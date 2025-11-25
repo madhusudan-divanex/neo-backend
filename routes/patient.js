@@ -1,7 +1,8 @@
-import { addPrescriptions, changePassword, deletePatient, deletePrescription, forgotEmail, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, signInPatient, signUpPatient, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
+import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, forgotEmail, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
+import { getPatientAppointment } from "../controller/appointmentController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
@@ -17,13 +18,20 @@ patient.post('/verify-otp',verifyOtp)
 patient.post('/change-password',changePassword)
 patient.put('',authMiddleware,updatePatient)
 patient.delete('',authMiddleware,deletePatient)
-patient.post('kyc',uploader.fields([{ name: 'frontImage', maxCount: 1 },
+patient.post('/kyc',uploader.fields([{ name: 'frontImage', maxCount: 1 },
     { name: 'backImage', maxCount: 1 }
 ]),authMiddleware,patientKyc)
-patient.post('prescription',authMiddleware,addPrescriptions)
-patient.delete('prescription/:id/:itemId',authMiddleware,deletePrescription)
-patient.post('medical-history',authMiddleware,patientMedicalHistory)
-patient.post('demographic',authMiddleware,patientDemographic)
+patient.post('/prescription',authMiddleware,addPrescriptions)
+patient.delete('/prescription/:id/:itemId',authMiddleware,deletePrescription)
+patient.post('/medical-history',authMiddleware,patientMedicalHistory)
+patient.post('/demographic',authMiddleware,patientDemographic)
+patient.post('/edit-request',authMiddleware,editRequest)
+
+
+patient.post('/update-image',uploader.fields([{ name: 'profileImage', maxCount: 1 }
+]),authMiddleware,updateImage)
+
+patient.get('/appointment/:id',authMiddleware,getPatientAppointment)
 
 
 
