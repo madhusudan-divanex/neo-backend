@@ -1,4 +1,4 @@
-import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage,  } from "../controller/Laboratory/authController.js"
+import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword,  } from "../controller/Laboratory/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
@@ -8,28 +8,39 @@ const lab=express.Router()
 const uploader = getUploader('lab');
 
 
-lab.post('',signUpLab)
-lab.get('',authMiddleware,getProfile)
+lab.post('',uploader.fields([{ name: 'logo' }]),signUpLab)
+lab.get('/:id',getProfile)
 lab.get('/detail/:id',authMiddleware,getProfileDetail)
 lab.post('/signin',signInLab)
 lab.post('/forgot-email',forgotEmail)
 lab.post('/resend-otp',resendOtp)
 lab.post('/verify-otp',verifyOtp)
 
-lab.post('/change-password',changePassword)
+lab.post('/change-password',authMiddleware,changePassword)
+lab.post('/reset-password',authMiddleware,resetPassword)
+
 lab.put('',authMiddleware,updateLab)
 lab.delete('',authMiddleware,deleteLab)
 
-lab.post('/license',uploader.fields([{ name: 'certFile' }
-]),authMiddleware,labLicense)
+lab.post(
+    '/license',
+    uploader.fields([
+        { name: 'certFiles', maxCount: 20 },   // multiple certificates
+        { name: 'licenseFile', maxCount: 1 }   // single license file
+    ]),
+    authMiddleware,
+    labLicense
+);
+
 lab.post('/about',authMiddleware,labAddress)
+lab.post('/person',uploader.fields([{ name: 'photo' }]),authMiddleware,labPerson)
 lab.post('/edit-request',authMiddleware,editRequest)
 
 
 lab.post('/update-image',uploader.fields([{ name: 'logo', maxCount: 1 }
 ]),authMiddleware,updateImage)
 
-lab.post('/image',authMiddleware,labImage)
+lab.post('/image',uploader.fields([{ name: 'thumbnail' },{ name: 'labImg' }]),authMiddleware,labImage)
 
 lab.post('/permission',authMiddleware,addLabPermission)
 lab.get('/permission/:id',authMiddleware,getAllPermission)

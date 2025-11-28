@@ -11,7 +11,7 @@ const addressSchema = new Schema({
   name: { type: String, required: true },
   contactNumber: { type: String, required: true },
   email: { type: String, required: true },
-  gender: { type: String, required: true },
+  gender: { type: String,enum:['male','female','other'] ,required: true },
   photo: { type: String, required: true },
 }, { timestamps: true });
 

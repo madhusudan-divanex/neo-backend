@@ -13,6 +13,7 @@ import LabPerson from '../../models/Laboratory/contactPerson.model.js';
 import LabImage from '../../models/Laboratory/labImages.model.js';
 import Rating from '../../models/Rating.js';
 import LabLicense from '../../models/Laboratory/labLicense.model.js';
+import mongoose from 'mongoose';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about } = req.body;
@@ -31,31 +32,25 @@ const signUpLab = async (req, res) => {
             email,
             contactNumber,
             password: hashedPassword,
-            dob, gstNumber, about, logo
+             gstNumber, about, logo
         });
 
-        if (newLab) {
-            const code = generateOTP()
-            const otp = await Otp.create({ userId: newLaboratory._id, code })
-            const emailHtml = `
-            Hello ${name}, 
-            Your One-Time Password (OTP) for Neo Health is: ${code} 
-            This OTP is valid for 10 minutes. Please do not share it with anyone.
-            If you did not request this, please ignore this email.
-            Thank you,
-            The Neo Health Team`
-            await sendEmail({
-                to: email,
-                subject: "Your Neo Health OTP Code!",
-                html: emailHtml
-            });
-            return res.status(200).json({ success: true, newLab, userId: newLaboratory._id });
+        if (newLab) {     
+            const token = jwt.sign(
+                { user: newLab._id },
+                process.env.JWT_SECRET,
+                // { expiresIn: isRemember ? "30d" : "1d" }
+            );     
+            return res.status(200).json({ success: true,  userId: newLab._id ,token});
         } else {
             return res.status(200).json({ success: false, message: "Lab not created" });
         }
 
     } catch (err) {
         console.error(err);
+        if(logo && fs.existsSync(logo)){
+            fs.unlinkSync(logo)
+        }
         return res.status(500).json({ message: 'Server Error' });
     }
 }
@@ -67,34 +62,18 @@ const signInLab = async (req, res) => {
         const hashedPassword = isExist.password
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
-        const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ userId: isExist._id })
-        if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ userId: isExist._id, code })
-        } else {
-
-            const otp = await Otp.create({ userId: isExist._id, code })
-        }
-        const emailHtml = `
-        Hello ${isExist?.name}, 
-            Your One-Time Password (OTP) for Neo Health is: ${code} 
-            This OTP is valid for 10 minutes. Please do not share it with anyone.
-            If you did not request this, please ignore this email.
-            Thank you,
-            The Neo Health Team`
-        await sendEmail({
-            to: email,
-            subject: "You OTP for Neo Health!",
-            html: emailHtml
-        });
+        const token = jwt.sign(
+                { user: isExist._id },
+                process.env.JWT_SECRET,
+                // { expiresIn: isRemember ? "30d" : "1d" }
+            );  
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist._id, isNew: false, success: true })
+            return res.status(200).json({ message: "Email Sent", userId: isExist._id,token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Email Sent", isNew: true, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Email Sent", isNew: true,token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -168,6 +147,7 @@ const resendOtp = async (req, res) => {
         });
         return res.status(200).json({
             success: true,
+            userId:isExist._id,
             message: "OTP sent!"
         });
     } catch (err) {
@@ -176,22 +156,22 @@ const resendOtp = async (req, res) => {
 };
 
 const forgotEmail = async (req, res) => {
-    const email = req.params.email
+    const {email} = req.body
     try {
         const user = await Laboratory.findOne({ email });
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
         const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ userId: isExist._id })
+        const isOtpExist = await Otp.findOne({ userId: user._id })
         if (isOtpExist) {
             await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ userId: isExist._id, code })
+            const otp = await Otp.create({ userId: user._id, code })
         } else {
-            const otp = await Otp.create({ userId: isExist._id, code })
+            const otp = await Otp.create({ userId: user._id, code })
         }
         const emailHtml = `
-            Hello ${isExist?.name}, 
+            Hello ${user?.name}, 
             Your One-Time Password (OTP) for Neo Health is: ${code} 
             This OTP is valid for 10 minutes. Please do not share it with anyone.
             If you did not request this, please ignore this email.
@@ -205,7 +185,8 @@ const forgotEmail = async (req, res) => {
         });
         return res.status(200).json({
             success: true,
-            message: "Mail sent!"
+            message: "Mail sent!",
+            userId:user._id
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -278,12 +259,13 @@ const updateLab = async (req, res) => {
 }
 
 function generateOTP() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
+    return Math.floor(1000 + Math.random() * 900000).toString();
 }
 
 const getProfile = async (req, res) => {
+    const id=req.params.id
     try {
-        const user = await Laboratory.findById(req.user.user).select('-password');
+        const user = await Laboratory.findById(id).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
@@ -296,17 +278,30 @@ const getProfile = async (req, res) => {
     }
 };
 const getProfileDetail = async (req, res) => {
-    const userId = req.params.id
+    const userId = req.params.id;
+
     try {
-        const user = await Laboratory.findById(userId).select('-password');
+        // 1️⃣ Find user
+        const user = await Laboratory.findById(userId).select("-password");
         if (!user) {
-            return res.status(404).json({ success: false, message: 'Lab not found' });
+            return res.status(404).json({
+                success: false,
+                message: "Lab not found"
+            });
         }
-        const labPerson = await LabPerson.findOne({ userId }).sort({ createdAt: -1 })
-        const labAddress = await LabAddress.findOne({ userId }).sort({ createdAt: -1 })
-        const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 })
-        const rating = await Rating.find({ labId: userId }).populate('patientId').sort({ createdAt: -1 })
-        // const eduWork = await LabEduWork.findOne({ userId }).sort({ createdAt: -1 })
+
+        // 2️⃣ Fetch latest related documents
+        const labPerson = await LabPerson.findOne({ userId }).sort({ createdAt: -1 });
+        const labAddress = await LabAddress.findOne({ userId }).sort({ createdAt: -1 });
+        const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
+        const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
+
+        // 3️⃣ Fetch ratings
+        const rating = await Rating.find({ labId: userId })
+            .populate("patientId")
+            .sort({ createdAt: -1 });
+
+        // 4️⃣ Calculate average rating
         const avgStats = await Rating.aggregate([
             { $match: { labId: new mongoose.Types.ObjectId(userId) } },
             {
@@ -317,19 +312,46 @@ const getProfileDetail = async (req, res) => {
                 }
             }
         ]);
-        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        ratingStats.forEach(r => ratingCounts[r._id] = r.count);
+
         const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
+
+        // 5️⃣ Count star ratings
+        const ratingStats = await Rating.aggregate([
+            { $match: { labId: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: "$star",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        ratingStats.forEach(r => {
+            ratingCounts[r._id] = r.count;
+        });
+
+        // 6️⃣ Return final response
         return res.status(200).json({
             success: true,
             user,
             labPerson,
-            labAddress, labImg, rating, avgRating
+            labAddress,
+            labImg,
+            labLicense,
+            rating,
+            avgRating,
+            ratingCounts
         });
+
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 };
+
 const deleteLab = async (req, res) => {
     const userId = req.user.user
     try {
@@ -390,16 +412,20 @@ const labPerson = async (req, res) => {
             await LabPerson.findByIdAndUpdate(data._id, { name, email, contactNumber, gender, photo, userId }, { new: true })
             return res.status(200).json({
                 success: true,
-                message: "Education and Work update successfully",
+                message: "Lab person update successfully",
             });
         } else {
             await LabPerson.create({ name, email, contactNumber, gender, photo, userId })
             return res.status(200).json({
                 success: true,
-                message: "Education and work saved successfully",
+                message: "Lab person saved successfully",
             });
         }
     } catch (error) {
+        if(fs.existsSync(photo)){
+            fs.unlinkSync(photo)
+        }
+        console.log(error)
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",

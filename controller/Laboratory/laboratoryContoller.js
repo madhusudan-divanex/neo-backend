@@ -254,7 +254,6 @@ const saveEmpProfessional = async (req, res) => {
         }
 
     } catch (error) {
-        // Clean up uploaded files if error occurs
         if (labCertFiles.length > 0) {
             labCertFiles.forEach(file => safeUnlink(file.path));
         }
@@ -299,14 +298,14 @@ const labStaffData = async (req, res) => {
         const isExist = await LabStaff.findById(id);
         if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
 
-        const employment=await EmpEmployement.findOne({empId:id})
-        const professional=await EmpProfesional.findOne({empId:id})
-        const empAccess=await EmpAccess.findOne({empId:id})
+        const employment = await EmpEmployement.findOne({ empId: id })
+        const professional = await EmpProfesional.findOne({ empId: id })
+        const empAccess = await EmpAccess.findOne({ empId: id })
 
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
-            employee:isExist,employment,professional,empAccess
+            employee: isExist, employment, professional, empAccess
 
         });
 
@@ -316,16 +315,16 @@ const labStaffData = async (req, res) => {
 };
 const labStaff = async (req, res) => {
     const id = req.params.id
-    const {page,limit,name}=req.query
+    const { page, limit, name } = req.query
     try {
-        const filter={labId:id}
+        const filter = { labId: id }
         const isExist = await Laboratory.findById(id);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
-        if(name){
-            filter.name={ $regex: name, $options: "i" }
+        if (name) {
+            filter.name = { $regex: name, $options: "i" }
         }
-        const employee=await LabStaff.find(filter).skip((page-1)*limit).limit(limit)
+        const employee = await LabStaff.find(filter).skip((page - 1) * limit).limit(limit)
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
@@ -338,41 +337,42 @@ const labStaff = async (req, res) => {
     }
 };
 const deleteStaffData = async (req, res) => {
-  const id = req.params.id;
+    const id = req.params.id;
 
-  try {
-    const employee = await LabStaff.findById(id);
-    if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
+    try {
+        const employee = await LabStaff.findById(id);
+        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
-    safeUnlink(employee.profileImage);
+        safeUnlink(employee.profileImage);
 
-    // Find related professional data
-    const professional = await EmpProfesional.findOne({ empId: id });
-    if (professional?.labCert?.length) {
-      professional.labCert.forEach(cert => safeUnlink(cert.certFile));
+        // Find related professional data
+        const professional = await EmpProfesional.findOne({ empId: id });
+        if (professional?.labCert?.length) {
+            professional.labCert.forEach(cert => safeUnlink(cert.certFile));
+        }
+
+        // Find employment and access records
+        const employment = await EmpEmployement.findOne({ empId: id });
+        const empAccess = await EmpAccess.findOne({ empId: id });
+
+        // Delete all related records
+        await EmpProfesional.deleteMany({ empId: id });
+        await EmpEmployement.deleteMany({ empId: id });
+        await EmpAccess.deleteMany({ empId: id });
+        await LabStaff.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            success: true,
+            message: "Employee and related data deleted successfully"
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
-
-    // Find employment and access records
-    const employment = await EmpEmployement.findOne({ empId: id });
-    const empAccess = await EmpAccess.findOne({ empId: id });
-
-    // Delete all related records
-    await EmpProfesional.deleteMany({ empId: id });
-    await EmpEmployement.deleteMany({ empId: id });
-    await EmpAccess.deleteMany({ empId: id });
-    await LabStaff.findByIdAndDelete(id);
-
-    return res.status(200).json({
-      success: true,
-      message: "Employee and related data deleted successfully"
-    });
-
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
 };
 
 
-export { getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff ,
-    labStaffData,deleteStaffData,labStaff
+export {
+    getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,
+    labStaffData, deleteStaffData, labStaff
 }
