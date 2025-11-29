@@ -1,3 +1,4 @@
+import { error } from "console";
 import EmpAccess from "../../models/Laboratory/empAccess.model.js";
 import EmpEmployement from "../../models/Laboratory/employement.model.js";
 import EmpProfesional from "../../models/Laboratory/employement.model.js";
@@ -5,6 +6,7 @@ import LabStaff from "../../models/Laboratory/LabEmpPerson.model.js";
 import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import LabPermission from "../../models/Laboratory/LabPermission.model.js";
 import fs from 'fs'
+import Test from "../../models/Laboratory/test.model.js";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
@@ -22,32 +24,54 @@ const getAllLaboratory = async (req, res) => {
     }
 }
 const getAllPermission = async (req, res) => {
-    const id = req.params.id
-    const { page, limit, name } = req.query
+    const id = req.params.id;
+    let { page = 1, limit = 10, name } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
     try {
-        const filter = { labId: id }
-        if (name) {
-            filter.name = { $regex: name, $options: "i" }
+        const filter = { labId: id };
+        if (name !== 'null') {
+            filter.name = { $regex: name, $options: "i" };
         }
-        const laboratory = await Laboratory.findById(id)
+
+        const laboratory = await Laboratory.findById(id);
+
         if (!laboratory) {
-            return res.status(200).json({ message: "Laboratory not found", success: false })
-        } else {
-            const permissions = await LabPermission.find(filter).skip((page - 1) * 10).limit(10)
             return res.status(200).json({
-                message: "Laboratory not fount", data: permissions,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }, success: true
-            })
+                message: "Laboratory not found",
+                success: false
+            });
         }
+
+        const total = await LabPermission.countDocuments(filter);
+
+        const permissions = await LabPermission.find(filter)
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        return res.status(200).json({
+            message: "Laboratory permissions fetched successfully",
+            data: permissions,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            },
+            success: true
+        });
+
     } catch (err) {
-        return res.status(200).json({ message: 'Server Error' });
+        console.log(err);
+        return res.status(500).json({
+            message: 'Server Error',
+            success: false
+        });
     }
-}
+};
+
 const addLabPermission = async (req, res) => {
     try {
         const { name, labId, ...permissions } = req.body;
@@ -98,10 +122,47 @@ const addLabPermission = async (req, res) => {
         });
     }
 };
-const deleteLabPermission = async (req, res) => {
+const updateLabPermission = async (req, res) => {
     try {
-        const { permissionId } = req.body;
-        const isExist = await LabPermission.findById(labId);
+        const { name, permissionId, labId, ...permissions } = req.body;
+        const isExist = await Laboratory.findById(labId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory not found", success: false })
+        const isPermExist = await LabPermission.findById(permissionId);
+        if (!isPermExist) return res.status(200).json({ message: "Permission not found", success: false })
+
+        if (!name || !labId) {
+            return res.status(400).json({
+                success: false,
+                message: "name and labId are required"
+            });
+        }
+        const updated = await LabPermission.findByIdAndUpdate(
+            isPermExist._id,
+            { ...permissions, name },
+            { new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Permission updated successfully",
+            data: updated
+        });
+
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+const deleteLabPermission = async (req, res) => {
+    const { permissionId, labId } = req.body;
+    try {
+        const isLabExist = await Laboratory.findById(labId);
+        if (!isLabExist) return res.status(200).json({ message: "Laboratory not found", success: false })
+        const isExist = await LabPermission.findById(permissionId);
         if (!isExist) return res.status(200).json({ message: "Laboratory permission not found", success: false })
 
         const delPerm = await LabPermission.findByIdAndDelete(permissionId);
@@ -370,9 +431,66 @@ const deleteStaffData = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+const addTest = async (req, res) => {
+    const { labId, title, category, precautions, shortName, testCategory, sampleType, price,component } = req.body
+    try {
+        const isExist = await Laboratory.findById(labId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
+        const isStaff = await Test.create({ labId, title, category, precautions, shortName, testCategory, sampleType, price ,component});
 
+        if (isStaff) {
+            return res.status(200).json({
+                success: true,
+                message: "Test created"
+            });
+        } else {
+            return res.status(200).json({
+                success: true,
+                message: "Test not created"
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+const getTest = async (req, res) => {
+    const labId = req.params.id
+    try {
+        const isExist = await Laboratory.findById(labId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
+
+        const data = await Test.find({ labId });
+
+        return res.status(200).json({
+            success: true,
+            data,
+            message: "Test Fetched"
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+const deleteTest = async (req, res) => {
+    const testId = req.params.id
+    try {
+        const isExist = await Test.findById(testId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory test not found", success: false })
+
+        const data = await Test.findByIdAndDelete(testId);
+
+        return res.status(200).json({
+            success: true,
+            data,
+            message: "Test deleted"
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,
-    labStaffData, deleteStaffData, labStaff
+    labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest,getTest,deleteTest
 }

@@ -9,7 +9,7 @@ const doctorDashboard = async (req, res) => {
             return res.status(200).json({ message: "Doctor not exist", success: false })
         }
         const start = new Date();
-        start.setHours(0, 0, 0, 0);   
+        start.setHours(0, 0, 0, 0);  
 
         const end = new Date();
         end.setHours(23, 59, 59, 999);

@@ -1,7 +1,7 @@
 import mongoose, { Schema} from "mongoose";
 
 const requestSchema=new Schema({
-    doctorId:{
+    labId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Laboratory',required:true
     },

@@ -17,7 +17,7 @@ appointment.get('/patient-lab/:id',authMiddleware,getPatientLabAppointment)
 
 appointment.post('/lab',authMiddleware,bookLabAppointment)
 appointment.get('/lab/:id',authMiddleware,getLabAppointment)
-
 appointment.put('/lab-action',authMiddleware,actionLabAppointment)
+
 
 export default appointment

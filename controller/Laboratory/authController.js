@@ -295,6 +295,7 @@ const getProfileDetail = async (req, res) => {
         const labAddress = await LabAddress.findOne({ userId }).sort({ createdAt: -1 });
         const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
+        const isRequest = Boolean(await EditRequest.exists({labId:userId}))
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: userId })
@@ -341,7 +342,8 @@ const getProfileDetail = async (req, res) => {
             labLicense,
             rating,
             avgRating,
-            ratingCounts
+            ratingCounts,
+            isRequest
         });
 
     } catch (err) {

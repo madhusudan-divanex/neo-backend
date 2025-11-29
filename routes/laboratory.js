@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import {  getLabAppointment } from "../controller/appointmentController.js";
-import { addLabPermission, deleteLabPermission, deleteStaffData, getAllPermission, labStaff, labStaffData, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff } from "../controller/Laboratory/laboratoryContoller.js";
+import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteTest, getAllPermission, getTest, labStaff, labStaffData, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, updateLabPermission } from "../controller/Laboratory/laboratoryContoller.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
@@ -43,8 +43,9 @@ lab.post('/update-image',uploader.fields([{ name: 'logo', maxCount: 1 }
 lab.post('/image',uploader.fields([{ name: 'thumbnail' },{ name: 'labImg' }]),authMiddleware,labImage)
 
 lab.post('/permission',authMiddleware,addLabPermission)
+lab.put('/permission',authMiddleware,updateLabPermission)
 lab.get('/permission/:id',authMiddleware,getAllPermission)
-lab.delete('/permission/:id',authMiddleware,deleteLabPermission)
+lab.delete('/permission',authMiddleware,deleteLabPermission)
 
 
 lab.get('/appointment/:id',authMiddleware,getLabAppointment)
@@ -55,10 +56,12 @@ lab.post('/employment',authMiddleware,saveEmpEmployement)
 lab.post('/access',authMiddleware,saveEmpAccess)
 lab.post('/staff/:id',authMiddleware,labStaff)
 lab.post('/staff-data/:id',authMiddleware,labStaffData)
-
 lab.delete('/staff/:id',authMiddleware,deleteStaffData)
 
 
+lab.post('/test',authMiddleware,addTest)
+lab.get('/test/:id',authMiddleware,getTest)
+lab.delete('/test/:id',authMiddleware,deleteTest)
 
 
 
