@@ -12,6 +12,6 @@ const licSchema = new Schema({
     empId: { type: mongoose.Schema.Types.ObjectId, ref: 'lab-staff', required: true },
 }, { timestamps: true })
 
-const EmpEmployement = mongoose.model('lab-emp-prof', licSchema)
+const EmpEmployement = mongoose.model('lab-employment', licSchema)
 
 export default EmpEmployement

@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import {  getLabAppointment } from "../controller/appointmentController.js";
-import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteTest, getAllPermission, getTest, labStaff, labStaffData, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, updateLabPermission } from "../controller/Laboratory/laboratoryContoller.js";
+import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, labStaff, labStaffAction, labStaffData, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, updateLabPermission } from "../controller/Laboratory/laboratoryContoller.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
@@ -50,12 +50,15 @@ lab.delete('/permission',authMiddleware,deleteLabPermission)
 
 lab.get('/appointment/:id',authMiddleware,getLabAppointment)
 
-lab.post('/staff',authMiddleware,saveLabStaff)
-lab.post('/professional',authMiddleware,saveEmpProfessional)
+lab.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,saveLabStaff)
+lab.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
 lab.post('/employment',authMiddleware,saveEmpEmployement)
+lab.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
+
 lab.post('/access',authMiddleware,saveEmpAccess)
-lab.post('/staff/:id',authMiddleware,labStaff)
-lab.post('/staff-data/:id',authMiddleware,labStaffData)
+lab.get('/staff/:id',authMiddleware,labStaff)
+lab.post('/staff-action',authMiddleware,labStaffAction)
+lab.get('/staff-data/:id',authMiddleware,labStaffData)
 lab.delete('/staff/:id',authMiddleware,deleteStaffData)
 
 

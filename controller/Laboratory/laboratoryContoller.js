@@ -1,12 +1,13 @@
 import { error } from "console";
 import EmpAccess from "../../models/Laboratory/empAccess.model.js";
 import EmpEmployement from "../../models/Laboratory/employement.model.js";
-import EmpProfesional from "../../models/Laboratory/employement.model.js";
+import EmpProfesional from "../../models/Laboratory/empProffesional.js";
 import LabStaff from "../../models/Laboratory/LabEmpPerson.model.js";
 import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import LabPermission from "../../models/Laboratory/LabPermission.model.js";
 import fs from 'fs'
 import Test from "../../models/Laboratory/test.model.js";
+import safeUnlink from "../../utils/globalFunction.js";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
@@ -32,7 +33,7 @@ const getAllPermission = async (req, res) => {
 
     try {
         const filter = { labId: id };
-        if (name !== 'null') {
+        if (name && name !== 'null') {
             filter.name = { $regex: name, $options: "i" };
         }
 
@@ -188,7 +189,8 @@ const deleteLabPermission = async (req, res) => {
 }
 
 const saveLabStaff = async (req, res) => {
-    const { contactNumber, name, address, dob, state, city, phoneCode, contactInformation, labId, empId } = req.body
+    const { name, address, dob, state, city, pinCode, labId, empId, gender } = req.body
+    const contactInformation = JSON.parse(req.body.contactInformation)
     const profileImage = req.files?.['profileImage']?.[0]?.path
     try {
         const isExist = await Laboratory.findById(labId);
@@ -200,19 +202,17 @@ const saveLabStaff = async (req, res) => {
             safeUnlink(isStaff.profileImage)
         }
         if (isStaff) {
-            await LabStaff.findByIdAndUpdate(empId, { contactNumber, name, address, dob, state, city, phoneCode, contactInformation, labId, profileImage: profileImage || isStaff.profileImage }, { new: true })
+            await LabStaff.findByIdAndUpdate(empId, { name, address, dob, state, gender, city, pinCode, contactInformation, labId, profileImage: profileImage || isStaff.profileImage }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "Staff updated",
-                data
             });
         } else {
-
-            await LabStaff.create(req.body);
+            const staf = await LabStaff.create({ name, address, dob, state, gender, city, pinCode, contactInformation, labId, profileImage });
             return res.status(200).json({
                 success: true,
                 message: "Staff created",
-                data
+                empId: staf._id
             });
         }
 
@@ -256,20 +256,60 @@ const saveEmpEmployement = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+const deleteSubEmpProffesional = async (req, res) => {
+    const { id, empId, type } = req.body; 
+
+    try {
+        // Check if employee exists
+        const employee = await LabStaff.findById(empId);
+        if (!employee) {
+            return res.status(200).json({ success: false, message: "Employee not found" });
+        }
+
+        // Build pull query based on type
+        let pullQuery = {};
+
+        if (type === "education") {
+            pullQuery = { $pull: { education: { _id: id } } };
+        } else if (type === "cert") {
+            pullQuery = { $pull: { labCert: { _id: id } } };
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid type" });
+        }
+
+        const data = await EmpProfesional.findOneAndUpdate(
+            { empId },
+            pullQuery,
+            { new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Sub-document deleted successfully",
+            data
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 const saveEmpProfessional = async (req, res) => {
     const { id, empId, profession, specialization, totalExperience, professionalBio, education } = req.body;
-    const labCertFiles = req.files?.labCert || [];
+    const certMeta = JSON.parse(req.body.labCert || "[]");
     try {
+        console.log(req.body.empId)
         const employee = await LabStaff.findById(empId);
         if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
-        const labCert = labCertFiles.map(file => ({
-            certName: file.originalname,
-            certFile: file.path
+        const uploadedFiles = req.files?.certFile || [];
+        const labCert = certMeta.map((meta, idx) => ({
+            certName: meta.certName,
+            certFile: uploadedFiles[idx] ? uploadedFiles[idx].path : "",
         }));
-
+        const isExist = await EmpProfesional.findOne({ empId })
         let data;
-        if (id) {
-            const existing = await EmpProfesional.findById(id);
+        if (isExist) {
+            const existing = await EmpProfesional.findById(isExist._id);
             if (!existing) return res.status(200).json({ success: false, message: "Professional record not found" });
 
             if (labCert.length > 0 && existing.labCert?.length) {
@@ -277,7 +317,7 @@ const saveEmpProfessional = async (req, res) => {
             }
 
             data = await EmpProfesional.findByIdAndUpdate(
-                id,
+                isExist._id,
                 {
                     profession,
                     specialization,
@@ -291,8 +331,7 @@ const saveEmpProfessional = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Employee professional updated",
-                data
+                message: "Employee professional updated"
             });
 
         } else {
@@ -309,15 +348,14 @@ const saveEmpProfessional = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Employee professional created",
-                data
+                message: "Employee professional created"
             });
         }
 
     } catch (error) {
-        if (labCertFiles.length > 0) {
-            labCertFiles.forEach(file => safeUnlink(file.path));
-        }
+        // if (labCertFiles.length > 0) {
+        //     labCertFiles.forEach(file => safeUnlink(file.path));
+        // }
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -331,9 +369,11 @@ const saveEmpAccess = async (req, res) => {
         const permission = await LabPermission.findById(permissionId);
         if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
 
+        const isExist = await EmpAccess.findOne({ empId: empId });
         let data;
-        if (id) {
-            data = await EmpAccess.findByIdAndUpdate(id, req.body, { new: true });
+        await LabStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
+        if (isExist) {
+            data = await EmpAccess.findOneAndUpdate({ empId: empId }, { userName, email, password, permissionId }, { new: true });
             if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
             return res.status(200).json({
                 success: true,
@@ -361,12 +401,30 @@ const labStaffData = async (req, res) => {
 
         const employment = await EmpEmployement.findOne({ empId: id })
         const professional = await EmpProfesional.findOne({ empId: id })
-        const empAccess = await EmpAccess.findOne({ empId: id })
+        const empAccess = await EmpAccess.findOne({ empId: id })?.populate({ path: 'permissionId', select: 'name' })
 
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
             employee: isExist, employment, professional, empAccess
+
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+const labStaffAction = async (req, res) => {
+    const { empId, status } = req.body
+    try {
+        const isExist = await LabStaff.findById(empId);
+        if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
+
+        const employment = await LabStaff.findByIdAndUpdate(empId, { status }, { new: true })
+
+        return res.status(200).json({
+            success: true,
+            message: "Staff status updated"
 
         });
 
@@ -385,11 +443,18 @@ const labStaff = async (req, res) => {
         if (name) {
             filter.name = { $regex: name, $options: "i" }
         }
-        const employee = await LabStaff.find(filter).skip((page - 1) * limit).limit(limit)
+        const total = await LabStaff.countDocuments(filter);
+        const employee = await LabStaff.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
-            employee
+            data: employee,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            },
 
         });
 
@@ -432,12 +497,12 @@ const deleteStaffData = async (req, res) => {
     }
 };
 const addTest = async (req, res) => {
-    const { labId, title, category, precautions, shortName, testCategory, sampleType, price,component } = req.body
+    const { labId, title, category, precautions, shortName, testCategory, sampleType, price, component } = req.body
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
-        const isStaff = await Test.create({ labId, title, category, precautions, shortName, testCategory, sampleType, price ,component});
+        const isStaff = await Test.create({ labId, title, category, precautions, shortName, testCategory, sampleType, price, component });
 
         if (isStaff) {
             return res.status(200).json({
@@ -492,5 +557,5 @@ const deleteTest = async (req, res) => {
 };
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,
-    labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest,getTest,deleteTest
+    labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest, getTest, deleteTest, labStaffAction,deleteSubEmpProffesional
 }

@@ -22,17 +22,12 @@ Trading->
 Wizbizal->
     Feedback(pending)
 
-Laboratory Api->
-Register new lab (signUpLab)
-Get lab profile (getProfile)
-lab login (signInlab)
-Forgot email handler
-Resend OTP
-Verify OTP
-Change lab password
-Add laboratory license
-Lab Person,Image,address
-
+Laboratory->
+    Get Appointment for lab
+    Approve/Reject Appointment
+    Lab Profile (address,Person,license,profile)
+    Edit Profile Request
+    Get/Add/Update/Delete Permission 
  
 Trading ->
 
