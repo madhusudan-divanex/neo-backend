@@ -3,9 +3,10 @@ import mongoose, { Schema} from "mongoose";
 const componentSchema=new Schema({
     name:{type:String,required:true},
     unit:{type:String,required:true},
-    result:{type:String,required:true},
+    optionType:{type:String,required:true,default:'text'},
+    result:[{type:String,required:true}],
     referenceRange:{type:String,required:true},
-    status:{type:String,enum:['active','inactive'],default:'inactive'}    
+    status:{type:Boolean,default:false}    
 })
 
 const requestSchema=new Schema({
@@ -14,11 +15,10 @@ const requestSchema=new Schema({
         ref:'Laboratory',required:true
     },
     title:[{type:String}],
-    category:{type:String,required:true},
-    precautions:{type:Date,required:true},
+    precautions:{type:String,required:true},
     shortName:{type:String,required:true},
     component:[componentSchema],
-    testCategory:{type:Date,required:true},
+    testCategory:{type:String,required:true},
     sampleType:{type:String,required:true},
     price:{type:String,required:true},
     status:{type:String,enum:['active','inactive'],default:'inactive'},

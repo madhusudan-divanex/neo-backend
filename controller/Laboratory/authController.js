@@ -14,6 +14,7 @@ import LabImage from '../../models/Laboratory/labImages.model.js';
 import Rating from '../../models/Rating.js';
 import LabLicense from '../../models/Laboratory/labLicense.model.js';
 import mongoose from 'mongoose';
+import safeUnlink from '../../utils/globalFunction.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about } = req.body;

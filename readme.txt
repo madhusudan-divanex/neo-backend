@@ -22,15 +22,16 @@ Trading->
 Wizbizal->
     Feedback(pending)
 
-Laboratory->
-    Get Appointment for lab
-    Approve/Reject Appointment
-    Lab Profile (address,Person,license,profile)
-    Edit Profile Request
-    Get/Add/Update/Delete Permission 
- 
-Trading ->
-
+Laboratory Staff->
+    Create (personal info,professional,employment,access)
+    Update (personal info,professional,employment,access)
+    Delete 
+    List 
+    Status (toggle active or inactive)
+Api->
+    Staff Status
+    Staff professional item Delete
+    
 chart implemention done 
 
 history data pending 

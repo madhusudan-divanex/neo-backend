@@ -257,7 +257,7 @@ const saveEmpEmployement = async (req, res) => {
     }
 };
 const deleteSubEmpProffesional = async (req, res) => {
-    const { id, empId, type } = req.body; 
+    const { id, empId, type } = req.body;
 
     try {
         // Check if employee exists
@@ -272,6 +272,8 @@ const deleteSubEmpProffesional = async (req, res) => {
         if (type === "education") {
             pullQuery = { $pull: { education: { _id: id } } };
         } else if (type === "cert") {
+            const data = await EmpProfesional.findOne({ empId }).select('labCert')
+            safeUnlink(data.labCert.certFile)
             pullQuery = { $pull: { labCert: { _id: id } } };
         } else {
             return res.status(400).json({ success: false, message: "Invalid type" });
@@ -298,7 +300,6 @@ const saveEmpProfessional = async (req, res) => {
     const { id, empId, profession, specialization, totalExperience, professionalBio, education } = req.body;
     const certMeta = JSON.parse(req.body.labCert || "[]");
     try {
-        console.log(req.body.empId)
         const employee = await LabStaff.findById(empId);
         if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
         const uploadedFiles = req.files?.certFile || [];
@@ -444,7 +445,7 @@ const labStaff = async (req, res) => {
             filter.name = { $regex: name, $options: "i" }
         }
         const total = await LabStaff.countDocuments(filter);
-        const employee = await LabStaff.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+        const employee = await LabStaff.find(filter).populate({path:"permissionId",select:'name'}).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
@@ -497,12 +498,12 @@ const deleteStaffData = async (req, res) => {
     }
 };
 const addTest = async (req, res) => {
-    const { labId, title, category, precautions, shortName, testCategory, sampleType, price, component } = req.body
+    const { labId, title,  precautions, shortName, testCategory, sampleType, price, component } = req.body
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
-        const isStaff = await Test.create({ labId, title, category, precautions, shortName, testCategory, sampleType, price, component });
+        const isStaff = await Test.create({ labId, title,  precautions, shortName, testCategory, sampleType, price, component });
 
         if (isStaff) {
             return res.status(200).json({
@@ -519,17 +520,86 @@ const addTest = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-const getTest = async (req, res) => {
-    const labId = req.params.id
+const updateTest = async (req, res) => {
+    const {testId,  title,  precautions, shortName, testCategory, sampleType, price, component } = req.body
     try {
-        const isExist = await Laboratory.findById(labId);
-        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
+        const isExist = await Test.findById(testId);
+        if (!isExist) return res.status(200).json({ message: "Test  not found", success: false })
 
-        const data = await Test.find({ labId });
+        const update = await Test.findByIdAndUpdate(testId,{  title,  precautions, shortName, testCategory, sampleType, price, component },{new:true});
+
+        if (update) {
+            return res.status(200).json({
+                success: true,
+                message: "Test updated"
+            });
+        } else {
+            return res.status(200).json({
+                success: true,
+                message: "Test not updated"
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+const labTestAction = async (req, res) => {
+    const { testId, status } = req.body
+    try {
+        const isExist = await Test.findById(testId);
+        if (!isExist) return res.status(200).json({ message: "test  not found", success: false })
+
+        const employment = await Test.findByIdAndUpdate(testId, { status }, { new: true })
 
         return res.status(200).json({
             success: true,
+            message: "Staff status updated"
+
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+const getTest = async (req, res) => {
+    const labId = req.params.id
+    const {page,limit=10}=req.query
+    try {
+        const filter={labId}
+        if(req.query.name){
+            filter.shortName=req.query.name
+        }
+        const isExist = await Laboratory.findById(labId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
+
+        const data = await Test.find(filter).sort({createdAt:-1}).skip((page-1)*limit).limit(limit);
+        const totalTest= await Test.countDocuments(filter)
+        return res.status(200).json({
+            success: true,
             data,
+            message: "Test Fetched",
+            pagination: {
+                page,
+                limit,
+                totalTest,
+                totalPages: Math.ceil(totalTest / limit)
+            },
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+const getTestData = async (req, res) => {
+    const testId = req.params.id
+    try {
+        const isExist = await Test.findById(testId);
+        if (!isExist) return res.status(200).json({ message: "test  not found", success: false })
+
+
+        return res.status(200).json({
+            success: true,
+            data:isExist,
             message: "Test Fetched"
         });
 
@@ -557,5 +627,6 @@ const deleteTest = async (req, res) => {
 };
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,
-    labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest, getTest, deleteTest, labStaffAction,deleteSubEmpProffesional
+    labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest, getTest, deleteTest, labStaffAction, deleteSubEmpProffesional,
+    getTestData,updateTest,labTestAction
 }

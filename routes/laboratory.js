@@ -2,8 +2,8 @@ import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail,
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import {  getLabAppointment } from "../controller/appointmentController.js";
-import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, labStaff, labStaffAction, labStaffData, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, updateLabPermission } from "../controller/Laboratory/laboratoryContoller.js";
+import {  getLabAppointment, labDashboardData } from "../controller/appointmentController.js";
+import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
@@ -60,11 +60,17 @@ lab.get('/staff/:id',authMiddleware,labStaff)
 lab.post('/staff-action',authMiddleware,labStaffAction)
 lab.get('/staff-data/:id',authMiddleware,labStaffData)
 lab.delete('/staff/:id',authMiddleware,deleteStaffData)
+lab.get('/dashboard/:id',authMiddleware,labDashboardData)
+
 
 
 lab.post('/test',authMiddleware,addTest)
+lab.put('/test',authMiddleware,updateTest)
+lab.get('/test-data/:id',authMiddleware,getTestData)
 lab.get('/test/:id',authMiddleware,getTest)
 lab.delete('/test/:id',authMiddleware,deleteTest)
+lab.post('/test-action',authMiddleware,labTestAction)
+
 
 
 

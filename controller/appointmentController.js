@@ -227,7 +227,7 @@ const getLabAppointment = async (req, res) => {
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
-        const appointment = await LabAppointment.find({ labId }).populate('patientId').sort({ createdAt: -1 })
+        const appointment = await LabAppointment.find({ labId }).populate({path:'testId',select:'shortName'}).populate('patientId').sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         if (appointment) {
@@ -235,6 +235,23 @@ const getLabAppointment = async (req, res) => {
         } else {
             return res.status(200).json({ message: "Appointment not fount", success: false })
         }
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
+const labDashboardData = async (req, res) => {
+    const labId = req.params.id;
+    try {
+        const isExist = await Laboratory.findById(labId);
+        if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
+        const pendingTestRequest = await LabAppointment.countDocuments({ labId, status: 'pending' })
+        const completeTestRequest = await LabAppointment.countDocuments({ labId, status: 'completed' })
+        const totalTestRequest = await LabAppointment.countDocuments({ labId })
+
+        return res.status(200).json({ message: "Dashboard data fetch successfully", pendingTestRequest,completeTestRequest,totalTestRequest
+            , success: true })
+
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -286,6 +303,6 @@ const actionLabAppointment = async (req, res) => {
 }
 export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment,
-    doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment,
+    doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment,labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment
 }
