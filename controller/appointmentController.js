@@ -223,11 +223,15 @@ const giveRating = async (req, res) => {
 }
 const getLabAppointment = async (req, res) => {
     const labId = req.params.id;
-    const { page = 1, limit = 10 } = req.query
+    const { page = 1, limit = 10,type } = req.query
     try {
+        const filter={labId}
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
-        const appointment = await LabAppointment.find({ labId }).populate({path:'testId',select:'shortName'}).populate('patientId').sort({ createdAt: -1 })
+        if (type === 'approved') {
+            filter.status = { $in: ['approved', 'completed'] }; // only approved or completed
+        }
+        const appointment = await LabAppointment.find(filter).populate({path:'testId',select:'shortName'}).populate('patientId').sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         if (appointment) {
@@ -235,6 +239,19 @@ const getLabAppointment = async (req, res) => {
         } else {
             return res.status(200).json({ message: "Appointment not fount", success: false })
         }
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
+const getLabAppointmentData = async (req, res) => {
+    const appointmentId = req.params.id;
+    try {
+        const isExist = await LabAppointment.findById(appointmentId);
+        if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
+     
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, success: true })
+        
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -302,7 +319,7 @@ const actionLabAppointment = async (req, res) => {
     }
 }
 export {
-    bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment,
+    bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment,getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment,labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment
 }

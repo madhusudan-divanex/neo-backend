@@ -17,39 +17,65 @@ import mongoose from 'mongoose';
 import safeUnlink from '../../utils/globalFunction.js';
 
 const signUpLab = async (req, res) => {
-    const { name, gender, email, contactNumber, password, gstNumber, about } = req.body;
+    const { name, gender, email, contactNumber, password, gstNumber, about, labId } = req.body;
     const logo = req.files?.['logo']?.[0]?.path
     try {
-        const isExist = await Laboratory.findOne({ email })
-        if (isExist) {
-            return res.status(200).json({ message: "Lab already exist", success: false })
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
+        if (labId) {
+            const isExist = await Laboratory.findById(labId)
+            if (!isExist) {
+                return res.status(200).json({ message: "Lab not exist", success: false })
+            }
+            if (logo && isExist.logo) {
+                safeUnlink(isExist.logo)
+            }
+            // Create user
+            const newLab = await Laboratory.findByIdAndUpdate(labId, {
+                name,
+                gender,
+                email,
+                contactNumber,
+                gstNumber, about, logo
+            }, { new: true });
 
-        // Create user
-        const newLab = await Laboratory.create({
-            name,
-            gender,
-            email,
-            contactNumber,
-            password: hashedPassword,
-             gstNumber, about, logo
-        });
-
-        if (newLab) {     
-            const token = jwt.sign(
-                { user: newLab._id },
-                process.env.JWT_SECRET,
-                // { expiresIn: isRemember ? "30d" : "1d" }
-            );     
-            return res.status(200).json({ success: true,  userId: newLab._id ,token});
+            if (newLab) {
+                return res.status(200).json({ success: true, });
+            } else {
+                return res.status(200).json({ success: false, message: "Lab not updated" });
+            }
         } else {
-            return res.status(200).json({ success: false, message: "Lab not created" });
+
+
+            const isExist = await Laboratory.findOne({ email })
+            if (isExist) {
+                return res.status(200).json({ message: "Lab already exist", success: false })
+            }
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Create user
+            const newLab = await Laboratory.create({
+                name,
+                gender,
+                email,
+                contactNumber,
+                password: hashedPassword,
+                gstNumber, about, logo
+            });
+
+            if (newLab) {
+                const token = jwt.sign(
+                    { user: newLab._id },
+                    process.env.JWT_SECRET,
+                    // { expiresIn: isRemember ? "30d" : "1d" }
+                );
+                return res.status(200).json({ success: true, userId: newLab._id, token });
+            } else {
+                return res.status(200).json({ success: false, message: "Lab not created" });
+            }
         }
 
     } catch (err) {
         console.error(err);
-        if(logo && fs.existsSync(logo)){
+        if (logo && fs.existsSync(logo)) {
             fs.unlinkSync(logo)
         }
         return res.status(500).json({ message: 'Server Error' });
@@ -64,17 +90,17 @@ const signInLab = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
-                { user: isExist._id },
-                process.env.JWT_SECRET,
-                // { expiresIn: isRemember ? "30d" : "1d" }
-            );  
+            { user: isExist._id },
+            process.env.JWT_SECRET,
+            // { expiresIn: isRemember ? "30d" : "1d" }
+        );
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist._id,token, isNew: false, success: true })
+            return res.status(200).json({ message: "Email Sent", userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Email Sent", isNew: true,token, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Email Sent", isNew: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -148,7 +174,7 @@ const resendOtp = async (req, res) => {
         });
         return res.status(200).json({
             success: true,
-            userId:isExist._id,
+            userId: isExist._id,
             message: "OTP sent!"
         });
     } catch (err) {
@@ -157,7 +183,7 @@ const resendOtp = async (req, res) => {
 };
 
 const forgotEmail = async (req, res) => {
-    const {email} = req.body
+    const { email } = req.body
     try {
         const user = await Laboratory.findOne({ email });
         if (!user) {
@@ -187,7 +213,7 @@ const forgotEmail = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Mail sent!",
-            userId:user._id
+            userId: user._id
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -264,7 +290,7 @@ function generateOTP() {
 }
 
 const getProfile = async (req, res) => {
-    const id=req.params.id
+    const id = req.params.id
     try {
         const user = await Laboratory.findById(id).select('-password');
         if (!user) {
@@ -296,7 +322,7 @@ const getProfileDetail = async (req, res) => {
         const labAddress = await LabAddress.findOne({ userId }).sort({ createdAt: -1 });
         const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const isRequest = Boolean(await EditRequest.exists({labId:userId}))
+        const isRequest = Boolean(await EditRequest.exists({ labId: userId }))
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: userId })
@@ -425,7 +451,7 @@ const labPerson = async (req, res) => {
             });
         }
     } catch (error) {
-        if(fs.existsSync(photo)){
+        if (fs.existsSync(photo)) {
             fs.unlinkSync(photo)
         }
         console.log(error)
@@ -438,45 +464,62 @@ const labPerson = async (req, res) => {
 const labLicense = async (req, res) => {
     try {
         const { userId, labLicenseNumber } = req.body;
-        const user = await Laboratory.findById(userId);
 
+        // Check user exists
+        const user = await Laboratory.findById(userId);
         if (!user) {
             return res.status(404).json({
                 message: "User not found",
                 success: false
             });
         }
+
         let certificateList = [];
         if (req.body.labCert) {
             certificateList = JSON.parse(req.body.labCert);
         }
+
         if (req.files?.certFiles) {
-            req.files.certFiles.forEach((file, idx) => {
-                if (certificateList[idx]) {
-                    certificateList[idx].certFile = file.path;
+            let fileIdx = 0;
+            certificateList.forEach((cert, idx) => {
+                if (!cert.certFile && req.files.certFiles[fileIdx]) {
+                    cert.certFile = req.files.certFiles[fileIdx].path;
+                    fileIdx++;
                 }
             });
+
+            for (; fileIdx < req.files.certFiles.length; fileIdx++) {
+                certificateList.push({
+                    certName: "New Certificate", // fallback name, can be updated on frontend
+                    certFile: req.files.certFiles[fileIdx].path
+                });
+            }
         }
+
+        // Handle license file upload
         let licenseFilePath = null;
         if (req.files?.licenseFile && req.files.licenseFile[0]) {
             licenseFilePath = req.files.licenseFile[0].path;
         }
 
-        // Fetch existing
+        // Fetch existing license
         const existing = await LabLicense.findOne({ userId });
 
         if (existing) {
-            if (req.files?.certFiles) {
-                existing.labCert.forEach((cert, i) => {
-                    if (req.files.certFiles[i]) {
-                        safeUnlink(cert.certFile);
-                    }
-                });
-            }
+            // Delete replaced certificate files
+            existing.labCert.forEach((cert) => {
+                const replaced = certificateList.find(c => c.certFile === cert.certFile);
+                if (!replaced && cert.certFile && req.files?.certFiles) {
+                    safeUnlink(cert.certFile);
+                }
+            });
 
+            // Delete old license file if replaced
             if (licenseFilePath && existing.licenseFile) {
                 safeUnlink(existing.licenseFile);
             }
+
+            // Update license document
             const updated = await LabLicense.findByIdAndUpdate(
                 existing._id,
                 {
@@ -494,6 +537,7 @@ const labLicense = async (req, res) => {
             });
         }
 
+        // Create new license if none exists
         const created = await LabLicense.create({
             userId,
             labCert: certificateList,
@@ -515,6 +559,7 @@ const labLicense = async (req, res) => {
         });
     }
 };
+
 
 const deleteLicense = async (req, res) => {
     try {
@@ -626,8 +671,36 @@ const editRequest = async (req, res) => {
     }
 };
 
+const deleteLabImage = async (req, res) => {
+    const { labId, path, type } = req.body;
+    try {
+        const user = await Laboratory.findById(labId)
+        if (!user) return res.status(200).json({ message: "Lab not found", success: false })
+        if (type == 'thumbnail') {
+            await LabImage.findOneAndUpdate({ userId: labId }, { thumbnail: '' }, { new: true })
+            safeUnlink(path)
+            return res.status(200).json({
+                success: true,
+                message: "Image deleted",
+            });
+        } else {
+            const imgDoc = await LabImage.findOne({ userId: labId });
+            await LabImage.findOneAndUpdate({ userId: labId }, { $pull: { labImg: path }, }, { new: true })
+            safeUnlink(path)
+            return res.status(200).json({
+                success: true,
+                message: "Image deleted",
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
 export {
     signInLab, updateImage, labLicense, deleteLicense, getProfileDetail, signUpLab, resetPassword, editRequest,
     labPerson, labAddress, forgotEmail, verifyOtp, resendOtp, getProfile, updateLab, changePassword, deleteLab,
-    labImage
+    labImage, deleteLabImage
 }

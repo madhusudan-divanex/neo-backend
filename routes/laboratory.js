@@ -1,15 +1,15 @@
-import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword,  } from "../controller/Laboratory/authController.js"
+import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword, deleteLabImage,  } from "../controller/Laboratory/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import {  getLabAppointment, labDashboardData } from "../controller/appointmentController.js";
-import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
+import {  getLabAppointment, getLabAppointmentData, labDashboardData } from "../controller/appointmentController.js";
+import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, getTestReport, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
 
 lab.post('',uploader.fields([{ name: 'logo' }]),signUpLab)
-lab.get('/:id',getProfile)
+lab.get('/:id',authMiddleware,getProfile)
 lab.get('/detail/:id',authMiddleware,getProfileDetail)
 lab.post('/signin',signInLab)
 lab.post('/forgot-email',forgotEmail)
@@ -49,6 +49,8 @@ lab.delete('/permission',authMiddleware,deleteLabPermission)
 
 
 lab.get('/appointment/:id',authMiddleware,getLabAppointment)
+lab.get('/appointment-data/:id',authMiddleware,getLabAppointmentData)
+
 
 lab.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,saveLabStaff)
 lab.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
@@ -67,10 +69,15 @@ lab.get('/dashboard/:id',authMiddleware,labDashboardData)
 lab.post('/test',authMiddleware,addTest)
 lab.put('/test',authMiddleware,updateTest)
 lab.get('/test-data/:id',authMiddleware,getTestData)
+lab.post('/test-report',authMiddleware,saveReport)
+lab.post('/test-report-data',authMiddleware,getTestReport)
+
+
 lab.get('/test/:id',authMiddleware,getTest)
 lab.delete('/test/:id',authMiddleware,deleteTest)
 lab.post('/test-action',authMiddleware,labTestAction)
 
+lab.post('/delete-image',authMiddleware,deleteLabImage)
 
 
 

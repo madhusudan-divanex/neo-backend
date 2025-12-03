@@ -6,7 +6,9 @@ const componentSchema=new Schema({
     optionType:{type:String,required:true,default:'text'},
     result:[{type:String,required:true}],
     referenceRange:{type:String,required:true},
-    status:{type:Boolean,default:false}    
+    status:{type:Boolean,default:false}    ,
+    title:{type:String},
+
 })
 
 const requestSchema=new Schema({
@@ -14,7 +16,6 @@ const requestSchema=new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'Laboratory',required:true
     },
-    title:[{type:String}],
     precautions:{type:String,required:true},
     shortName:{type:String,required:true},
     component:[componentSchema],

@@ -9,12 +9,13 @@ const requestSchema=new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'Patient',required:true
     },
-    testId:{
+    testId:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Test',required:true
-    },
+    }],
     date:{type:Date,required:true},
     fees:{type:String,required:true},
+    paymentStatus:{type:String,enum:['due','paid'],default:'due'},
     status:{type:String,enum:['pending','approved','completed','rejected','cancel'],default:'pending'},
     cancelMessage:String
 

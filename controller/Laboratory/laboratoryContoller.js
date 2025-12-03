@@ -8,6 +8,7 @@ import LabPermission from "../../models/Laboratory/LabPermission.model.js";
 import fs from 'fs'
 import Test from "../../models/Laboratory/test.model.js";
 import safeUnlink from "../../utils/globalFunction.js";
+import TestReport from "../../models/testReport.js";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
@@ -445,7 +446,7 @@ const labStaff = async (req, res) => {
             filter.name = { $regex: name, $options: "i" }
         }
         const total = await LabStaff.countDocuments(filter);
-        const employee = await LabStaff.find(filter).populate({path:"permissionId",select:'name'}).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+        const employee = await LabStaff.find(filter).populate({ path: "permissionId", select: 'name' }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
@@ -498,12 +499,12 @@ const deleteStaffData = async (req, res) => {
     }
 };
 const addTest = async (req, res) => {
-    const { labId, title,  precautions, shortName, testCategory, sampleType, price, component } = req.body
+    const { labId, precautions, shortName, testCategory, sampleType, price, component } = req.body
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
-        const isStaff = await Test.create({ labId, title,  precautions, shortName, testCategory, sampleType, price, component });
+        const isStaff = await Test.create({ labId, precautions, shortName, testCategory, sampleType, price, component });
 
         if (isStaff) {
             return res.status(200).json({
@@ -521,12 +522,12 @@ const addTest = async (req, res) => {
     }
 };
 const updateTest = async (req, res) => {
-    const {testId,  title,  precautions, shortName, testCategory, sampleType, price, component } = req.body
+    const { testId, precautions, shortName, testCategory, sampleType, price, component } = req.body
     try {
         const isExist = await Test.findById(testId);
         if (!isExist) return res.status(200).json({ message: "Test  not found", success: false })
 
-        const update = await Test.findByIdAndUpdate(testId,{  title,  precautions, shortName, testCategory, sampleType, price, component },{new:true});
+        const update = await Test.findByIdAndUpdate(testId, { precautions, shortName, testCategory, sampleType, price, component }, { new: true });
 
         if (update) {
             return res.status(200).json({
@@ -563,17 +564,17 @@ const labTestAction = async (req, res) => {
 };
 const getTest = async (req, res) => {
     const labId = req.params.id
-    const {page,limit=10}=req.query
+    const { page, limit = 10 } = req.query
     try {
-        const filter={labId}
-        if(req.query.name){
-            filter.shortName=req.query.name
+        const filter = { labId }
+        if (req.query.name) {
+            filter.shortName = req.query.name
         }
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
-        const data = await Test.find(filter).sort({createdAt:-1}).skip((page-1)*limit).limit(limit);
-        const totalTest= await Test.countDocuments(filter)
+        const data = await Test.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+        const totalTest = await Test.countDocuments(filter)
         return res.status(200).json({
             success: true,
             data,
@@ -599,7 +600,7 @@ const getTestData = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            data:isExist,
+            data: isExist,
             message: "Test Fetched"
         });
 
@@ -625,8 +626,82 @@ const deleteTest = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+const saveReport = async (req, res) => {
+    try {
+        const {
+            labId,
+            patientId,
+            testId,
+            appointmentId,
+            comment,
+            component
+        } = req.body;
+        const isExist = await TestReport.findOne({ testId, appointmentId })
+        if (isExist) {
+            await TestReport.findByIdAndUpdate(isExist._id, {
+                labId,
+                patientId,
+                testId,
+                appointmentId,
+                comment,
+                component
+            }, { new: true })
+            return res.status(201).json({
+                success: true,
+                message: "Test report saved successfully"
+            });
+        }
+        else {
+
+            const newReport = new TestReport({
+                labId,
+                patientId,
+                testId,
+                appointmentId,
+                comment,
+                component
+            });
+
+            await newReport.save();
+
+            return res.status(201).json({
+                success: true,
+                message: "Test report saved successfully",
+                data: newReport
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Error saving report" });
+    }
+};
+const getTestReport = async (req, res) => {
+    try {
+        const {
+            testId,
+            appointmentId,
+        } = req.body;
+        const isExist = await TestReport.findOne({ testId, appointmentId }).populate('testId')
+        if (isExist) {
+            return res.status(201).json({
+                success: true,
+                message: "Test report saved successfully",
+                data: isExist
+            });
+        }
+        else {
+            return res.status(201).json({
+                success: false,
+                message: "Test report not found"
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Error saving report" });
+    }
+};
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,
     labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest, getTest, deleteTest, labStaffAction, deleteSubEmpProffesional,
-    getTestData,updateTest,labTestAction
+    getTestData, updateTest, labTestAction, saveReport,getTestReport
 }

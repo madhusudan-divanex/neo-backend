@@ -22,15 +22,16 @@ Trading->
 Wizbizal->
     Feedback(pending)
 
-Laboratory Staff->
-    Create (personal info,professional,employment,access)
+Laboratory->
+    lab test report
     Update (personal info,professional,employment,access)
     Delete 
     List 
     Status (toggle active or inactive)
 Api->
-    Staff Status
-    Staff professional item Delete
+    Test Report
+    Get Appointment Data
+    Get Test Report
     
 chart implemention done 
 

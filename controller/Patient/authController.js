@@ -12,6 +12,7 @@ import PatientDemographic from '../../models/Patient/demographic.model.js';
 import MedicalHistory from '../../models/Patient/medicalHistory.model.js';
 import Prescriptions from '../../models/Patient/prescription.model.js';
 import EditRequest from '../../models/EditRequest.js';
+import LabAppointment from '../../models/LabAppointment.js';
 
 const signUpPatient = async (req, res) => {
     const { name, gender, email, contactNumber, password, } = req.body;
@@ -303,10 +304,13 @@ const getProfileDetail = async (req, res) => {
         const medicalHistory = await MedicalHistory.findOne({ userId }).sort({ createdAt: -1 })
         const demographic = await PatientDemographic.findOne({ userId }).sort({ createdAt: -1 })
         const prescription = await Prescriptions.findOne({ userId }).sort({ createdAt: -1 })
+        const labAppointment = await LabAppointment.find({patientId: userId }).sort({ createdAt: -1 })
+
         return res.status(200).json({
             success: true,
             user,
             kyc,
+            labAppointment,
             demographic, prescription, medicalHistory
         });
     } catch (err) {
