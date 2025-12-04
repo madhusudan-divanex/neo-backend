@@ -97,7 +97,7 @@ const signInLab = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Email Sent",user:isExist, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
             return res.status(200).json({ message: "Email Sent", isNew: true, token, userId: isExist._id, success: true })

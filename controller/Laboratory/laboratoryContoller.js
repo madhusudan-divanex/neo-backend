@@ -573,7 +573,7 @@ const getTest = async (req, res) => {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
-        const data = await Test.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+        const data = await Test.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
         const totalTest = await Test.countDocuments(filter)
         return res.status(200).json({
             success: true,

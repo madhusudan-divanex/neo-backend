@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     about: { type: String, required: true }  , 
     logo: { type: String,required:true},
     role:{type:String,default:'parent'},
+    allowEdit:{type:Boolean,default:false},
     status: { type: String,enum:['pending','verify'], default: 'pending' }        
 
 }, { timestamps: true });

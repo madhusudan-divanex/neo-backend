@@ -180,7 +180,7 @@ const forgotEmail = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-         const code = generateOTP()
+        const code = generateOTP()
         const isOtpExist = await Otp.findOne({ userId: isExist._id })
         if (isOtpExist) {
             await Otp.findByIdAndDelete(isOtpExist._id)
@@ -304,7 +304,7 @@ const getProfileDetail = async (req, res) => {
         const medicalHistory = await MedicalHistory.findOne({ userId }).sort({ createdAt: -1 })
         const demographic = await PatientDemographic.findOne({ userId }).sort({ createdAt: -1 })
         const prescription = await Prescriptions.findOne({ userId }).sort({ createdAt: -1 })
-        const labAppointment = await LabAppointment.find({patientId: userId }).sort({ createdAt: -1 })
+        const labAppointment = await LabAppointment.find({ patientId: userId }).sort({ createdAt: -1 })
 
         return res.status(200).json({
             success: true,
@@ -410,6 +410,28 @@ const patientDemographic = async (req, res) => {
         });
     }
 };
+const getPatientDemographic = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        const user = await Patient.findById(userId)
+        if (!user) return res.status(200).json({ message: "User not found", success: false })
+
+        const data = await PatientDemographic.findOne({ userId });
+
+        return res.status(200).json({
+            success: true,
+            data,
+            message: "Demographic fetch successfully",
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
 const patientMedicalHistory = async (req, res) => {
     const { userId, alcohol, smoking, allergies, medicationDetail, onMedication, chronicCondition, familyHistory } = req.body;
     try {
@@ -488,46 +510,48 @@ const deletePrescription = async (req, res) => {
     }
 };
 const updateImage = async (req, res) => {
-  const { userId } = req.body;
-  const image = req.files?.['profileImage']?.[0]?.path
-  try {
-    const user = await Patient.findById(userId)
-    if (!user) return res.status(200).json({ message: "Patient not found", success: false })
+    const { userId } = req.body;
+    const image = req.files?.['profileImage']?.[0]?.path
+    try {
+        const user = await Patient.findById(userId)
+        if (!user) return res.status(200).json({ message: "Patient not found", success: false })
 
-    if (user.image) {
-      safeUnlink(user.profileImage)
+        if (user.image) {
+            safeUnlink(user.profileImage)
+        }
+        await Doctor.findByIdAndUpdate(user._id, { profileImage: image }, { new: true })
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile image saved successfully",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
     }
-    await Doctor.findByIdAndUpdate(user._id, { profileImage: image }, { new: true })
-
-    return res.status(200).json({
-      success: true,
-      message: "Profile image saved successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
 };
 const editRequest = async (req, res) => {
-  const { patientId,message } = req.body;
-  try {
-    const user = await Patient.findById(patientId)
-    if (!user) return res.status(200).json({ message: "Patient not found", success: false })
+    const { patientId, message } = req.body;
+    try {
+        const user = await Patient.findById(patientId)
+        if (!user) return res.status(200).json({ message: "Patient not found", success: false })
 
-    
-    await EditRequest.create({ patientId,message,type:'patient' })
 
-    return res.status(200).json({
-      success: true,
-      message: "Request successfully send to admin",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
+        await EditRequest.create({ patientId, message, type: 'patient' })
+
+        return res.status(200).json({
+            success: true,
+            message: "Request successfully send to admin",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
 };
-export { signInPatient, updateImage,addPrescriptions,getProfileDetail,editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient }
+export { signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient ,
+    getPatientDemographic
+}

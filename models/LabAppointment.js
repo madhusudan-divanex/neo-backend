@@ -9,6 +9,10 @@ const requestSchema=new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'Patient',required:true
     },
+    doctorId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'Doctor'
+    },
     testId:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Test',required:true
@@ -16,7 +20,7 @@ const requestSchema=new Schema({
     date:{type:Date,required:true},
     fees:{type:String,required:true},
     paymentStatus:{type:String,enum:['due','paid'],default:'due'},
-    status:{type:String,enum:['pending','approved','completed','rejected','cancel'],default:'pending'},
+    status:{type:String,enum:['pending','approved','deliver-report','pending-report','rejected','cancel'],default:'pending'},
     cancelMessage:String
 
 },{timestamps:true})

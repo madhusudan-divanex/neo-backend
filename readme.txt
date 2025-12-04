@@ -24,10 +24,7 @@ Wizbizal->
 
 Laboratory->
     lab test report
-    Update (personal info,professional,employment,access)
-    Delete 
-    List 
-    Status (toggle active or inactive)
+    Lab Profile Update 
 Api->
     Test Report
     Get Appointment Data
@@ -37,4 +34,13 @@ chart implemention done
 
 history data pending 
 
- 
+make a google sheet for Laboratory panel what this done in the project which i share to client 
+ lab can create account -> Lab Images ->lab Addresss -> Contact Person ->Lab license and certificate 
+ change password,forgot password
+ user can send edit profile request to admin and after gettting permission user can edit this data (account -> Lab Images ->lab Addresss -> Contact Person ->Lab license and certificate )
+ user can add Laboratory permission 
+ user can create staff for the Laboratory and grant them permission 
+ appointment request were show and user can approve and reject the appointment request 
+ user can view patient details 
+ user can add test in their Laboratory 
+ user add test report the the appointment and generate invoice

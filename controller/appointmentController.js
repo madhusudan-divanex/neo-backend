@@ -224,16 +224,17 @@ const giveRating = async (req, res) => {
 const getLabAppointment = async (req, res) => {
     const labId = req.params.id;
     const { page = 1, limit = 10,type } = req.query
+    console.log(req.query)
     try {
         const filter={labId}
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
         if (type === 'approved') {
-            filter.status = { $in: ['approved', 'completed'] }; // only approved or completed
+            filter.status = { $in: ['approved', 'deliver-report'] }; // only approved or completed
         }
         const appointment = await LabAppointment.find(filter).populate({path:'testId',select:'shortName'}).populate('patientId').sort({ createdAt: -1 })
             .skip((page - 1) * 10)
-            .limit(limit)
+            .limit(limit).lean()
         if (appointment) {
             return res.status(200).json({ message: "Appointment fetch successfully", data: appointment, success: true })
         } else {
@@ -247,11 +248,10 @@ const getLabAppointment = async (req, res) => {
 const getLabAppointmentData = async (req, res) => {
     const appointmentId = req.params.id;
     try {
-        const isExist = await LabAppointment.findById(appointmentId);
-        if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
-     
-        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, success: true })
-        
+        const isExist = await LabAppointment.findById(appointmentId).populate({path:'testId',select:'shortName price'})
+        .populate({path:'patientId',select:'name contactNumber gender'}).lean();
+        if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });     
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, success: true })        
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -300,19 +300,29 @@ const bookLabAppointment = async (req, res) => {
 }
 
 const actionLabAppointment = async (req, res) => {
-    const { labId, appointmentId, status, note } = req.body;
+    const { labId, appointmentId, status, note,type,paymentStatus } = req.body;
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
 
         const isPatient = await LabAppointment.findById(appointmentId);
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
+        if(type=='payment'){
+             const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note }, { new: true })
+            if (update) {
+                return res.status(200).json({ message: "Appointment status updated", success: true })
+            } else {
+                return res.status(200).json({ message: "Appointment status not updated", success: false })
+            }
+        }else{
 
-        const update = await LabAppointment.findByIdAndUpdate(appointmentId, { status, note }, { new: true })
-        if (update) {
-            return res.status(200).json({ message: "Appointment status updated", success: true })
-        } else {
-            return res.status(200).json({ message: "Appointment status not updated", success: false })
+            
+            const update = await LabAppointment.findByIdAndUpdate(appointmentId, { status, note }, { new: true })
+            if (update) {
+                return res.status(200).json({ message: "Appointment status updated", success: true })
+            } else {
+                return res.status(200).json({ message: "Appointment status not updated", success: false })
+            }
         }
     } catch (err) {
         return res.status(200).json({ message: 'Server Error' });

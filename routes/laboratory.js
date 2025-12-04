@@ -76,7 +76,6 @@ lab.post('/test-report-data',authMiddleware,getTestReport)
 lab.get('/test/:id',authMiddleware,getTest)
 lab.delete('/test/:id',authMiddleware,deleteTest)
 lab.post('/test-action',authMiddleware,labTestAction)
-
 lab.post('/delete-image',authMiddleware,deleteLabImage)
 
 
