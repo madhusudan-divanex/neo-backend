@@ -15,6 +15,11 @@ import Rating from '../../models/Rating.js';
 import LabLicense from '../../models/Laboratory/labLicense.model.js';
 import mongoose from 'mongoose';
 import safeUnlink from '../../utils/globalFunction.js';
+import LabAppointment from '../../models/LabAppointment.js';
+import TestReport from '../../models/testReport.js';
+import Test from '../../models/Laboratory/test.model.js';
+import Patient from '../../models/Patient/patient.model.js';
+import { generateReportPDF } from '../../utils/pdfMaker.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId } = req.body;
@@ -97,7 +102,7 @@ const signInLab = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent",user:isExist, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Email Sent", user: isExist, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
             return res.status(200).json({ message: "Email Sent", isNew: true, token, userId: isExist._id, success: true })
@@ -699,8 +704,49 @@ const deleteLabImage = async (req, res) => {
         });
     }
 };
+
+const sendReport = async (req, res) => {
+    const { type, appointmentId ,email} = req.body;
+    try {
+        const appointment = await LabAppointment.findById(appointmentId)
+        if (!appointment) return res.status(200).json({ message: "Appointment not found", success: false })
+        const tests = await Test.find({
+            _id: { $in: appointment.testId }
+        });
+        const ptData= await Patient.findById(appointment?.patientId)
+        const labData= await Laboratory.findById(appointment?.labId)
+
+        const testReports = await TestReport.find({ appointmentId })
+        const pdfBuffer = await generateReportPDF(appointment, tests, testReports,ptData,labData);
+
+        await sendEmail({
+            to: email,
+            subject: "Your Lab Report",
+            html: "<p>Your lab report is attached.</p>",
+            attachments: [
+                {
+                    filename: "lab-report.pdf",
+                    content: pdfBuffer,
+                    contentType: "application/pdf",
+                }
+            ]
+        });
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Report successfully send",
+        });
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
 export {
     signInLab, updateImage, labLicense, deleteLicense, getProfileDetail, signUpLab, resetPassword, editRequest,
     labPerson, labAddress, forgotEmail, verifyOtp, resendOtp, getProfile, updateLab, changePassword, deleteLab,
-    labImage, deleteLabImage
+    labImage, deleteLabImage,sendReport
 }

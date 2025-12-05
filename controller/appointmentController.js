@@ -2,6 +2,7 @@ import Doctor from "../models/Doctor/doctor.model.js";
 import DoctorAppointment from "../models/DoctorAppointment.js";
 import LabAppointment from "../models/LabAppointment.js";
 import Laboratory from "../models/Laboratory/laboratory.model.js";
+import Test from "../models/Laboratory/test.model.js";
 import LabTest from "../models/LabTest.js";
 import Patient from "../models/Patient/patient.model.js";
 import Prescriptions from "../models/Prescriptions.js";
@@ -224,13 +225,12 @@ const giveRating = async (req, res) => {
 const getLabAppointment = async (req, res) => {
     const labId = req.params.id;
     const { page = 1, limit = 10,type } = req.query
-    console.log(req.query)
     try {
         const filter={labId}
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
         if (type === 'approved') {
-            filter.status = { $in: ['approved', 'deliver-report'] }; // only approved or completed
+            filter.status = { $in: ['approved', 'deliver-report'] }; 
         }
         const appointment = await LabAppointment.find(filter).populate({path:'testId',select:'shortName'}).populate('patientId').sort({ createdAt: -1 })
             .skip((page - 1) * 10)
@@ -263,10 +263,13 @@ const labDashboardData = async (req, res) => {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
         const pendingTestRequest = await LabAppointment.countDocuments({ labId, status: 'pending' })
-        const completeTestRequest = await LabAppointment.countDocuments({ labId, status: 'completed' })
+        const deliverRequest = await LabAppointment.countDocuments({ labId, status: 'deliver-report' })
+        const pendingReport = await LabAppointment.countDocuments({ labId, status: 'pending-report' })
+        const totalTest= await Test.countDocuments({labId})
         const totalTestRequest = await LabAppointment.countDocuments({ labId })
-
-        return res.status(200).json({ message: "Dashboard data fetch successfully", pendingTestRequest,completeTestRequest,totalTestRequest
+        const testRequests={totalTestRequest}
+        const labReports={pendingReport,deliverRequest,pendingTestRequest}
+        return res.status(200).json({ message: "Dashboard data fetch successfully", labReports,testRequests,totalTest
             , success: true })
 
     } catch (err) {

@@ -1,4 +1,4 @@
-import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword, deleteLabImage,  } from "../controller/Laboratory/authController.js"
+import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword, deleteLabImage, sendReport,  } from "../controller/Laboratory/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
@@ -77,6 +77,9 @@ lab.get('/test/:id',authMiddleware,getTest)
 lab.delete('/test/:id',authMiddleware,deleteTest)
 lab.post('/test-action',authMiddleware,labTestAction)
 lab.post('/delete-image',authMiddleware,deleteLabImage)
+
+lab.post('/send-report',authMiddleware,sendReport)
+
 
 
 

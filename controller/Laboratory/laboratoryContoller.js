@@ -596,8 +596,6 @@ const getTestData = async (req, res) => {
     try {
         const isExist = await Test.findById(testId);
         if (!isExist) return res.status(200).json({ message: "test  not found", success: false })
-
-
         return res.status(200).json({
             success: true,
             data: isExist,
@@ -652,7 +650,6 @@ const saveReport = async (req, res) => {
             });
         }
         else {
-
             const newReport = new TestReport({
                 labId,
                 patientId,
