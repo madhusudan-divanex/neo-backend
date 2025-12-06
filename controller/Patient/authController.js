@@ -24,11 +24,16 @@ const signUpPatient = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user
+        const isLast = await Patient.findOne()?.sort({ createdAt: -1 })
+        const nextId = isLast
+            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            : '0001';
         const newPatient = await Patient.create({
             name,
             gender,
             email,
             contactNumber,
+            customId: nextId,
             password: hashedPassword,
         });
 
@@ -293,18 +298,45 @@ const getProfile = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
-const getProfileDetail = async (req, res) => {
-    const userId = req.params.id
+const getCustomProfile = async (req, res) => {
+    const userId=req.params.id
     try {
-        const user = await Patient.findById(userId).select('-password');
+        let user;
+        if(userId<24){
+            user = await Patient.findOne({customId:userId}).select('-password').lean();
+        }else{
+            user = await Patient.findById(userId).select('-password').lean();
+        }
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-        const kyc = await PatientKyc.findOne({ userId }).sort({ createdAt: -1 })
-        const medicalHistory = await MedicalHistory.findOne({ userId }).sort({ createdAt: -1 })
-        const demographic = await PatientDemographic.findOne({ userId }).sort({ createdAt: -1 })
-        const prescription = await Prescriptions.findOne({ userId }).sort({ createdAt: -1 })
-        const labAppointment = await LabAppointment.find({ patientId: userId }).sort({ createdAt: -1 })
+        const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
+        res.status(200).json({
+            success: true,
+            data: {...user,dob:ptDemographic?.dob}
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+const getProfileDetail = async (req, res) => {
+    const userId = req.params.id
+    try {
+        let user;
+        if (userId < 24) {
+            user = await Patient.findOne({ customId: userId }).select('-password');
+        } else {
+            user = await Patient.findById(userId).select('-password');
+        }
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Patient not found' });
+        }
+        const fullId=await userId<24? user._id :userId
+        const kyc = await PatientKyc.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const medicalHistory = await MedicalHistory.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const demographic = await PatientDemographic.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const prescription = await Prescriptions.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const labAppointment = await LabAppointment.find({ patientId: fullId }).sort({ createdAt: -1 })
 
         return res.status(200).json({
             success: true,
@@ -552,6 +584,7 @@ const editRequest = async (req, res) => {
         });
     }
 };
-export { signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient ,
-    getPatientDemographic
+export {
+    signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
+    getPatientDemographic,getCustomProfile
 }

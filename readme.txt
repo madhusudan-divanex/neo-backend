@@ -23,10 +23,8 @@ Wizbizal->
     Feedback(pending)
 
 Laboratory->
-    Barcode 
-    Lab Dashboard data 
-    Report View and Download
-    Report sent to the patient (email)
+    Report (intake,billing,labels,collection,report) 
+    Appointment Filter
 Api->
     Test Report
     Get Appointment Data

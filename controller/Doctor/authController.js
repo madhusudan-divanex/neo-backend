@@ -296,7 +296,13 @@ const getProfile = async (req, res) => {
 const getProfileDetail = async (req, res) => {
     const userId = req.params.id
     try {
-        const user = await Doctor.findById(userId).select('-password');
+        let user;
+        if(userId<24){
+                user = await Doctor.findOne({customId:userId}).select('-password');
+
+        }else{
+                user = await Doctor.findById(userId).select('-password');
+        }
         if (!user) {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }

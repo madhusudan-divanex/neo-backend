@@ -17,6 +17,7 @@ const requestSchema=new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'Test',required:true
     }],
+    customId:{type:String,required:true},
     date:{type:Date,required:true},
     fees:{type:String,required:true},
     paymentStatus:{type:String,enum:['due','paid'],default:'due'},

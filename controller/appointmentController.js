@@ -16,8 +16,12 @@ const bookDoctorAppointment = async (req, res) => {
 
         const isPatient = await Patient.findById(patientId);
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
+        const isLast=await DoctorAppointment.findOne().sort({createdAt:-1})
+        const nextId = isLast
+            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            : '0001';
 
-        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees })
+        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees,customId:nextId })
         if (book) {
             return res.status(200).json({ message: "Appointment book successfully", success: true })
         } else {
@@ -224,34 +228,89 @@ const giveRating = async (req, res) => {
 }
 const getLabAppointment = async (req, res) => {
     const labId = req.params.id;
-    const { page = 1, limit = 10,type } = req.query
+    const {
+        page = 1,
+        limit = 10,
+        status,
+        paymentStatus,
+        dateFrom,
+        dateTo,
+        test,
+        patientName
+    } = req.query;
+
     try {
-        const filter={labId}
-        const isExist = await Laboratory.findById(labId);
-        if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
-        if (type === 'approved') {
-            filter.status = { $in: ['approved', 'deliver-report'] }; 
+        const filter = { labId };
+
+        // STATUS FILTER
+        if (status) {
+            filter.status = status;
         }
-        const appointment = await LabAppointment.find(filter).populate({path:'testId',select:'shortName'}).populate('patientId').sort({ createdAt: -1 })
-            .skip((page - 1) * 10)
-            .limit(limit).lean()
-        if (appointment) {
-            return res.status(200).json({ message: "Appointment fetch successfully", data: appointment, success: true })
-        } else {
-            return res.status(200).json({ message: "Appointment not fount", success: false })
+
+        // PAYMENT STATUS FILTER
+        if (paymentStatus) {
+            filter.paymentStatus = paymentStatus;
         }
+
+        // TEST FILTER
+        if (test) {
+            filter.testId = { $in: [test] };
+        }
+
+        // DATE RANGE FILTER
+        if (dateFrom || dateTo) {
+            filter.date = {};
+            if (dateFrom) filter.date.$gte = new Date(dateFrom);
+            if (dateTo) filter.date.$lte = new Date(dateTo);
+        }
+
+        // PATIENT NAME FILTER (requires lookup after populate)
+        let appointmentQuery = LabAppointment.find(filter)
+            .populate({ path: 'testId', select: 'shortName' })
+            .populate({ path: 'patientId', select: '-password' })
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean();
+
+        let appointment = await appointmentQuery;
+
+        // Filter by patient name AFTER populate
+        if (patientName) {
+            appointment = appointment.filter(item =>
+                item.patientId?.fullName?.toLowerCase().includes(patientName.toLowerCase())
+            );
+        }
+
+        const totalAppointment = await LabAppointment.countDocuments(filter);
+
+        return res.status(200).json({
+            message: "Appointments fetched successfully",
+            data: appointment,
+            success: true,
+            totalPages: Math.ceil(totalAppointment / limit)
+        });
+
     } catch (err) {
-        console.log(err)
+        console.log(err);
         return res.status(200).json({ message: 'Server Error' });
     }
-}
+};
+
 const getLabAppointmentData = async (req, res) => {
     const appointmentId = req.params.id;
     try {
-        const isExist = await LabAppointment.findById(appointmentId).populate({path:'testId',select:'shortName price'})
-        .populate({path:'patientId',select:'name contactNumber gender'}).lean();
-        if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });     
-        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, success: true })        
+        let isExist;
+        if(appointmentId<24){
+            isExist = await LabAppointment.findOne({customId:appointmentId}).populate({ path: 'testId', select: 'shortName price' })
+            .populate({ path: 'patientId', select: 'name contactNumber gender customId' }).lean();
+        }else{
+
+            isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
+            .populate({ path: 'patientId', select: 'name contactNumber gender customId' }).lean();
+        }
+        if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, success: true })
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -265,12 +324,14 @@ const labDashboardData = async (req, res) => {
         const pendingTestRequest = await LabAppointment.countDocuments({ labId, status: 'pending' })
         const deliverRequest = await LabAppointment.countDocuments({ labId, status: 'deliver-report' })
         const pendingReport = await LabAppointment.countDocuments({ labId, status: 'pending-report' })
-        const totalTest= await Test.countDocuments({labId})
+        const totalTest = await Test.countDocuments({ labId })
         const totalTestRequest = await LabAppointment.countDocuments({ labId })
-        const testRequests={totalTestRequest}
-        const labReports={pendingReport,deliverRequest,pendingTestRequest}
-        return res.status(200).json({ message: "Dashboard data fetch successfully", labReports,testRequests,totalTest
-            , success: true })
+        const testRequests = { totalTestRequest }
+        const labReports = { pendingReport, deliverRequest, pendingTestRequest }
+        return res.status(200).json({
+            message: "Dashboard data fetch successfully", labReports, testRequests, totalTest
+            , success: true
+        })
 
     } catch (err) {
         console.log(err)
@@ -279,18 +340,18 @@ const labDashboardData = async (req, res) => {
 }
 
 const bookLabAppointment = async (req, res) => {
-    const { patientId, labId, testId, date, fees } = req.body;
+    const { patientId, labId, testId, date, fees,status } = req.body;
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Laboratory not exist' });
 
         const isPatient = await Patient.findById(patientId);
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
-
-        // const isTest = await Patient.findById(testId);
-        // if (!isTest) return res.status(200).json({ message: 'Test not exist' });
-
-        const book = await LabAppointment.create({ patientId, labId, testId, date, fees })
+        const isLast =await LabAppointment?.findOne()?.sort({createdAt:-1})
+        const nextId = isLast
+            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            : '0001';
+        const book = await LabAppointment.create({ patientId, labId, testId, date, fees, customId: nextId,status })
         if (book) {
             return res.status(200).json({ message: "Appointment book successfully", success: true })
         } else {
@@ -303,23 +364,23 @@ const bookLabAppointment = async (req, res) => {
 }
 
 const actionLabAppointment = async (req, res) => {
-    const { labId, appointmentId, status, note,type,paymentStatus } = req.body;
+    const { labId, appointmentId, status, note, type, paymentStatus } = req.body;
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
 
         const isPatient = await LabAppointment.findById(appointmentId);
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
-        if(type=='payment'){
-             const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note }, { new: true })
+        if (type == 'payment') {
+            const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note }, { new: true })
             if (update) {
                 return res.status(200).json({ message: "Appointment status updated", success: true })
             } else {
                 return res.status(200).json({ message: "Appointment status not updated", success: false })
             }
-        }else{
+        } else {
 
-            
+
             const update = await LabAppointment.findByIdAndUpdate(appointmentId, { status, note }, { new: true })
             if (update) {
                 return res.status(200).json({ message: "Appointment status updated", success: true })
@@ -332,7 +393,7 @@ const actionLabAppointment = async (req, res) => {
     }
 }
 export {
-    bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment,getLabAppointmentData,
-    doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment,labDashboardData,
+    bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
+    doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment
 }

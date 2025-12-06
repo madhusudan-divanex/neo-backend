@@ -10,6 +10,7 @@ const requestSchema = new Schema({
         ref: 'Patient', required: true
     },
     date: { type: Date, required: true },
+    customId:{type:String,required:true},
     fees: { type: String, required: true },
     note: { type: Date },
     prescriptionId: {
