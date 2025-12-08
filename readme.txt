@@ -23,8 +23,10 @@ Wizbizal->
     Feedback(pending)
 
 Laboratory->
-    Report (intake,billing,labels,collection,report) 
-    Appointment Filter
+    Add  Report  
+    Scanner (only for patient)
+    Access on permission base
+    Patient Prescriptions and Reports
 Api->
     Test Report
     Get Appointment Data

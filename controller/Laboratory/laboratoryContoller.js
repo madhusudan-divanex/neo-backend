@@ -435,35 +435,48 @@ const labStaffAction = async (req, res) => {
     }
 };
 const labStaff = async (req, res) => {
-    const id = req.params.id
-    const { page, limit, name } = req.query
-    try {
-        const filter = { labId: id }
-        const isExist = await Laboratory.findById(id);
-        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
+    const id = req.params.id;
+    let { page, limit, name } = req.query;
 
-        if (name) {
-            filter.name = { $regex: name, $options: "i" }
+    const pageNumber = parseInt(page) > 0 ? parseInt(page) : 1;
+    const limitNumber = parseInt(limit) > 0 ? parseInt(limit) : 10;
+
+    try {
+        const isExist = await Laboratory.findById(id);
+        if (!isExist) {
+            return res.status(404).json({ message: "Laboratory not found", success: false });
         }
+
+        const filter = { labId: id };
+        if (name) {
+            filter.name = { $regex: name, $options: "i" };
+        }
+
         const total = await LabStaff.countDocuments(filter);
-        const employee = await LabStaff.find(filter).populate({ path: "permissionId", select: 'name' }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+        const employee = await LabStaff.find(filter)
+            .populate({ path: "permissionId", select: 'name' })
+            .sort({ createdAt: -1 })
+            .skip((pageNumber - 1) * limitNumber)
+            .limit(limitNumber)
+            .lean();
+
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
             data: employee,
             pagination: {
-                page,
-                limit,
+                page: pageNumber,
+                limit: limitNumber,
                 total,
-                totalPages: Math.ceil(total / limit)
+                totalPages: Math.ceil(total / limitNumber)
             },
-
         });
 
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
 const deleteStaffData = async (req, res) => {
     const id = req.params.id;
 
@@ -503,8 +516,11 @@ const addTest = async (req, res) => {
     try {
         const isExist = await Laboratory.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
-
-        const isStaff = await Test.create({ labId, precautions, shortName, testCategory, sampleType, price, component });
+        const isLast=await Test.findOne()?.sort({createdAt:-1})
+            const nextId = isLast
+            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            : '0001';
+        const isStaff = await Test.create({customId:nextId, labId, precautions, shortName, testCategory, sampleType, price, component });
 
         if (isStaff) {
             return res.status(200).json({

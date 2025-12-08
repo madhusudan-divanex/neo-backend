@@ -22,6 +22,7 @@ const requestSchema=new Schema({
     testCategory:{type:String,required:true},
     sampleType:{type:String,required:true},
     price:{type:String,required:true},
+    customId: { type: String, required: true },
     status:{type:String,enum:['active','inactive'],default:'inactive'},
     cancelMessage:String
 

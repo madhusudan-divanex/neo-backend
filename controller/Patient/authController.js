@@ -13,6 +13,7 @@ import MedicalHistory from '../../models/Patient/medicalHistory.model.js';
 import Prescriptions from '../../models/Patient/prescription.model.js';
 import EditRequest from '../../models/EditRequest.js';
 import LabAppointment from '../../models/LabAppointment.js';
+import safeUnlink from '../../utils/globalFunction.js';
 
 const signUpPatient = async (req, res) => {
     const { name, gender, email, contactNumber, password, } = req.body;
@@ -494,33 +495,78 @@ const patientMedicalHistory = async (req, res) => {
     }
 };
 const addPrescriptions = async (req, res) => {
-    try {
-        const { userId } = req.body;
-        const prescriptionsData = JSON.parse(req.body.prescriptions);
+  try {
+    const { userId } = req.body;
+    let prescriptionsData = req.body.prescriptions;
 
-        // Add fileUrl and fileType for each uploaded file
-        prescriptionsData.forEach((item, index) => {
-            if (req.files[index]) {
-                item.fileUrl = req.files[index].path;
-            }
-        });
-
-        const created = await Prescriptions.create({
-            userId,
-            prescriptions: prescriptionsData
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "Prescriptions uploaded successfully",
-            data: created
-        });
-
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ success: false, error: err.message });
+    if (!Array.isArray(prescriptionsData)) {
+      prescriptionsData = [prescriptionsData];
     }
+
+    const files = req.files || [];
+
+    // Find existing document for user
+    let userPrescriptionsDoc = await Prescriptions.findOne({ userId });
+
+    if (!userPrescriptionsDoc) {
+      // Create new document if doesn't exist
+      // Attach file paths to new prescriptions
+      prescriptionsData.forEach((prescription, i) => {
+        if (files[i]) {
+          prescription.fileUrl = files[i].path;
+        }
+      });
+
+      const created = await Prescriptions.create({
+        userId,
+        prescriptions: prescriptionsData,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Prescriptions created successfully",
+        data: created,
+      });
+    }
+    prescriptionsData.forEach((newPresc, index) => {
+      const existingPresc = userPrescriptionsDoc.prescriptions.id(newPresc._id); 
+      if (existingPresc) {
+        // If file uploaded for this prescription, delete old file and update fileUrl
+        if (files[index]) {
+          safeUnlink(existingPresc.fileUrl);
+          existingPresc.fileUrl = files[index].path;
+        }
+
+        // Update other fields
+        existingPresc.name = newPresc.name;
+        existingPresc.diagnosticName = newPresc.diagnosticName;
+        // update other fields similarly if any
+
+      } else {
+        // If no matching existing prescription, push new one
+        if (files[index]) {
+          newPresc.fileUrl = files[index].path;
+        }
+        userPrescriptionsDoc.prescriptions.push(newPresc);
+      }
+    });
+
+    await userPrescriptionsDoc.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Prescriptions updated successfully",
+      data: userPrescriptionsDoc,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 };
+
+
+ 
 const deletePrescription = async (req, res) => {
     try {
         const { id, itemId } = req.params;

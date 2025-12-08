@@ -2,7 +2,7 @@ import { addPrescriptions, changePassword, deletePatient, deletePrescription, ed
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { getPatientAppointment } from "../controller/appointmentController.js";
+import { getLabReport, getPatientAppointment } from "../controller/appointmentController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
@@ -22,7 +22,7 @@ patient.delete('',authMiddleware,deletePatient)
 patient.post('/kyc',uploader.fields([{ name: 'frontImage', maxCount: 1 },
     { name: 'backImage', maxCount: 1 }
 ]),authMiddleware,patientKyc)
-patient.post('/prescription',authMiddleware,addPrescriptions)
+patient.post('/prescription', uploader.array('fileUrl'), authMiddleware, addPrescriptions);
 patient.delete('/prescription/:id/:itemId',authMiddleware,deletePrescription)
 patient.post('/medical-history',authMiddleware,patientMedicalHistory)
 patient.post('/demographic',authMiddleware,patientDemographic)
@@ -35,6 +35,8 @@ patient.post('/update-image',uploader.fields([{ name: 'profileImage', maxCount: 
 ]),authMiddleware,updateImage)
 
 patient.get('/appointment/:id',authMiddleware,getPatientAppointment)
+patient.get('/lab-report/:id',authMiddleware,getLabReport)
+
 
 
 

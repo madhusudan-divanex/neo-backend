@@ -7,6 +7,7 @@ import LabTest from "../models/LabTest.js";
 import Patient from "../models/Patient/patient.model.js";
 import Prescriptions from "../models/Prescriptions.js";
 import Rating from "../models/Rating.js";
+import TestReport from "../models/testReport.js";
 
 const bookDoctorAppointment = async (req, res) => {
     const { patientId, doctorId, date, fees } = req.body;
@@ -392,8 +393,35 @@ const actionLabAppointment = async (req, res) => {
         return res.status(200).json({ message: 'Server Error' });
     }
 }
+const getLabReport = async (req, res) => {
+    const patientId = req.params.id;
+    const { page = 1, limit = 10 } = req.query
+    try {
+        let isExist;
+        if(patientId<24){
+         isExist = await Patient.findOne({customId:patientId});
+
+        }else{
+             isExist = await Patient.findById(patientId);
+        }
+        if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
+        const appointment = await TestReport.find({ patientId:isExist?._id }).populate('appointmentId').populate({ path: 'labId', select: 'name customId ' })
+            .populate({ path: 'testId', select: 'shortName customId' }).sort({ createdAt: -1 })
+            .skip((page - 1) * 10)
+            .limit(limit)
+        if (appointment) {
+            return res.status(200).json({ message: "Report fetch successfully", data: appointment, success: true })
+        } else {
+            return res.status(200).json({ message: "Report not fount", success: false })
+        }
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
 export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
-    getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment
+    getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
+    getLabReport
 }

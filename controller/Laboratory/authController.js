@@ -104,7 +104,7 @@ const signInLab = async (req, res) => {
                 process.env.JWT_SECRET,
                 // { expiresIn: isRemember ? "30d" : "1d" }
             );
-            return res.status(200).json({ message: "Login success", user: labPerson, userId: empData.labId, token, success: true })
+            return res.status(200).json({ message: "Login success", user: labPerson, userId: empData.labId,isOwner:false, token, success: true })
         }
         const isExist = await Laboratory.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Lab not Found', success: false });
@@ -119,10 +119,10 @@ const signInLab = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: isExist, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: isExist,isOwner:true, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Login success", isNew: true, token, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Login success", isNew: true,isOwner:true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);

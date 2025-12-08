@@ -3,7 +3,8 @@ import mongoose,{ Schema }  from "mongoose";
 const prescriptionItemSchema = new Schema({
   name: { type: String, required: true },
   fileUrl: { type: String, required: true },
-}, { timestamps: true });
+  diagnosticName:{type:String,required:true}
+});
 
 const prescriptionsSchema = new Schema({
   userId: {
@@ -14,5 +15,5 @@ const prescriptionsSchema = new Schema({
   prescriptions: [prescriptionItemSchema]
 }, { timestamps: true });
 
-const Prescriptions = mongoose.model("prescriptions", prescriptionsSchema);
+const Prescriptions = mongoose.model("patient-prescriptions", prescriptionsSchema);
 export default Prescriptions
