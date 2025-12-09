@@ -13,6 +13,10 @@ const requestSchema=new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'Laboratory'
     },
+    pharId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'Pharmacy'
+    },
     message:{type:String,required:true},
     star:{type:Number,min:1,max:5,required:true},
 

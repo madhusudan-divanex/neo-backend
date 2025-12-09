@@ -26,7 +26,7 @@ Laboratory->
     Add  Report  
     Scanner (only for patient)
     Access on permission base
-    Patient Prescriptions and Reports
+    Patient Prescriptions and Lab Reports
 Api->
     Test Report
     Get Appointment Data

@@ -13,9 +13,13 @@ const requestSchema=new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'Laboratory'
     },
+    pharId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'Pharmacy'
+    },
     message:{type:String,required:true},
 
-    type:{type:String,enum:['doctor','patient','lab'],default:'doctor'},
+    type:{type:String,enum:['doctor','patient','lab','pharmacy'],default:'doctor'},
     status:{type:String,enum:['pending','approved','rejected'],default:'pending'}
 
 },{timestamps:true})

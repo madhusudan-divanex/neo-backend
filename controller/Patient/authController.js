@@ -630,7 +630,37 @@ const editRequest = async (req, res) => {
         });
     }
 };
+const getNameProfile = async (req, res) => {
+    const name = req.params.name;
+
+    try {
+        const users = await Patient.find({ name:{ $regex: name, $options: "i" } })
+            .select('-password')
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean();
+
+        if (!users || users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No users found with that name"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: users
+        });
+
+    } catch (err) {
+        return res.status(500).json({ 
+            success: false, 
+            message: err.message 
+        });
+    }
+};
+
 export {
     signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
-    getPatientDemographic,getCustomProfile
+    getPatientDemographic,getCustomProfile,getNameProfile
 }

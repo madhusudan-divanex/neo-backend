@@ -6,6 +6,7 @@ import patient from './routes/patient.js'
 import doctor from './routes/doctor.js'
 import appointment from './routes/appointment.js'
 import lab from './routes/laboratory.js'
+import pharmacy from './routes/pharmacy.js'
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -25,6 +26,8 @@ app.use('/patient',patient)
 app.use('/doctor',doctor)
 app.use('/appointment',appointment)
 app.use('/lab',lab)
+app.use('/pharmacy',pharmacy)
+
 
 
 app.listen(process.env.PORT,()=>{
