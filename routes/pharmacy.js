@@ -2,7 +2,7 @@ import {  changePassword, deletePhar,  forgotEmail, getProfile, getProfileDetail
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { addInventry, addSupplier, changeRequestStatus, completeReturn, createPO, createReturn, deletePO, deleteReturn, deleteSupplier, getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, receivePO, sendMedicineRequest, updatePO, updateReturn, updateSupplier } from "../controller/Pharmacy/pharmacyController.js";
+import { addInventry, addPharPermission, addSupplier, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, receivePO, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier } from "../controller/Pharmacy/pharmacyController.js";
 // import {   pharDashboardData } from "../controller/appointmentController.js";
 // import { addPharPermission,  deletePharPermission,    getAllPermission,  } from "../controller/Pharmacy/PharoratoryContoller.js";
 import { addLabPermission,  deleteLabPermission, deleteStaffData, deleteSubEmpProffesional,  getAllPermission,   labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
@@ -43,29 +43,29 @@ pharmacy.post('/edit-request',authMiddleware,editRequest)
 pharmacy.post('/update-image',uploader.fields([{ name: 'logo', maxCount: 1 }
 ]),authMiddleware,updateImage)
 
-pharmacy.post('/image',uploader.fields([{ name: 'thumbnail' },{ name: 'PharImg' }]),authMiddleware,pharImage)
+pharmacy.post('/image',uploader.fields([{ name: 'thumbnail' },{ name: 'pharImg' }]),authMiddleware,pharImage)
 
-// pharmacy.post('/permission',authMiddleware,addPharPermission)
-// pharmacy.put('/permission',authMiddleware,updatePharPermission)
-// pharmacy.get('/permission/:id',authMiddleware,getAllPermission)
-// pharmacy.delete('/permission',authMiddleware,deletePharPermission)
+pharmacy.post('/permission',authMiddleware,addPharPermission)
+pharmacy.put('/permission',authMiddleware,updatePharPermission)
+pharmacy.get('/permission/:id',authMiddleware,getAllPharPermission)
+pharmacy.delete('/permission',authMiddleware,deletePharPermission)
 
 
 // pharmacy.get('/appointment/:id',authMiddleware,getPharAppointment)
 // pharmacy.get('/appointment-data/:id',authMiddleware,getPharAppointmentData)
 
 
-pharmacy.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,savePharStaff)
-pharmacy.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
-pharmacy.post('/employment',authMiddleware,saveEmpEmployement)
-pharmacy.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
+// pharmacy.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,savePharStaff)
+// pharmacy.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
+// pharmacy.post('/employment',authMiddleware,saveEmpEmployement)
+// pharmacy.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
 
-pharmacy.post('/access',authMiddleware,saveEmpAccess)
-pharmacy.get('/staff/:id',authMiddleware,PharStaff)
-pharmacy.post('/staff-action',authMiddleware,PharStaffAction)
-pharmacy.get('/staff-data/:id',authMiddleware,PharStaffData)
-pharmacy.delete('/staff/:id',authMiddleware,deleteStaffData)
-pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
+// pharmacy.post('/access',authMiddleware,saveEmpAccess)
+// pharmacy.get('/staff/:id',authMiddleware,PharStaff)
+// pharmacy.post('/staff-action',authMiddleware,PharStaffAction)
+// pharmacy.get('/staff-data/:id',authMiddleware,PharStaffData)
+// pharmacy.delete('/staff/:id',authMiddleware,deleteStaffData)
+// pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
 
 pharmacy.post('/delete-image',authMiddleware,deletePharImage)
 

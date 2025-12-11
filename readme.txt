@@ -22,7 +22,7 @@ Trading->
 Wizbizal->
     Feedback(pending)
 
-Laboratory->
+Pharmacy->
     Add  Report  
     Scanner (only for patient)
     Access on permission base

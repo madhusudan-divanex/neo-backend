@@ -1,6 +1,8 @@
 
-import Inventory from '../../models/Pharmacy/inventory.model';
-import MedicineRequest from '../../models/Pharmacy/medicineRequest.model';
+import Inventory from '../../models/Pharmacy/inventory.model.js';
+import MedicineRequest from '../../models/Pharmacy/medicineRequest.model.js';
+import PharPermission from '../../models/Pharmacy/permission.model.js';
+import Pharmacy from '../../models/Pharmacy/pharmacy.model.js';
 
 const addInventry = async (req, res) => {
     try {
@@ -748,7 +750,170 @@ const deleteReturn = async (req, res) => {
     }
 };
 
+const getAllPharPermission = async (req, res) => {
+    const id = req.params.id;
+    let { page = 1, limit = 10, name } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    try {
+        const filter = { pharId: id };
+        if (name && name !== 'null') {
+            filter.name = { $regex: name, $options: "i" };
+        }
+
+        const laboratory = await Pharmacy.findById(id);
+
+        if (!laboratory) {
+            return res.status(200).json({
+                message: "Laboratory not found",
+                success: false
+            });
+        }
+
+        const total = await PharPermission.countDocuments(filter);
+
+        const permissions = await PharPermission.find(filter)
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        return res.status(200).json({
+            message: "Laboratory permissions fetched successfully",
+            data: permissions,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            },
+            success: true
+        });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: 'Server Error',
+            success: false
+        });
+    }
+};
+
+const addPharPermission = async (req, res) => {
+    try {
+        const { name, pharId, ...permissions } = req.body;
+        const isExist = await Pharmacy.findById(pharId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory not found", success: false })
+
+
+        if (!name || !pharId) {
+            return res.status(400).json({
+                success: false,
+                message: "name and pharId are required"
+            });
+        }
+
+        const existing = await PharPermission.findOne({ name, pharId });
+
+        if (existing) {
+            const updated = await PharPermission.findByIdAndUpdate(
+                existing._id,
+                { ...permissions },
+                { new: true }
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: "Permission updated successfully",
+                data: updated
+            });
+        }
+
+        const created = await PharPermission.create({
+            name,
+            pharId,
+            ...permissions
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Permission created successfully",
+            data: created
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+const updatePharPermission = async (req, res) => {
+    try {
+        const { name, permissionId, pharId, ...permissions } = req.body;
+        const isExist = await Pharmacy.findById(pharId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory not found", success: false })
+        const isPermExist = await PharPermission.findById(permissionId);
+        if (!isPermExist) return res.status(200).json({ message: "Permission not found", success: false })
+
+        if (!name || !pharId) {
+            return res.status(400).json({
+                success: false,
+                message: "name and pharId are required"
+            });
+        }
+        const updated = await PharPermission.findByIdAndUpdate(
+            isPermExist._id,
+            { ...permissions, name },
+            { new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Permission updated successfully",
+            data: updated
+        });
+
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+const deletePharPermission = async (req, res) => {
+    const { permissionId, pharId } = req.body;
+    try {
+        const isLabExist = await Pharmacy.findById(pharId);
+        if (!isLabExist) return res.status(200).json({ message: "Laboratory not found", success: false })
+        const isExist = await PharPermission.findById(permissionId);
+        if (!isExist) return res.status(200).json({ message: "Laboratory permission not found", success: false })
+
+        const delPerm = await PharPermission.findByIdAndDelete(permissionId);
+
+        if (delPerm) {
+            return res.status(200).json({
+                success: true,
+                message: "Permission deleted successfully",
+            });
+        }
+        return res.status(200).json({
+            success: false,
+            message: "Permission not deleted"
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
 export {getAllMedicineRequestsForAdmin,getMedicineRequestsList,getPODetails,getPOList,getReturnById,getSupplier,getSupplierById,
     addInventry,inventoryUpdate,inventoryDelete,inventoryGetById,inventoryList,changeRequestStatus,sendMedicineRequest,
 addSupplier,updatePO,updateSupplier,deleteSupplier,createReturn,listReturns,completeReturn,updateReturn,deletePO,deleteReturn,
-createPO,receivePO}
+createPO,receivePO,addPharPermission,updatePharPermission,deletePharPermission,getAllPharPermission}

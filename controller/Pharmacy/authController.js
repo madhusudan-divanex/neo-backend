@@ -49,10 +49,10 @@ const signUpPhar = async (req, res) => {
             if (isExist) {
                 return res.status(200).json({ message: "Pharmacy already exist", success: false })
             }
-            const isLast=await Pharmacy.findOne()?.sort({createdAt:-1})
+            const isLast = await Pharmacy.findOne()?.sort({ createdAt: -1 })
             const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
+                ? String(Number(isLast.customId) + 1).padStart(4, '0')
+                : '0001';
             const hashedPassword = await bcrypt.hash(password, 10);
 
             // Create user
@@ -63,7 +63,7 @@ const signUpPhar = async (req, res) => {
                 contactNumber,
                 password: hashedPassword,
                 gstNumber, about, logo,
-                customId:nextId
+                customId: nextId
             });
 
             if (newphar) {
@@ -111,10 +111,10 @@ const signInPhar = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: isExist,isOwner:true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: isExist, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Login success", isNew: true,isOwner:true, token, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Login success", user: isExist, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -332,10 +332,10 @@ const getProfileDetail = async (req, res) => {
         }
 
         // 2️⃣ Fetch latest related documents
-        const pharPerson = await pharPerson.findOne({ userId }).sort({ createdAt: -1 });
+        const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
         const pharAddress = await PharAddress.findOne({ userId }).sort({ createdAt: -1 });
-        const pharImg = await pharImage.findOne({ userId }).sort({ createdAt: -1 });
-        const pharLicense = await pharLicense.findOne({ userId }).sort({ createdAt: -1 });
+        const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
+        const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
 
         // 3️⃣ Fetch ratings
@@ -618,6 +618,7 @@ const pharImage = async (req, res) => {
 
     const thumbnailFile = req.files?.['thumbnail']?.[0]?.path;
     const pharImgFiles = req.files?.['pharImg'] || [];
+    console.log(pharImgFiles, thumbnailFile)
     try {
         const phar = await Pharmacy.findById(userId);
         if (!phar) return res.status(200).json({ success: false, message: "Pharmacy not found" });
@@ -625,23 +626,27 @@ const pharImage = async (req, res) => {
         let pharImageData = await PharImage.findOne({ userId });
 
         if (pharImageData) {
-            if (thumbnailFile && pharImageData.thumbnail) {
-                safeUnlink(pharImageData.thumbnail);
-            }
-            if (pharImgFiles.length > 0 && pharImageData.pharImg?.length) {
-                pharImageData.pharImg.forEach(img => safeUnlink(img));
-            }
-            pharImageData.thumbnail = thumbnailFile || pharImageData.thumbnail;
-            pharImageData.pharImg = pharImgFiles.length > 0 ? pharImgFiles.map(f => f.path) : pharImageData.pharImg;
 
-            await PharImageData.save();
+            // 🔸 Thumbnail replace logic
+            if (thumbnailFile) {
+                if (pharImageData.thumbnail) safeUnlink(pharImageData.thumbnail);
+                pharImageData.thumbnail = thumbnailFile;
+            }
+
+            // 🔸 pharImg append logic (NOT delete old images)
+            if (pharImgFiles.length > 0) {
+                const newImages = pharImgFiles.map(f => f.path);
+                pharImageData.pharImg = [...pharImageData.pharImg, ...newImages]; // **append only**
+            }
+
+            await pharImageData.save();
 
             return res.status(200).json({
                 success: true,
-                message: "Pharmacy images updated successfully",
-                data: pharImageData
+                message: "Pharmacy images updated successfully"
             });
-        } else {
+        }
+        else {
             // Create new
             pharImageData = await PharImage.create({
                 userId,
@@ -651,8 +656,7 @@ const pharImage = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Pharmacy images saved successfully",
-                data: pharImageData
+                message: "Pharmacy images saved successfully"
             });
         }
 
@@ -691,15 +695,15 @@ const deletePharImage = async (req, res) => {
         const user = await Pharmacy.findById(pharId)
         if (!user) return res.status(200).json({ message: "Pharmacy not found", success: false })
         if (type == 'thumbnail') {
-            await pharImage.findOneAndUpdate({ userId: pharId }, { thumbnail: '' }, { new: true })
+            await PharImage.findOneAndUpdate({ userId: pharId }, { thumbnail: '' }, { new: true })
             safeUnlink(path)
             return res.status(200).json({
                 success: true,
                 message: "Image deleted",
             });
         } else {
-            const imgDoc = await pharImage.findOne({ userId: pharId });
-            await pharImage.findOneAndUpdate({ userId: pharId }, { $pull: { pharImg: path }, }, { new: true })
+            const imgDoc = await PharImage.findOne({ userId: pharId });
+            await PharImage.findOneAndUpdate({ userId: pharId }, { $pull: { pharImg: path }, }, { new: true })
             safeUnlink(path)
             return res.status(200).json({
                 success: true,
@@ -707,6 +711,7 @@ const deletePharImage = async (req, res) => {
             });
         }
     } catch (error) {
+        console.log(error)
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
