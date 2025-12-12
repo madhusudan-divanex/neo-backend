@@ -296,7 +296,6 @@ const deleteSubEmpProffesional = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
 const saveEmpProfessional = async (req, res) => {
     const { id, empId, profession, specialization, totalExperience, professionalBio, education } = req.body;
     const certMeta = JSON.parse(req.body.labCert || "[]");
@@ -361,7 +360,6 @@ const saveEmpProfessional = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
 const saveEmpAccess = async (req, res) => {
     const { id, empId, userName, email, password, permissionId } = req.body;
     try {
@@ -476,7 +474,6 @@ const labStaff = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
 const deleteStaffData = async (req, res) => {
     const id = req.params.id;
 

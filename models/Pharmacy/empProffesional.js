@@ -1,0 +1,26 @@
+import mongoose, { Schema } from "mongoose"
+
+
+const certSchema = new Schema({
+  certName: { type: String, required: true },
+  certFile: { type: String, required: true },
+});
+const eduSchema = new Schema({
+  university: { type: String, required: true },
+  degree: { type: String, required: true },
+  yearFrom:{type:String,required:true},
+  yearTo:{type:String,required:true}
+});
+const licSchema = new Schema({
+    pharCert: [certSchema],
+    profession:{type:String,required:true},
+    specialization:{type:String,required:true},
+    totalExperience:{type:String,required:true},
+    professionalBio:{type:String,required:true},
+    education:[eduSchema],
+    empId: { type: mongoose.Schema.Types.ObjectId, ref: 'phar-staff', required: true },
+}, { timestamps: true })
+
+const EmpProfesional = mongoose.model('phar-emp-prof', licSchema)
+
+export default EmpProfesional

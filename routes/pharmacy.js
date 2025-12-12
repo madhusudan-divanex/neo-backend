@@ -2,10 +2,7 @@ import {  changePassword, deletePhar,  forgotEmail, getProfile, getProfileDetail
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { addInventry, addPharPermission, addSupplier, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, receivePO, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier } from "../controller/Pharmacy/pharmacyController.js";
-// import {   pharDashboardData } from "../controller/appointmentController.js";
-// import { addPharPermission,  deletePharPermission,    getAllPermission,  } from "../controller/Pharmacy/PharoratoryContoller.js";
-import { addLabPermission,  deleteLabPermission, deleteStaffData, deleteSubEmpProffesional,  getAllPermission,   labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
+import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier } from "../controller/Pharmacy/pharmacyController.js";
 
 const pharmacy=express.Router()
 const uploader = getUploader('phar');
@@ -55,16 +52,16 @@ pharmacy.delete('/permission',authMiddleware,deletePharPermission)
 // pharmacy.get('/appointment-data/:id',authMiddleware,getPharAppointmentData)
 
 
-// pharmacy.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,savePharStaff)
-// pharmacy.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
-// pharmacy.post('/employment',authMiddleware,saveEmpEmployement)
-// pharmacy.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
+pharmacy.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,savePharStaff)
+pharmacy.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
+pharmacy.post('/employment',authMiddleware,saveEmpEmployement)
+pharmacy.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
 
-// pharmacy.post('/access',authMiddleware,saveEmpAccess)
-// pharmacy.get('/staff/:id',authMiddleware,PharStaff)
-// pharmacy.post('/staff-action',authMiddleware,PharStaffAction)
-// pharmacy.get('/staff-data/:id',authMiddleware,PharStaffData)
-// pharmacy.delete('/staff/:id',authMiddleware,deleteStaffData)
+pharmacy.post('/access',authMiddleware,saveEmpAccess)
+pharmacy.get('/staff/:id',authMiddleware,pharStaff)
+pharmacy.post('/staff-action',authMiddleware,pharStaffAction)
+pharmacy.get('/staff-data/:id',authMiddleware,pharStaffData)
+pharmacy.delete('/staff/:id',authMiddleware,deleteStaffData)
 // pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
 
 pharmacy.post('/delete-image',authMiddleware,deletePharImage)
@@ -81,9 +78,9 @@ pharmacy.get('/medicine-request/all', authMiddleware, getAllMedicineRequestsForA
 pharmacy.patch('/medicine-request/:id/status', authMiddleware, changeRequestStatus);
 
 pharmacy.post("/supplier", authMiddleware, addSupplier);
-pharmacy.get("/supplier", authMiddleware, getSupplier);
+pharmacy.get("/supplier/:id", authMiddleware, getSupplier);
 pharmacy.get("/supplier/:id", authMiddleware, getSupplierById);
-pharmacy.put("/supplier/:id", authMiddleware, updateSupplier);
+pharmacy.put("/supplier", authMiddleware, updateSupplier);
 pharmacy.delete("/supplier/:id", authMiddleware, deleteSupplier);
 
 pharmacy.post("/return", authMiddleware, createReturn);
@@ -94,7 +91,7 @@ pharmacy.put("/return/:id", authMiddleware, updateReturn);
 pharmacy.delete("/return/:id", authMiddleware, deleteReturn);
 
 pharmacy.post("/purchase-order", authMiddleware, createPO);
-pharmacy.get("/purchase-order", authMiddleware, getPOList);
+pharmacy.get("/purchase-order/:id", authMiddleware, getPOList);
 pharmacy.get("/purchase-order/:id", authMiddleware, getPODetails);
 pharmacy.get("/purchase-order/receive/:poId", authMiddleware, receivePO);
 pharmacy.put("/purchase-order/:id", authMiddleware, updatePO);

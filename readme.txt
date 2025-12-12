@@ -23,10 +23,12 @@ Wizbizal->
     Feedback(pending)
 
 Pharmacy->
-    Add  Report  
-    Scanner (only for patient)
-    Access on permission base
-    Patient Prescriptions and Lab Reports
+    Permission CRUD  
+    Signup,Upload Image,contact person 
+    license ,Addresss
+    edit request
+    change password 
+    profile
 Api->
     Test Report
     Get Appointment Data

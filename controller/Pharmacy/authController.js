@@ -15,6 +15,8 @@ import Rating from '../../models/Rating.js';
 import PharLicense from '../../models/Pharmacy/pharmacyLicense.model.js';
 import mongoose from 'mongoose';
 import safeUnlink from '../../utils/globalFunction.js';
+import EmpAccess from '../../models/Pharmacy/empAccess.model.js';
+import PharStaff from '../../models/Pharmacy/PharEmpPerson.model.js';
 
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
@@ -89,15 +91,15 @@ const signUpPhar = async (req, res) => {
 const signInPhar = async (req, res) => {
     const { email, password } = req.body;
     try {
-        // const pharPerson = await EmpAccess.findOne({email}).populate('permissionId')
-        // if(pharPerson && pharPerson.password==password){
-        //     const empData=await pharStaff.findById(pharPerson.empId)
-        //     const token = jwt.sign(
-        //         { user: empData.pharId },
-        //         process.env.JWT_SECRET,
-        //     );
-        //     return res.status(200).json({ message: "Login success", user: pharPerson, userId: empData.pharId,isOwner:false, token, success: true })
-        // }
+        const pharPerson = await EmpAccess.findOne({email}).populate('permissionId')
+        if(pharPerson && pharPerson.password==password){
+            const empData=await PharStaff.findById(pharPerson.empId)
+            const token = jwt.sign(
+                { user: empData.pharId },
+                process.env.JWT_SECRET,
+            );
+            return res.status(200).json({ message: "Login success",staffId:empData?._id,user:pharPerson, userId: empData.pharId,isOwner:false, token, success: true })
+        }
         const isExist = await Pharmacy.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Phar not Found', success: false });
         const hashedPassword = isExist.password

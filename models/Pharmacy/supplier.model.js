@@ -6,12 +6,9 @@ const SupplierSchema = new mongoose.Schema({
     mobileNumber: { type: String, required: true },
     email: { type: String, unique: true },
     address: { type: String },
-    cityId: { type: mongoose.Schema.Types.ObjectId, ref: "City" },
+    city: { type: String },
     pincode: { type: String },
     score: { type: Number, default: 0 },
-    onTimeDelivery: { type: Number, default: 0 },
-    price: { type: Number, default: 0 },
-    quality: { type: Number, default: 0 }
 }, { timestamps: true });
 
 const Supplier = mongoose.model("Supplier", SupplierSchema);
