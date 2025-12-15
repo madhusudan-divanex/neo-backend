@@ -2,7 +2,7 @@ import {  changePassword, deletePhar,  forgotEmail, getProfile, getProfileDetail
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier } from "../controller/Pharmacy/pharmacyController.js";
+import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData } from "../controller/Pharmacy/pharmacyController.js";
 
 const pharmacy=express.Router()
 const uploader = getUploader('phar');
@@ -62,18 +62,20 @@ pharmacy.get('/staff/:id',authMiddleware,pharStaff)
 pharmacy.post('/staff-action',authMiddleware,pharStaffAction)
 pharmacy.get('/staff-data/:id',authMiddleware,pharStaffData)
 pharmacy.delete('/staff/:id',authMiddleware,deleteStaffData)
-// pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
+pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
 
 pharmacy.post('/delete-image',authMiddleware,deletePharImage)
 
-pharmacy.post('/inventry', authMiddleware, addInventry);
-pharmacy.get('/inventry', authMiddleware, inventoryList);
-pharmacy.get('/inventry/:id', authMiddleware, inventoryGetById);
-pharmacy.put('/inventry', authMiddleware, inventoryUpdate);
-pharmacy.delete('/inventry/:id', authMiddleware, inventoryDelete);
+pharmacy.post('/inventory', authMiddleware, addInventry);
+pharmacy.get('/inventory/:id', authMiddleware, inventoryList);
+pharmacy.get('/inventory-data/:id', authMiddleware, inventoryGetById);
+pharmacy.put('/inventory', authMiddleware, inventoryUpdate);
+pharmacy.delete('/inventory/:id', authMiddleware, inventoryDelete);
+pharmacy.get('/medicine-data/:name', authMiddleware, medicineData);
 
-pharmacy.post('/medicine-request/send', authMiddleware, sendMedicineRequest);
-pharmacy.get('/medicine-request', authMiddleware, getMedicineRequestsList);
+
+pharmacy.post('/medicine-request', authMiddleware, sendMedicineRequest);
+pharmacy.get('/medicine-request/:id', authMiddleware, getMedicineRequestsList);
 pharmacy.get('/medicine-request/all', authMiddleware, getAllMedicineRequestsForAdmin);
 pharmacy.patch('/medicine-request/:id/status', authMiddleware, changeRequestStatus);
 
@@ -84,10 +86,10 @@ pharmacy.put("/supplier", authMiddleware, updateSupplier);
 pharmacy.delete("/supplier/:id", authMiddleware, deleteSupplier);
 
 pharmacy.post("/return", authMiddleware, createReturn);
-pharmacy.get("/return", authMiddleware, listReturns);
-pharmacy.get("/return/:id", authMiddleware, getReturnById);
+pharmacy.get("/return/:id", authMiddleware, listReturns);
+pharmacy.get("/return-data/:id", authMiddleware, getReturnById);
 pharmacy.post("/return/:id/complete", authMiddleware, completeReturn);
-pharmacy.put("/return/:id", authMiddleware, updateReturn);
+pharmacy.put("/return", authMiddleware, updateReturn);
 pharmacy.delete("/return/:id", authMiddleware, deleteReturn);
 
 pharmacy.post("/purchase-order", authMiddleware, createPO);

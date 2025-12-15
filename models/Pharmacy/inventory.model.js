@@ -5,17 +5,14 @@ const InventorySchema = new mongoose.Schema({
     medicineName: String,
     schedule: String,
     batchNumber: String,
-    mfgDate: String,
-    expDate: String,
+    mfgDate: Date,
+    expDate: Date,
     quantity: Number,
     purchasePrice: Number,
     totalStockPrice: Number,
     avgMargin: Number,
     highMargin: Number,
     lowMargin: Number,
-    manufacturerBarcode: String,
-    internalBarcode: { type: String, unique: true },
-    internalBarcodeImage: String,
 }, { timestamps: true });
 const Inventory= mongoose.model('Inventory', InventorySchema);
 export default Inventory

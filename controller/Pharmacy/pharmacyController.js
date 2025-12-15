@@ -9,23 +9,28 @@ import EmpProfesional from "../../models/Pharmacy/empProffesional.js";
 import PharStaff from "../../models/Pharmacy/PharEmpPerson.model.js";
 import Supplier from "../../models/Pharmacy/supplier.model.js"
 import PurchaseOrder from '../../models/Pharmacy/purchaseOrder.model.js';
+import Return from '../../models/Pharmacy/return.model.js'
 import fs from 'fs'
 import safeUnlink from '../../utils/globalFunction.js';
+import mongoose from 'mongoose';
 
 const addInventry = async (req, res) => {
+    const { pharId } = req.body;
     try {
-        const pharId = req.user.pharId;
-        const item = await Inventory.create({ pharId, ...req.body });
+        const isExist = await Pharmacy.findById(pharId)
+        if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
+        const item = await Inventory.create(req.body);
 
         return res.status(200).json({ success: true, message: "Inventory added successfully" });
 
     } catch (error) {
+        console.log(error)
         res.status(400).json({ success: false, error: error.message });
     }
 }
 const inventoryList = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
+        const pharId = req.params.id;
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
@@ -43,10 +48,9 @@ const inventoryList = async (req, res) => {
         }
 
         // Search by schedule
-        if (schedule) {
+        if (schedule !== 'all') {
             filter.schedule = schedule; // exact match
         }
-
         // Fetch data
         const [items, total] = await Promise.all([
             Inventory.find(filter)
@@ -79,7 +83,7 @@ const inventoryGetById = async (req, res) => {
         const updated = await Inventory.findById({ _id: id, pharId: req.user.pharId });
 
         if (!updated) {
-            return res.status(404).json({ success: false, message: "Inventory item not found" });
+            return res.status(200).json({ success: false, message: "Inventory item not found" });
         }
 
         res.status(200).json({ success: true, message: "Inventory get successfully", data: updated });
@@ -91,15 +95,15 @@ const inventoryGetById = async (req, res) => {
 }
 const inventoryUpdate = async (req, res) => {
     try {
-        const id = req.params.id
+        const { inventoryId } = req.body;
         const updated = await Inventory.findOneAndUpdate(
-            { _id: id, pharId: req.user.pharId },
+            { _id: inventoryId, pharId: req.body.pharId },
             req.body,
             { new: true }
         );
 
         if (!updated) {
-            return res.status(404).json({ success: false, message: "Inventory item not found" });
+            return res.status(200).json({ success: false, message: "Inventory item not found" });
         }
 
         res.status(200).json({ success: true, message: "Inventory updated" });
@@ -112,19 +116,95 @@ const inventoryUpdate = async (req, res) => {
 const inventoryDelete = async (req, res) => {
     try {
         const id = req.params.id;
-        const deleted = await Inventory.findOneAndDelete({ _id: id, pharId: req.user.pharId });
 
+        const deleted = await Inventory.findByIdAndDelete(id);
         if (!deleted) {
-            return res.status(404).json({ success: false, message: "Item not found" });
+            return res.status(200).json({
+                success: false,
+                message: "Item not found"
+            });
         }
 
-        res.status(200).json({ success: true, message: "Inventory deleted" });
+        await PurchaseOrder.updateMany(
+            { "products.inventoryId": id },
+            { $pull: { products: { inventoryId: id } } }
+        );
+
+        await Return.updateMany(
+            { "products.inventoryId": id },
+            { $pull: { products: { inventoryId: id } } }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Inventory deleted and removed from related documents"
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+const medicineData = async (req, res) => {
+    try {
+        const name = req.params.name;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const [items, total] = await Promise.all([
+            Inventory.find({ medicineName: name })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Inventory.countDocuments({ medicineName: name })
+        ]);
+        const inventoryValue = await items.reduce(
+            (sum, item) => sum + (item.totalStockPrice || 0),
+            0
+        );
+        const now = new Date();
+
+        // next 1 month ki last date
+        const nextMonth = new Date();
+        nextMonth.setMonth(now.getMonth() + 1);
+
+        const expiringSoonCount = items.reduce((count, item) => {
+            if (!item?.expDate) return count;
+
+            const expDate = new Date(item.expDate);
+
+            if (expDate >= now && expDate <= nextMonth) {
+                return count + 1;
+            }
+
+            return count;
+        }, 0);
+
+
+        return res.status(200).json({
+            success: true,
+            data: items,
+            inventoryValue,
+            expiringSoonCount,
+            pagiantion: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            }
+        });
 
     } catch (error) {
         console.log(error);
         res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 const getMedicineRequestsList = async (req, res) => {
     try {
         const pharId = req.user.pharId;
@@ -173,12 +253,11 @@ const getMedicineRequestsList = async (req, res) => {
 };
 const sendMedicineRequest = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
-        const { medicineId, quantity, message } = req.body;
+        const { medicineId, quantity, message, pharId, schedule } = req.body;
 
         // Check medicine exists and is H1 schedule
-        const medicine = await Inventory.findOne({ _id: medicineId, pharId, schedule: 'H1' });
-        if (!medicine) return res.status(404).json({ success: false, message: "Medicine not found or not H1 schedule" });
+        const medicine = await Inventory.findOne({ _id: medicineId, pharId, schedule });
+        if (!medicine) return res.status(200).json({ success: false, message: "Medicine not found or not H1 schedule" });
 
         const newRequest = new MedicineRequest({
             pharId,
@@ -208,7 +287,7 @@ const changeRequestStatus = async (req, res) => {
 
         const request = await MedicineRequest.findById(id);
         if (!request) {
-            return res.status(404).json({ success: false, message: "Request not found" });
+            return res.status(200).json({ success: false, message: "Request not found" });
         }
 
         request.status = status;
@@ -278,8 +357,7 @@ const getAllMedicineRequestsForAdmin = async (req, res) => {
 
 const createPO = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
-        const { supplierId, deliveryDate, note, products } = req.body;
+        const { supplierId, deliveryDate, note, products, pharId } = req.body;
 
         const supplier = await Supplier.findById(supplierId);
         if (!supplier) {
@@ -306,36 +384,62 @@ const createPO = async (req, res) => {
 }
 
 const getPOList = async (req, res) => {
-    const pharId = req.params.body;
     try {
         let { page = 1, limit = 10, search = "" } = req.query;
-
         page = parseInt(page);
         limit = parseInt(limit);
 
+        const matchStage = { pharId: new mongoose.Types.ObjectId(req.params.id) };
 
-        const query = { pharId };
         if (search) {
-            const regex = new RegExp(search, "i");
-
-            query.$or = [
-                { note: regex },                // search note
-                { deliveryDate: regex },        // search by date
-                { success: regex },              // search by status
-            ];
+            matchStage["supplier.name"] = { $regex: search, $options: "i" };
         }
 
-        const total = await PurchaseOrder.countDocuments(query);
+        const pipeline = [
+            {
+                $lookup: {
+                    from: "suppliers",
+                    localField: "supplierId",
+                    foreignField: "_id",
+                    as: "supplier"
+                }
+            },
+            { $unwind: "$supplier" },
+            { $match: matchStage },
+            // 👇 populate jaisa behaviour
+            {
+                $addFields: {
+                    supplierId: {
+                        _id: "$supplier._id",
+                        name: "$supplier.name",
+                        mobileNumber: "$supplier.mobileNumber"
+                    }
+                }
+            },
 
-        const POs = await PurchaseOrder.find(query)
-            .populate("supplierId", "name mobileNumber") // optional fields
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+            { $project: { supplier: 0 } }, // extra field remove
+
+            { $sort: { createdAt: -1 } },
+
+            {
+                $facet: {
+                    data: [
+                        { $skip: (page - 1) * limit },
+                        { $limit: limit }
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
+
+        const result = await PurchaseOrder.aggregate(pipeline);
+        const total = result[0].totalCount[0]?.count || 0;
 
         return res.status(200).json({
             success: true,
-            data: POs,
+            data: result[0].data,
             pagination: {
                 total,
                 page,
@@ -345,9 +449,14 @@ const getPOList = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };
+
+
 
 const getPODetails = async (req, res) => {
     try {
@@ -360,13 +469,12 @@ const getPODetails = async (req, res) => {
 
 const updatePO = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
         const { id } = req.params;  // PO ID
-        const { supplierId, deliveryDate, note, products } = req.body;
+        const { supplierId, deliveryDate, note, products, pharId } = req.body;
 
         const po = await PurchaseOrder.findOne({ _id: id, pharId });
         if (!po) {
-            return res.status(404).json({ success: false, message: "PO not found" });
+            return res.status(200).json({ success: false, message: "PO not found" });
         }
 
         if (supplierId) {
@@ -401,8 +509,8 @@ const updatePO = async (req, res) => {
 
 const deletePO = async (req, res) => {
     try {
-        const res = await PurchaseOrder.findByIdAndDelete({ _id: req.params.id, pharId: req.user.pharId });
-        res.status(200).json({ success: true, message: "PO Deleted" })
+        const res = await PurchaseOrder.findByIdAndDelete(req.params.id);
+        return res.status(200).json({ success: true, message: "PO Deleted" })
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message })
     }
@@ -411,7 +519,7 @@ const deletePO = async (req, res) => {
 const receivePO = async (req, res) => {
     try {
         const po = await PurchaseOrder.findById(req.params.poId);
-        if (!po) return res.status(404).json({ success: false, message: "PO not found" });
+        if (!po) return res.status(200).json({ success: false, message: "PO not found" });
 
         if (PurchaseOrder.status === "received")
             return res.status(400).json({ success: false, message: "Already received" });
@@ -461,11 +569,11 @@ const receivePO = async (req, res) => {
 
 const addSupplier = async (req, res) => {
     try {
-        const isExist =await Supplier.findOne({email:req.body.email})
-        if(isExist) return res.status(200).json({message:"Already exists",success:false})
+        const isExist = await Supplier.findOne({ email: req.body.email })
+        if (isExist) return res.status(200).json({ message: "Already exists", success: false })
         const supplier = await Supplier.create(req.body);
 
-        return res.status(200).json({ success: true, message: "Supplier added successfully" ,supplier});
+        return res.status(200).json({ success: true, message: "Supplier added successfully", supplier });
     } catch (error) {
         console.log(error)
         return res.status(500).json({ success: false, message: error.message })
@@ -524,7 +632,7 @@ const getSupplierById = async (req, res) => {
         });
 
         if (!supplier) {
-            return res.status(404).json({ success: false, message: "Supplier not found" });
+            return res.status(200).json({ success: false, message: "Supplier not found" });
         }
 
         res.status(200).json({ success: true, data: supplier });
@@ -536,7 +644,7 @@ const getSupplierById = async (req, res) => {
 
 // UPDATE SUPPLIER
 const updateSupplier = async (req, res) => {
-    const {supplierId}=req.body
+    const { supplierId } = req.body
     try {
         const supplier = await Supplier.findOneAndUpdate(
             { _id: supplierId, pharId: req.body.pharId },
@@ -545,7 +653,7 @@ const updateSupplier = async (req, res) => {
         );
 
         if (!supplier) {
-            return res.status(404).json({ success: false, message: "Supplier not found" });
+            return res.status(200).json({ success: false, message: "Supplier not found" });
         }
 
         res.status(200).json({ success: true, message: "Supplier updated" });
@@ -563,7 +671,7 @@ const deleteSupplier = async (req, res) => {
         });
 
         if (!supplier) {
-            return res.status(404).json({ success: false, message: "Supplier not found" });
+            return res.status(200).json({ success: false, message: "Supplier not found" });
         }
 
         res.status(200).json({ success: true, message: "Supplier deleted successfully" });
@@ -587,8 +695,8 @@ async function validateProductsAvailability(pharId, products) {
 
 const createReturn = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
-        const { supplierId, deliveryDate, products, reason } = req.body;
+        const { supplierId, deliveryDate, products, reason, pharId, status } = req.body;
+
 
         if (!supplierId || !Array.isArray(products) || products.length === 0) {
             return res.status(400).json({ success: false, message: "supplierId and products are required" });
@@ -606,7 +714,7 @@ const createReturn = async (req, res) => {
             supplierId,
             deliveryDate,
             products,
-            reason
+            reason, status
         });
 
         res.status(201).json({ success: true, data: ret, message: "Return generated" });
@@ -617,32 +725,114 @@ const createReturn = async (req, res) => {
 
 const listReturns = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
+        const pharId = req.params.id;
         const { page = 1, limit = 10, status, search } = req.query;
-        const query = { pharId };
-        if (status) query.status = status;
+        const matchStage = { pharId: new mongoose.Types.ObjectId(req.params.id) };
+        if (status !== 'all') query.status = status;
         if (search) {
-            // naive search: supplier name or product name
-            query.$or = [
-                { reason: { $regex: search, $options: "i" } },
-            ];
+            matchStage["supplier.name"] = { $regex: search, $options: "i" };
         }
+        const pipeline = [
+            // Lookup supplier
+            {
+                $lookup: {
+                    from: "suppliers",
+                    localField: "supplierId",
+                    foreignField: "_id",
+                    as: "supplier"
+                }
+            },
+            { $unwind: "$supplier" },
 
-        const docs = await Return.find(query)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(Number(limit))
-            .populate("supplierId", "name mobileNumber")
-            .populate("products.inventoryId", "medicineName batchNumber");
+            // Lookup inventory for each product inside products array
+            {
+                $lookup: {
+                    from: "inventories", // MongoDB collection name (usually plural lowercase)
+                    localField: "products.inventoryId",
+                    foreignField: "_id",
+                    as: "inventoriesData"
+                }
+            },
 
-        const total = await Return.countDocuments(query);
+            // Add medicineName to each product from inventoriesData
+            {
+                $addFields: {
+                    products: {
+                        $map: {
+                            input: "$products",
+                            as: "product",
+                            in: {
+                                $mergeObjects: [
+                                    "$$product",
+                                    {
+                                        medicineName: {
+                                            $let: {
+                                                vars: {
+                                                    matchedInventory: {
+                                                        $arrayElemAt: [
+                                                            {
+                                                                $filter: {
+                                                                    input: "$inventoriesData",
+                                                                    cond: { $eq: ["$$this._id", "$$product.inventoryId"] }
+                                                                }
+                                                            },
+                                                            0
+                                                        ]
+                                                    }
+                                                },
+                                                in: "$$matchedInventory.medicineName"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
 
+            { $project: { inventoriesData: 0 } }, // Remove temporary lookup field
+
+            // Filter stage
+            { $match: matchStage },
+
+            // Add supplier info as embedded object instead of just ID
+            {
+                $addFields: {
+                    supplierId: {
+                        _id: "$supplier._id",
+                        name: "$supplier.name",
+                        mobileNumber: "$supplier.mobileNumber"
+                    }
+                }
+            },
+
+            { $project: { supplier: 0 } }, // Remove extra field
+
+            { $sort: { createdAt: -1 } },
+
+            {
+                $facet: {
+                    data: [
+                        { $skip: (page - 1) * limit },
+                        { $limit: limit }
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
+
+        const result = await Return.aggregate(pipeline)
+
+        const total = result[0].totalCount[0]?.count || 0;
         return res.status(200).json({
-            success: true, data: docs,
+            success: true, data: result[0].data,
             pagination: {
                 total,
                 page: Number(page),
-                pages: Math.ceil(total / limit)
+                totalPages: Math.ceil(total / limit)
             }
         });
     } catch (error) {
@@ -659,7 +849,7 @@ const getReturnById = async (req, res) => {
             .populate("supplierId", "name mobileNumber")
             .populate("products.inventoryId", "medicineName quantity batchNumber");
 
-        if (!doc) return res.status(404).json({ success: false, message: "Return not found" });
+        if (!doc) return res.status(200).json({ success: false, message: "Return not found" });
 
         return res.status(200).json({ success: true, data: doc });
     } catch (error) {
@@ -670,24 +860,23 @@ const getReturnById = async (req, res) => {
 // UPDATE RETURN (only while Pending)
 const updateReturn = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
-        const id = req.params.id;
-        const updates = req.body;
+        const { supplierId, deliveryDate, status, products, reason, pharId, returnId } = req.body;
 
-        const ret = await Return.findOne({ _id: id, pharId });
-        if (!ret) return res.status(404).json({ success: false, message: "Return not found" });
-        if (ret.status !== "Pending") return res.status(400).json({ success: false, message: "Only pending returns can be updated" });
+        const ret = await Return.findOne({ _id: returnId, pharId });
+        if (!ret) return res.status(200).json({ success: false, message: "Return not found" });
 
         // If products changed, validate availability
-        if (updates.products) {
-            const validation = await validateProductsAvailability(pharId, updates.products);
+        if (products) {
+            const validation = await validateProductsAvailability(pharId, products);
             if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
-            ret.products = updates.products;
+            ret.products = products;
         }
 
-        if (updates.deliveryDate) ret.deliveryDate = updates.deliveryDate;
-        if (updates.reason) ret.reason = updates.reason;
-        if (updates.supplierId) ret.supplierId = updates.supplierId;
+        if (deliveryDate) ret.deliveryDate = deliveryDate;
+        if (reason) ret.reason = reason;
+        if (supplierId) ret.supplierId = supplierId;
+        if (status) ret.status = status;
+
 
         await ret.save();
         return res.status(200).json({ success: true, data: ret, message: "Return Updated" });
@@ -705,7 +894,7 @@ const completeReturn = async (req, res) => {
         const id = req.params.id;
 
         const ret = await Return.findOne({ _id: id, pharId }).session(session);
-        if (!ret) return res.status(404).json({ success: false, message: "Return not found" });
+        if (!ret) return res.status(200).json({ success: false, message: "Return not found" });
         if (ret.status !== "Pending") return res.status(400).json({ success: false, message: "Only pending returns can be completed" });
 
         // Start transaction (if your MongoDB supports it)
@@ -745,12 +934,11 @@ const completeReturn = async (req, res) => {
 // DELETE RETURN (only if pending)
 const deleteReturn = async (req, res) => {
     try {
-        const pharId = req.user.pharId;
         const id = req.params.id;
 
-        const ret = await Return.findOne({ _id: id, pharId });
-        if (!ret) return res.status(404).json({ success: false, message: "Return not found" });
-        if (ret.status !== "Pending") return res.status(400).json({ success: false, message: "Only pending returns can be deleted" });
+        const ret = await Return.findOne({ _id: id });
+        if (!ret) return res.status(200).json({ success: false, message: "Return not found" });
+        if (ret.status !== "Pending") return res.status(200).json({ success: false, message: "Only pending returns can be deleted" });
 
         await Return.deleteOne({ _id: id });
         return res.status(200).json({ success: true, message: "Return deleted" });
@@ -786,9 +974,9 @@ const getAllPharPermission = async (req, res) => {
         const permissions = await PharPermission.find(filter)
             .skip((page - 1) * limit)
             .limit(limit).lean();
-        const usedPermission=await Promise.all( permissions?.map(async(item)=>{
-            const totalUsed=await PharStaff.countDocuments({permissionId:item?._id}) ||0
-            return{
+        const usedPermission = await Promise.all(permissions?.map(async (item) => {
+            const totalUsed = await PharStaff.countDocuments({ permissionId: item?._id }) || 0
+            return {
                 ...item,
                 totalUsed
             }
@@ -1188,7 +1376,7 @@ const pharStaff = async (req, res) => {
     try {
         const isExist = await Pharmacy.findById(id);
         if (!isExist) {
-            return res.status(404).json({ message: "Pharmacy not found", success: false });
+            return res.status(200).json({ message: "Pharmacy not found", success: false });
         }
 
         const filter = { pharId: id };
@@ -1196,7 +1384,6 @@ const pharStaff = async (req, res) => {
             filter.name = { $regex: name, $options: "i" };
         }
         if (status && status !== "undefined") {
-            console.log(status)
             filter.status = status;
         }
 
@@ -1260,10 +1447,48 @@ const deleteStaffData = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+const pharDashboardData = async (req, res) => {
+    const pharId = req.params.id;
+    try {
+        const isExist = await Pharmacy.findById(pharId);
+        if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
+        const items = await Inventory.find({pharId})
+        const inventoryValue = await items.reduce(
+            (sum, item) => sum + (item.totalStockPrice || 0),
+            0
+        );
+          const now = new Date();
+
+        // next 1 month ki last date
+        const nextMonth = new Date();
+        nextMonth.setMonth(now.getMonth() + 1);
+
+        const expiringSoonCount = items.reduce((count, item) => {
+            if (!item?.expDate) return count;
+
+            const expDate = new Date(item.expDate);
+
+            if (expDate >= now && expDate <= nextMonth) {
+                return count + 1;
+            }
+
+            return count;
+        }, 0);
+       
+        return res.status(200).json({
+            message: "Dashboard data fetch successfully", inventoryValue, expiringSoonCount
+                        , success: true
+        })
+
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
 export { deleteStaffData, pharStaff, pharStaffAction, pharStaffData, saveEmpAccess, saveEmpProfessional, deleteSubEmpProffesional, saveEmpEmployement, savePharStaff }
 export {
     getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById,
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,
     addSupplier, updatePO, updateSupplier, deleteSupplier, createReturn, listReturns, completeReturn, updateReturn, deletePO, deleteReturn,
-    createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission
+    createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission, medicineData,pharDashboardData
 }
