@@ -590,4 +590,25 @@ const editRequest = async (req, res) => {
         });
     }
 };
-export { signInDoctor, updateImage, doctorEduWork, deleteEdu, doctorLicense, deleteLicense, deleteWork, doctorAbout, getProfileDetail, signUpDoctor, resetPassword, doctorKyc, editRequest, forgotEmail, verifyOtp, resendOtp, getProfile, updateDoctor, changePassword, deleteDoctor }
+const getCustomProfile = async (req, res) => {
+    const userId=req.params.id
+    try {
+        let user;
+        if(userId<24){
+            user = await Doctor.findOne({customId:userId}).select('-password').lean();
+        }else{
+            user = await Doctor.findById(userId).select('-password').lean();
+        }
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
+        // const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
+        res.status(200).json({
+            success: true,
+            data: user
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+export { signInDoctor, updateImage, doctorEduWork,getCustomProfile, deleteEdu, doctorLicense, deleteLicense, deleteWork, doctorAbout, getProfileDetail, signUpDoctor, resetPassword, doctorKyc, editRequest, forgotEmail, verifyOtp, resendOtp, getProfile, updateDoctor, changePassword, deleteDoctor }

@@ -23,7 +23,9 @@ Wizbizal->
     Feedback(pending)
 
 Pharmacy->
-    Permission CRUD  
+    CRUD Inventory
+    CRUD Return 
+    CRUD Purchase Order
     Signup,Upload Image,contact person 
     license ,Addresss
     edit request

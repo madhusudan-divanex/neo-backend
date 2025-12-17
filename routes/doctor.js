@@ -1,4 +1,4 @@
-import {  changePassword, deleteDoctor,  forgotEmail, getProfile, getProfileDetail,  doctorKyc,  resendOtp, signInDoctor, signUpDoctor, updateDoctor, verifyOtp, doctorLicense, deleteLicense, doctorAbout, doctorEduWork, updateImage, editRequest, deleteEdu, deleteWork } from "../controller/Doctor/authController.js"
+import {  changePassword, deleteDoctor,getCustomProfile,  forgotEmail, getProfile, getProfileDetail,  doctorKyc,  resendOtp, signInDoctor, signUpDoctor, updateDoctor, verifyOtp, doctorLicense, deleteLicense, doctorAbout, doctorEduWork, updateImage, editRequest, deleteEdu, deleteWork } from "../controller/Doctor/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
@@ -10,6 +10,7 @@ const uploader = getUploader('doctor');
 doctor.post('',signUpDoctor)
 doctor.get('',authMiddleware,getProfile)
 doctor.get('/detail/:id',authMiddleware,getProfileDetail)
+doctor.get('/:id',authMiddleware,getCustomProfile)
 doctor.post('/signin',signInDoctor)
 doctor.post('/forgot-email',forgotEmail)
 doctor.post('/resend-otp',resendOtp)

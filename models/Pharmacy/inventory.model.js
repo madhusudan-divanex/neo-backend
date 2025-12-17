@@ -13,6 +13,7 @@ const InventorySchema = new mongoose.Schema({
     avgMargin: Number,
     highMargin: Number,
     lowMargin: Number,
+    status:{type:String,enum:['Pending','Approved','Rejected'],default:'Pending'}
 }, { timestamps: true });
 const Inventory= mongoose.model('Inventory', InventorySchema);
 export default Inventory

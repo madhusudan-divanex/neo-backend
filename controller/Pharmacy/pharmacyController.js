@@ -10,7 +10,7 @@ import PharStaff from "../../models/Pharmacy/PharEmpPerson.model.js";
 import Supplier from "../../models/Pharmacy/supplier.model.js"
 import PurchaseOrder from '../../models/Pharmacy/purchaseOrder.model.js';
 import Return from '../../models/Pharmacy/return.model.js'
-import fs from 'fs'
+import fs, { stat } from 'fs'
 import safeUnlink from '../../utils/globalFunction.js';
 import mongoose from 'mongoose';
 
@@ -19,7 +19,19 @@ const addInventry = async (req, res) => {
     try {
         const isExist = await Pharmacy.findById(pharId)
         if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
-        const item = await Inventory.create(req.body);
+        let data;
+        if(req.body.schedule=='H1'){
+            data = {
+                ...req.body,
+                status: 'Pending'
+            }
+        }else{
+            data = {
+                ...req.body,
+                status: 'Approved'
+            }
+        }
+        const item = await Inventory.create(data);
 
         return res.status(200).json({ success: true, message: "Inventory added successfully" });
 
@@ -38,13 +50,16 @@ const inventoryList = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Search filters
-        const { search, schedule } = req.query;
+        const { search, schedule,status } = req.query;
 
         let filter = { pharId };
 
         // Search by name (medicineName)
         if (search) {
             filter.medicineName = { $regex: search, $options: "i" };
+        }
+        if (status) {
+            filter.status =status;
         }
 
         // Search by schedule
@@ -206,51 +221,115 @@ const medicineData = async (req, res) => {
     }
 };
 const getMedicineRequestsList = async (req, res) => {
-    try {
-        const pharId = req.user.pharId;
-        const { page = 1, limit = 10, search, status } = req.query;
+  try {
+    const pharId = req.params.id;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+    const search = req.query.search?.trim();
+    const status = req.query.status;
 
-        const filter = { pharId };
-        if (status) filter.status = status;
-
-        const query = MedicineRequest.find(filter).populate({
-            path: 'medicineId',
-            match: search ? { medicineName: { $regex: search, $options: 'i' } } : {},
-            select: 'medicineName description quantity'
-        });
-
-        const skip = (page - 1) * limit;
-        query.skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
-
-        const [data, total] = await Promise.all([
-            query.exec(),
-            MedicineRequest.countDocuments(filter)
-        ]);
-
-        // Filter out null populated medicineId due to search mismatch
-        const filteredData = data.filter(item => item.medicineId !== null);
-
-        res.json({
-            success: true,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            totalPages: Math.ceil(total / limit),
-            data: filteredData.map(item => ({
-                _id: item._id,
-                medicineName: item.medicineId.medicineName,
-                date: item.createdAt,
-                description: item.medicineId.description || "",
-                stock: item.medicineId.quantity,
-                success: item.status
-            }))
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: "Server error" });
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(pharId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pharmacy id"
+      });
     }
+
+    const skip = (page - 1) * limit;
+
+    // ✅ Base match
+    const matchStage = {
+      pharId: new mongoose.Types.ObjectId(pharId)
+    };
+
+    if (status && status !== "all") {
+      matchStage.status = status;
+    }
+
+    // ✅ Aggregation pipeline
+    const pipeline = [
+      { $match: matchStage },
+
+      // 🔹 Lookup inventory
+      {
+        $lookup: {
+          from: "inventories",
+          localField: "medicineId",
+          foreignField: "_id",
+          as: "medicine"
+        }
+      },
+
+      // 🔹 Safe unwind
+      {
+        $unwind: {
+          path: "$medicine",
+          preserveNullAndEmptyArrays: false
+        }
+      }
+    ];
+
+    // 🔍 Search by medicine name (optimized)
+    if (search) {
+      pipeline.push({
+        $match: {
+          "medicine.medicineName": {
+            $regex: search,
+            $options: "i"
+          }
+        }
+      });
+    }
+
+    // 🔹 Pagination + total count
+    pipeline.push(
+      { $sort: { _id: -1 } },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit }
+          ],
+          total: [
+            { $count: "count" }
+          ]
+        }
+      }
+    );
+
+    const result = await MedicineRequest.aggregate(pipeline);
+
+    const data = result[0]?.data || [];
+    const total = result[0]?.total[0]?.count || 0;
+
+    // ✅ Final response
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      data: data.map(item => ({
+        _id: item._id,
+        medicineName: item.medicine.medicineName,
+        message: item.message || "",
+        quantity: item.medicine.quantity,
+        status: item.status,
+        createdAt: item.createdAt
+      }))
+    });
+
+  } catch (error) {
+    console.error("getMedicineRequestsList error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
 };
+
+
 const sendMedicineRequest = async (req, res) => {
     try {
         const { medicineId, quantity, message, pharId, schedule } = req.body;
@@ -1452,32 +1531,26 @@ const pharDashboardData = async (req, res) => {
     try {
         const isExist = await Pharmacy.findById(pharId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
-        const items = await Inventory.find({pharId})
+        const items = await Inventory.find({ pharId })
         const inventoryValue = await items.reduce(
             (sum, item) => sum + (item.totalStockPrice || 0),
             0
         );
-          const now = new Date();
-
-        // next 1 month ki last date
+        const now = new Date();
         const nextMonth = new Date();
         nextMonth.setMonth(now.getMonth() + 1);
-
         const expiringSoonCount = items.reduce((count, item) => {
             if (!item?.expDate) return count;
-
             const expDate = new Date(item.expDate);
-
             if (expDate >= now && expDate <= nextMonth) {
                 return count + 1;
             }
-
             return count;
         }, 0);
-       
+
         return res.status(200).json({
-            message: "Dashboard data fetch successfully", inventoryValue, expiringSoonCount
-                        , success: true
+            message: "Dashboard data fetch successfully", inventoryValue,
+            expiringSoonCount, success: true
         })
 
     } catch (err) {
@@ -1490,5 +1563,5 @@ export {
     getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById,
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,
     addSupplier, updatePO, updateSupplier, deleteSupplier, createReturn, listReturns, completeReturn, updateReturn, deletePO, deleteReturn,
-    createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission, medicineData,pharDashboardData
+    createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission, medicineData, pharDashboardData
 }
