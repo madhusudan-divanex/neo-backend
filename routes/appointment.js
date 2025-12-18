@@ -1,6 +1,6 @@
 import express from 'express'
 import authMiddleware from '../middleware/authMiddleare.js'
-import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating } from '../controller/appointmentController.js'
+import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getDoctorPrescriptiondata, getLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating } from '../controller/appointmentController.js'
 
 const appointment=express.Router()
 appointment.post('/doctor',authMiddleware,bookDoctorAppointment)
@@ -9,6 +9,7 @@ appointment.put('/doctor-action',authMiddleware,actionDoctorAppointment)
 appointment.put('/doctor-cancel',authMiddleware,cancelDoctorAppointment)
 
 appointment.post('/prescription',authMiddleware,doctorPrescription)
+appointment.get('/prescription-data/:id',authMiddleware,getDoctorPrescriptiondata)
 appointment.put('/prescription',authMiddleware,editDoctorPrescription)
 appointment.post('/lab-test',authMiddleware,doctorLabTest)
 appointment.post('/rating',authMiddleware,giveRating)

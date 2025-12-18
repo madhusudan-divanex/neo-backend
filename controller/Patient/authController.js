@@ -34,7 +34,7 @@ const signUpPatient = async (req, res) => {
             gender,
             email,
             contactNumber,
-            customId: nextId,
+            customId: 'PAT-'+nextId,
             password: hashedPassword,
         });
 

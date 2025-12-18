@@ -2,9 +2,11 @@
 import mongoose from "mongoose";
 
 const ReturnSchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "Pharmacy" },
-    patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient" },
-    doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor" },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "Pharmacy",required:true },
+    patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient" ,required:true },
+    doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor" ,required:true },
+    prescriptionFile: { type: String },
+    prescriptionId: { type: mongoose.Schema.Types.ObjectId, ref: "Prescription" },
     products: [
         {
             inventoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory" },

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Inventory from '../models/Pharmacy/inventory.model.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const safeUnlink = (filePath) => {
@@ -19,5 +20,34 @@ const safeUnlink = (filePath) => {
     console.error('Error deleting file:', filePath, err);
   }
 };
+const updateInventoryStock = async (products, type = "decrease") => {
+    for (let item of products) {
+        const inventory = await Inventory.findById(item.inventoryId);
+        if (type === "decrease") {
+            inventory.quantity -= Number(item.quantity);
+            inventory.sellCount +=Number(item.quantity);
+        } else {
+            inventory.quantity += Number(item.quantity);
+            inventory.sellCount-=Number(item.quantity);
 
+        }
+        await inventory.save();
+    }
+};
+const checkStockAvailability = async (pharId,products) => {
+    for (let item of products) {
+        const inventory = await Inventory.findOne({ _id: item.inventoryId, pharId });
+        if (!inventory) {
+            return { success: false, message: "Inventory not found" };
+        }
+        if (inventory.quantity < item.quantity) {
+            return {
+                success: false,
+                message: `Insufficient stock for ${inventory._id}`
+            };
+        }
+    }
+    return { success: true };
+};
+export { updateInventoryStock, checkStockAvailability };
 export default safeUnlink;

@@ -23,6 +23,10 @@ const signUpDoctor = async (req, res) => {
         if (isExist) {
             return res.status(200).json({ message: "Doctor already exist", success: false })
         }
+        const isLast = await Doctor.findOne()?.sort({ createdAt: -1 })
+        const nextId = isLast
+            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            : '0001';
         const hashedPassword = await bcrypt.hash(password, 10);
         // Create user
         const newDoctor = await Doctor.create({
@@ -31,6 +35,7 @@ const signUpDoctor = async (req, res) => {
             email,
             contactNumber,
             password: hashedPassword,
+            customId: 'DOC-'+nextId,
             dob,
         });
         if (newDoctor) {

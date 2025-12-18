@@ -8,11 +8,13 @@ const InventorySchema = new mongoose.Schema({
     mfgDate: Date,
     expDate: Date,
     quantity: Number,
+    sellCount:{type:Number,default:0},
     purchasePrice: Number,
     totalStockPrice: Number,
     avgMargin: Number,
     highMargin: Number,
     lowMargin: Number,
+    customId: { type: String, required: true },
     status:{type:String,enum:['Pending','Approved','Rejected'],default:'Pending'}
 }, { timestamps: true });
 const Inventory= mongoose.model('Inventory', InventorySchema);

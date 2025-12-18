@@ -19,8 +19,12 @@ Laboratory Api ->
 Trading->
     Historical data 
 
-Wizbizal->
-    Feedback(pending)
+Api->
+    Get Prescription data
+    CRD Sell
+Pharmacy->
+    Manual Sell 
+    Generate Bill 
 
 Pharmacy->
     CRUD Inventory
