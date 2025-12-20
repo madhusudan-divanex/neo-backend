@@ -14,6 +14,7 @@ const ReturnSchema = new mongoose.Schema({
             price:Number
         }
     ],
+    total:{ type: Number, default: 0 },
     paymentStatus: {type: String, enum: ["Pending", "Completed"], default: "Pending" },
 }, { timestamps: true });
 

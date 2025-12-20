@@ -13,6 +13,7 @@ const requestSchema = new Schema({
     customId:{type:String,required:true},
     fees: { type: String, required: true },
     note: { type: Date },
+    customId: { type: String, required: true },
     prescriptionId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'prescriptions'

@@ -9,7 +9,7 @@ const uploader = getUploader('lab');
 
 
 lab.post('',uploader.fields([{ name: 'logo' }]),signUpLab)
-lab.get('/:id',authMiddleware,getProfile)
+lab.get('/:id',getProfile)
 lab.get('/detail/:id',authMiddleware,getProfileDetail)
 lab.post('/signin',signInLab)
 lab.post('/forgot-email',forgotEmail)

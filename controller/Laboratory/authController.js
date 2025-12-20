@@ -104,7 +104,8 @@ const signInLab = async (req, res) => {
                 process.env.JWT_SECRET,
                 // { expiresIn: isRemember ? "30d" : "1d" }
             );
-            return res.status(200).json({ message: "Login success", user: labPerson, userId: empData.labId,isOwner:false, token, success: true })
+            console.log(labPerson)
+            return res.status(200).json({ message: "Login success",user:labPerson, staffId: labPerson.empId, userId: empData.labId,isOwner:false, token, success: true })
         }
         const isExist = await Laboratory.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Lab not Found', success: false });

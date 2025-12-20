@@ -15,5 +15,5 @@ const prescriptionsSchema = new Schema({
   prescriptions: [prescriptionItemSchema]
 }, { timestamps: true });
 
-const Prescriptions = mongoose.model("patient-prescriptions", prescriptionsSchema);
-export default Prescriptions
+const PatientPrescriptions = mongoose.model("patient-prescriptions", prescriptionsSchema);
+export default PatientPrescriptions

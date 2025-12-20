@@ -10,10 +10,10 @@ import PatientKyc from '../../models/Patient/kyc.model.js';
 import fs from 'fs'
 import PatientDemographic from '../../models/Patient/demographic.model.js';
 import MedicalHistory from '../../models/Patient/medicalHistory.model.js';
-import Prescriptions from '../../models/Patient/prescription.model.js';
 import EditRequest from '../../models/EditRequest.js';
 import LabAppointment from '../../models/LabAppointment.js';
 import safeUnlink from '../../utils/globalFunction.js';
+import PatientPrescriptions from '../../models/Patient/prescription.model.js';
 
 const signUpPatient = async (req, res) => {
     const { name, gender, email, contactNumber, password, } = req.body;
@@ -303,13 +303,13 @@ const getCustomProfile = async (req, res) => {
     const userId=req.params.id
     try {
         let user;
-        if(userId<24){
+        if(userId?.length<24){
             user = await Patient.findOne({customId:userId}).select('-password').lean();
         }else{
             user = await Patient.findById(userId).select('-password').lean();
         }
         if (!user) {
-            return res.status(404).json({ success: false, message: 'Patient not found' });
+            return res.status(200).json({ success: false, message: 'Patient not found' });
         }
         const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
         res.status(200).json({
@@ -324,7 +324,7 @@ const getProfileDetail = async (req, res) => {
     const userId = req.params.id
     try {
         let user;
-        if (userId < 24) {
+        if (userId?.length < 24) {
             user = await Patient.findOne({ customId: userId }).select('-password');
         } else {
             user = await Patient.findById(userId).select('-password');
@@ -332,11 +332,11 @@ const getProfileDetail = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-        const fullId=await userId<24? user._id :userId
+        const fullId=await userId?.length<24? user._id :userId
         const kyc = await PatientKyc.findOne({ userId:fullId }).sort({ createdAt: -1 })
         const medicalHistory = await MedicalHistory.findOne({ userId:fullId }).sort({ createdAt: -1 })
         const demographic = await PatientDemographic.findOne({ userId:fullId }).sort({ createdAt: -1 })
-        const prescription = await Prescriptions.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const prescription = await PatientPrescriptions.findOne({ userId:fullId }).sort({ createdAt: -1 })
         const labAppointment = await LabAppointment.find({ patientId: fullId }).sort({ createdAt: -1 })
 
         return res.status(200).json({
@@ -506,7 +506,7 @@ const addPrescriptions = async (req, res) => {
     const files = req.files || [];
 
     // Find existing document for user
-    let userPrescriptionsDoc = await Prescriptions.findOne({ userId });
+    let userPrescriptionsDoc = await PatientPrescriptions.findOne({ userId });
 
     if (!userPrescriptionsDoc) {
       // Create new document if doesn't exist
@@ -517,7 +517,7 @@ const addPrescriptions = async (req, res) => {
         }
       });
 
-      const created = await Prescriptions.create({
+      const created = await PatientPrescriptions.create({
         userId,
         prescriptions: prescriptionsData,
       });
@@ -571,7 +571,7 @@ const deletePrescription = async (req, res) => {
     try {
         const { id, itemId } = req.params;
 
-        const record = await Prescriptions.findById(id);
+        const record = await PatientPrescriptions.findById(id);
         const item = record.prescriptions.id(itemId);
 
         if (!item) return res.status(404).json({ success: false, message: "Not found" });

@@ -14,6 +14,11 @@ import fs, { stat } from 'fs'
 import safeUnlink, { checkStockAvailability, updateInventoryStock } from '../../utils/globalFunction.js';
 import mongoose from 'mongoose';
 import Sell from '../../models/Pharmacy/sell.model.js';
+import MedicalHistory from '../../models/Patient/medicalHistory.model.js';
+import PatientDemographic from '../../models/Patient/demographic.model.js';
+import Prescriptions from '../../models/Prescriptions.js';
+import Patient from '../../models/Patient/patient.model.js';
+import PatientPrescriptions from '../../models/Patient/prescription.model.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
@@ -129,6 +134,11 @@ const inventoryGetById = async (req, res) => {
 const inventoryUpdate = async (req, res) => {
     try {
         const { inventoryId } = req.body;
+        const isExist=await Inventory.findById(inventoryId)
+        if(!isExist) return res.status(200).json({success:false,message:"Inventory not found"})
+        if(isExist.sellCount> req.body.quantity){
+            return  res.status(200).json({ success: false, message: `You already Sell ${isExist.sellCount} so we cant update your quantity less then ${isExist?.sellCount}` });
+        }
         const updated = await Inventory.findOneAndUpdate(
             { _id: inventoryId, pharId: req.body.pharId },
             req.body,
@@ -1773,12 +1783,44 @@ const deleteSellData = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 }
+const getPatientPrescriptionData = async (req, res) => {
+    const userId = req.params.id
+    console.log(userId.length) //  8
+    try {
+        let user;
+        if (userId?.length < 24) {
+            user = await Patient.findOne({ customId: userId }).select('-password');
+        } else {
+            console.log("hehe")
+            user = await Patient.findById(userId).select('-password');
+        }
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Patient not found' });
+        }
+        const fullId=await userId.length <24? user._id :userId
+        const medicalHistory = await MedicalHistory.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const demographic = await PatientDemographic.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const prescription = await Prescriptions.find({ patientId:fullId }).sort({ createdAt: -1 })
+        .populate({ path: 'doctorId', select: 'name customId profileImage' })
+        .populate({ path: 'appointmentId', select: 'customId' })
+        const patientPrescription = await PatientPrescriptions.findOne({ userId:fullId }).sort({ createdAt: -1 })
 
+
+        return res.status(200).json({
+            success: true,
+            user,patientPrescription,
+            demographic, prescription, medicalHistory
+        });
+    } catch (err) {
+        console.log(err)
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
 export { deleteStaffData, pharStaff, pharStaffAction, pharStaffData, saveEmpAccess, saveEmpProfessional, deleteSubEmpProffesional, saveEmpEmployement, savePharStaff }
 export {
     getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById,
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,
     addSupplier, updatePO, updateSupplier, deleteSupplier, createReturn, listReturns, completeReturn, updateReturn, deletePO, deleteReturn,
     createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission, medicineData, pharDashboardData,
-    sellMedicine, getSellMedicine, deleteSellData, getSellData
+    sellMedicine, getSellMedicine, deleteSellData, getSellData,getPatientPrescriptionData
 }

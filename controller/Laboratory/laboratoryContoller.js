@@ -396,8 +396,8 @@ const saveEmpAccess = async (req, res) => {
 const labStaffData = async (req, res) => {
     const id = req.params.id
     try {
-        const isExist = await LabStaff.findById(id);
-        if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
+        const personal = await LabStaff.findById(id);
+        if (!personal) return res.status(200).json({ message: "Employee  not found", success: false })
 
         const employment = await EmpEmployement.findOne({ empId: id })
         const professional = await EmpProfesional.findOne({ empId: id })
@@ -406,7 +406,7 @@ const labStaffData = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Staff fetched",
-            employee: isExist, employment, professional, empAccess
+            employee: personal, employment, professional, empAccess
 
         });
 

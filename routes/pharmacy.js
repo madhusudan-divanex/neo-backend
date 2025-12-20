@@ -2,7 +2,7 @@ import {  changePassword, deletePhar,  forgotEmail, getProfile, getProfileDetail
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData } from "../controller/Pharmacy/pharmacyController.js";
+import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData } from "../controller/Pharmacy/pharmacyController.js";
 
 const pharmacy=express.Router()
 const uploader = getUploader('phar');
@@ -103,6 +103,7 @@ pharmacy.get('/sell/:id',authMiddleware,getSellMedicine)
 pharmacy.get('/sell-data/:id',authMiddleware,getSellData)
 pharmacy.delete('/sell/:id',authMiddleware,deleteSellData)
 
+pharmacy.get('/patient-prescription/:id',authMiddleware,getPatientPrescriptionData)
 
 
 export default pharmacy

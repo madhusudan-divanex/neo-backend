@@ -22,7 +22,7 @@ const bookDoctorAppointment = async (req, res) => {
             ? String(Number(isLast.customId) + 1).padStart(4, '0')
             : '0001';
 
-        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees, customId: nextId })
+        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees, customId: 'DAP' + nextId })
         if (book) {
             return res.status(200).json({ message: "Appointment book successfully", success: true })
         } else {
@@ -104,8 +104,11 @@ const doctorPrescription = async (req, res) => {
 
         const isAppointment = await DoctorAppointment.findById(appointmentId);
         if (!isAppointment) return res.status(200).json({ message: 'Appointment not exist' });
-
-        const add = await Prescriptions.create({ patientId, doctorId, medications, diagnosis, status, notes, appointmentId })
+        const isLast = await Prescriptions.findOne()?.sort({ createdAt: -1 })
+        const nextId = isLast
+            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            : '0001';
+        const add = await Prescriptions.create({ patientId, doctorId, medications, diagnosis, status, notes, appointmentId ,customId:'PRC'+ nextId})
         if (add) {
             await DoctorAppointment.findByIdAndUpdate(isAppointment._id, { prescriptionId: add._id }, { new: true })
             return res.status(200).json({ message: "Presctiption add successfully", success: true })
@@ -117,13 +120,19 @@ const doctorPrescription = async (req, res) => {
     }
 }
 const getDoctorPrescriptiondata = async (req, res) => {
-    const  prescriptionId  = req.params.id;
+    const prescriptionId = req.params.id;
     try {
-        const isExist = await Prescriptions.findById(prescriptionId).populate({ path: 'doctorId', select: 'name customId profileImage' })
+        let isExist;
+        if (prescriptionId.length < 24) {
+            isExist = await Prescriptions.findOne({ customId: prescriptionId }).populate({ path: 'doctorId', select: 'name customId profileImage' })
+                .populate({ path: 'patientId', select: 'name customId ' });
+        } else {
+         isExist = await Prescriptions.findById(prescriptionId).populate({ path: 'doctorId', select: 'name customId profileImage' })
             .populate({ path: 'patientId', select: 'name customId ' });
+        }
         if (!isExist) return res.status(200).json({ message: 'Prescription not exist' });
 
-        return res.status(200).json({ message: "Presctiption data fetch successfully",data:isExist, success: true })
+        return res.status(200).json({ message: "Presctiption data fetch successfully", data: isExist, success: true })
 
     } catch (err) {
         return res.status(200).json({ message: 'Server Error' });
@@ -436,5 +445,5 @@ export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
-    getLabReport,getDoctorPrescriptiondata
+    getLabReport, getDoctorPrescriptiondata
 }
