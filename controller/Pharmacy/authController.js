@@ -17,6 +17,7 @@ import mongoose from 'mongoose';
 import safeUnlink from '../../utils/globalFunction.js';
 import EmpAccess from '../../models/Pharmacy/empAccess.model.js';
 import PharStaff from '../../models/Pharmacy/PharEmpPerson.model.js';
+import User from '../../models/Hospital/User.js';
 
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
@@ -30,6 +31,10 @@ const signUpPhar = async (req, res) => {
             if (logo && isExist.logo) {
                 safeUnlink(isExist.logo)
             }
+            const isMax = await Pharmacy.countDocuments({ email })
+            if (isMax > 1) {
+                return res.status(200).json({ message: "Email already exist", success: false })
+            }
             // Create user
             const newphar = await Pharmacy.findByIdAndUpdate(pharId, {
                 name,
@@ -40,6 +45,7 @@ const signUpPhar = async (req, res) => {
             }, { new: true });
 
             if (newphar) {
+                 await User.findOneAndUpdate(pharId,{email},{new:true})
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Pharmacy not updated" });
@@ -50,6 +56,10 @@ const signUpPhar = async (req, res) => {
             const isExist = await Pharmacy.findOne({ email })
             if (isExist) {
                 return res.status(200).json({ message: "Pharmacy already exist", success: false })
+            }
+            const isUser = await User.findOne({ email })
+            if (isUser) {
+                return res.status(200).json({ message: "User already exist", success: false })
             }
             const isLast = await Pharmacy.findOne()?.sort({ createdAt: -1 })
             const nextId = isLast
@@ -69,6 +79,9 @@ const signUpPhar = async (req, res) => {
             });
 
             if (newphar) {
+                const userData = await User.create({ name, email, role: 'pharmacy', passwordHash: hashedPassword, pharId: newphar?._id })
+                newphar.userId = userData?._id
+                await newphar.save()
                 const token = jwt.sign(
                     { user: newphar._id },
                     process.env.JWT_SECRET,
@@ -91,14 +104,14 @@ const signUpPhar = async (req, res) => {
 const signInPhar = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const pharPerson = await EmpAccess.findOne({email}).populate('permissionId')
-        if(pharPerson && pharPerson.password==password){
-            const empData=await PharStaff.findById(pharPerson.empId)
+        const pharPerson = await EmpAccess.findOne({ email }).populate('permissionId')
+        if (pharPerson && pharPerson.password == password) {
+            const empData = await PharStaff.findById(pharPerson.empId)
             const token = jwt.sign(
                 { user: empData.pharId },
                 process.env.JWT_SECRET,
             );
-            return res.status(200).json({ message: "Login success",staffId:empData?._id,user:pharPerson, userId: empData.pharId,isOwner:false, token, success: true })
+            return res.status(200).json({ message: "Login success", staffId: empData?._id, user: pharPerson, userId: empData.pharId, isOwner: false, token, success: true })
         }
         const isExist = await Pharmacy.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Phar not Found', success: false });
@@ -404,6 +417,7 @@ const deletePhar = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Phar not found' });
         }
+        await User.deleteOne({pharId:userId})
         await Otp.deleteMany({ userId })
         await Login.deleteMany({ userId })
         await Pharmacy.findByIdAndDelete(userId)

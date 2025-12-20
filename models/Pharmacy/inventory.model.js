@@ -15,6 +15,8 @@ const InventorySchema = new mongoose.Schema({
     highMargin: Number,
     lowMargin: Number,
     customId: { type: String, required: true },
+    marginType:{type:String,enum:['Percentage','Fixed'],default:'Percentage'},
+
     status:{type:String,enum:['Pending','Approved','Rejected'],default:'Pending'}
 }, { timestamps: true });
 const Inventory= mongoose.model('Inventory', InventorySchema);

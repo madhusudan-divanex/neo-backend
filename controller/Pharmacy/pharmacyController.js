@@ -134,10 +134,10 @@ const inventoryGetById = async (req, res) => {
 const inventoryUpdate = async (req, res) => {
     try {
         const { inventoryId } = req.body;
-        const isExist=await Inventory.findById(inventoryId)
-        if(!isExist) return res.status(200).json({success:false,message:"Inventory not found"})
-        if(isExist.sellCount> req.body.quantity){
-            return  res.status(200).json({ success: false, message: `You already Sell ${isExist.sellCount} so we cant update your quantity less then ${isExist?.sellCount}` });
+        const isExist = await Inventory.findById(inventoryId)
+        if (!isExist) return res.status(200).json({ success: false, message: "Inventory not found" })
+        if (isExist.sellCount > req.body.quantity) {
+            return res.status(200).json({ success: false, message: `You already Sell ${isExist.sellCount} so we cant update your quantity less then ${isExist?.sellCount}` });
         }
         const updated = await Inventory.findOneAndUpdate(
             { _id: inventoryId, pharId: req.body.pharId },
@@ -207,8 +207,13 @@ const medicineData = async (req, res) => {
 
             Inventory.countDocuments({ medicineName: name })
         ]);
+        const inventoryIds = items.map(item => item._id);
         const inventoryValue = await items.reduce(
             (sum, item) => sum + (item.totalStockPrice || 0),
+            0
+        );
+        const totalStock = await items.reduce(
+            (sum, item) => sum + (item.quantity || 0),
             0
         );
         const now = new Date();
@@ -228,6 +233,27 @@ const medicineData = async (req, res) => {
 
             return count;
         }, 0);
+        const salesData = await Sell.aggregate([
+            { $unwind: "$products" },
+            {
+                $match: {
+                    "products.inventoryId": { $in: inventoryIds }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalSalesAmount: {
+                        $sum: "$products.price"
+                    },
+                    totalSoldQuantity: {
+                        $sum: "$products.quantity"
+                    }
+                }
+            }
+        ]);
+
+        const totalSales = salesData[0]?.totalSalesAmount || 0;
 
 
         return res.status(200).json({
@@ -235,6 +261,7 @@ const medicineData = async (req, res) => {
             data: items,
             inventoryValue,
             expiringSoonCount,
+            totalStock, totalSales,
             pagiantion: {
                 page,
                 limit,
@@ -701,7 +728,7 @@ const getSupplier = async (req, res) => {
             name: { $regex: name, $options: "i" }
         };
 
-        // Get total count
+        // Get total count of suppliers matching the filter
         const total = await Supplier.countDocuments(filter);
 
         // Fetch suppliers
@@ -711,9 +738,29 @@ const getSupplier = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
+        // Fetch Purchase Orders and calculate the total quantity per supplier
+        const supplierData = await Promise.all(
+            suppliers.map(async (supplier) => {
+                const purchaseOrders = await PurchaseOrder.find({
+                    supplierId: supplier._id,
+                    pharId: pharId,
+                    // status: "received" // Only include received orders
+                });
+                const totalQuantity = purchaseOrders.reduce((sum, order) => {
+                    return sum + order.products.reduce((productSum, product) => productSum + product.quantity, 0);
+                }, 0);
+
+                return {
+                    ...supplier.toObject(),
+                    totalQuantity
+                };
+            })
+        );
+
+        // Return the response with suppliers and total quantities
         res.status(200).json({
             success: true,
-            data: suppliers,
+            data: supplierData,
             pagination: {
                 page,
                 limit,
@@ -729,6 +776,7 @@ const getSupplier = async (req, res) => {
         });
     }
 };
+
 
 // GET SUPPLIER BY ID
 const getSupplierById = async (req, res) => {
@@ -836,7 +884,7 @@ const listReturns = async (req, res) => {
         const pharId = req.params.id;
         const { page = 1, limit = 10, status, search } = req.query;
         const matchStage = { pharId: new mongoose.Types.ObjectId(req.params.id) };
-        if (status !== 'all') query.status = status;
+        if (status !== 'all') matchStage.status = status;
         if (search) {
             matchStage["supplier.name"] = { $regex: search, $options: "i" };
         }
@@ -944,6 +992,7 @@ const listReturns = async (req, res) => {
             }
         });
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ success: false, message: error.message })
     }
 }
@@ -1577,9 +1626,99 @@ const pharDashboardData = async (req, res) => {
             return count;
         }, 0);
 
+        const h1Compliance = await Inventory.countDocuments({ schedule: 'H1' })
+        const xCompliance = await Inventory.aggregate([
+            {
+                $match: { schedule: 'X' },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalQuantity: { $sum: "$quantity" }
+                }
+            },
+        ])
+        const totalXQuantity = xCompliance[0]?.totalQuantity || 0;
+
+        const hCompliance = await Inventory.aggregate([
+            {
+                $match: { schedule: 'H' },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalQuantity: { $sum: "$quantity" }
+                }
+            },
+        ])
+        const totalHQuantity = hCompliance[0]?.totalQuantity || 0;
+        const h1ComplianceData = await Inventory.aggregate([
+            {
+                $match: { schedule: 'H1' },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalQuantity: { $sum: "$quantity" }
+                }
+            },
+        ])
+        const totalH1Quantity = h1ComplianceData[0]?.totalQuantity || 0;
+        const marginAnalysis = await Inventory.find({ margintType: "Percentage" }).sort({ avgMargin: -1 }).limit(5)
+        const inventory = await Inventory.find().sort({ sellCount: -1 }).limit(5)
+        const suppliers = await Supplier.find().sort({ createdAt: -1 }).limit(5)
+        const supplierData = await Promise.all(
+            suppliers.map(async (supplier) => {
+                const purchaseOrders = await PurchaseOrder.find({
+                    supplierId: supplier._id,
+                    pharId: pharId,
+                    // status: "received" // Only include received orders
+                });
+                const totalQuantity = purchaseOrders.reduce((sum, order) => {
+                    return sum + order.products.reduce((productSum, product) => productSum + product.quantity, 0);
+                }, 0);
+
+                return {
+                    ...supplier.toObject(),
+                    totalQuantity
+                };
+            })
+        );
+        // 🔥 LAST 1 MONTH SALES AGGREGATION
+        const lastMonth = new Date();
+        lastMonth.setMonth(now.getMonth() - 1);
+
+        const salesData = await Sell.aggregate([
+            {
+                $match: {
+                    createdAt: {
+                        $gte: lastMonth,
+                        $lte: now
+                    }
+                }
+            },
+            { $unwind: "$products" },
+            {
+                $group: {
+                    _id: null,
+                    totalSalesAmount: {
+                        $sum: {
+                            $multiply: "$products.price"
+                        }
+                    },
+                    totalSoldQuantity: {
+                        $sum: "$products.quantity"
+                    }
+                }
+            }
+        ]);
+
+        const totalSales = salesData[0]?.totalSalesAmount || 0;
+        const totalSoldQuantity = salesData[0]?.totalSoldQuantity || 0;
+
         return res.status(200).json({
-            message: "Dashboard data fetch successfully", inventoryValue,
-            expiringSoonCount, success: true
+            message: "Dashboard data fetch successfully", inventoryValue, inventory, totalSales,
+            expiringSoonCount, h1Compliance, totalH1Quantity, totalHQuantity, totalXQuantity, marginAnalysis, supplierData, success: true
         })
 
     } catch (err) {
@@ -1797,18 +1936,18 @@ const getPatientPrescriptionData = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-        const fullId=await userId.length <24? user._id :userId
-        const medicalHistory = await MedicalHistory.findOne({ userId:fullId }).sort({ createdAt: -1 })
-        const demographic = await PatientDemographic.findOne({ userId:fullId }).sort({ createdAt: -1 })
-        const prescription = await Prescriptions.find({ patientId:fullId }).sort({ createdAt: -1 })
-        .populate({ path: 'doctorId', select: 'name customId profileImage' })
-        .populate({ path: 'appointmentId', select: 'customId' })
-        const patientPrescription = await PatientPrescriptions.findOne({ userId:fullId }).sort({ createdAt: -1 })
+        const fullId = await userId.length < 24 ? user._id : userId
+        const medicalHistory = await MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 })
+        const demographic = await PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 })
+        const prescription = await Prescriptions.find({ patientId: fullId }).sort({ createdAt: -1 })
+            .populate({ path: 'doctorId', select: 'name customId profileImage' })
+            .populate({ path: 'appointmentId', select: 'customId' })
+        const patientPrescription = await PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 })
 
 
         return res.status(200).json({
             success: true,
-            user,patientPrescription,
+            user, patientPrescription,
             demographic, prescription, medicalHistory
         });
     } catch (err) {
@@ -1822,5 +1961,5 @@ export {
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,
     addSupplier, updatePO, updateSupplier, deleteSupplier, createReturn, listReturns, completeReturn, updateReturn, deletePO, deleteReturn,
     createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission, medicineData, pharDashboardData,
-    sellMedicine, getSellMedicine, deleteSellData, getSellData,getPatientPrescriptionData
+    sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData
 }

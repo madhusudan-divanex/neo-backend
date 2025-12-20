@@ -22,6 +22,7 @@ import Patient from '../../models/Patient/patient.model.js';
 import { generateReportPDF } from '../../utils/pdfMaker.js';
 import LabStaff from '../../models/Laboratory/LabEmpPerson.model.js';
 import EmpAccess from '../../models/Laboratory/empAccess.model.js';
+import User from '../../models/Hospital/User.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId } = req.body;
@@ -35,6 +36,10 @@ const signUpLab = async (req, res) => {
             if (logo && isExist.logo) {
                 safeUnlink(isExist.logo)
             }
+            const isMax=await Laboratory.countDocuments({email})
+            if(isMax>1){
+                return res.status(200).json({ message: "Email already exist", success: false })
+            }
             // Create user
             const newLab = await Laboratory.findByIdAndUpdate(labId, {
                 name,
@@ -45,16 +50,20 @@ const signUpLab = async (req, res) => {
             }, { new: true });
 
             if (newLab) {
+                await User.findOneAndUpdate(labId,{email},{new:true})
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Lab not updated" });
             }
-        } else {
-
+        } else {           
 
             const isExist = await Laboratory.findOne({ email })
             if (isExist) {
                 return res.status(200).json({ message: "Lab already exist", success: false })
+            }
+            const isUser = await User.findOne({email})
+            if (isUser) {
+                return res.status(200).json({ message: "User already exist", success: false })
             }
             const isLast=await Laboratory.findOne()?.sort({createdAt:-1})
             const nextId = isLast
@@ -72,8 +81,11 @@ const signUpLab = async (req, res) => {
                 gstNumber, about, logo,
                 customId:nextId
             });
-
+            
             if (newLab) {
+                const userData=await User.create({name,email,role:'lab',passwordHash:hashedPassword,labId:newLab?._id})
+                newLab.userId=userData?._id
+                await newLab.save()
                 const token = jwt.sign(
                     { user: newLab._id },
                     process.env.JWT_SECRET,
@@ -411,6 +423,7 @@ const deleteLab = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
+        await User.deleteOne({labId:userId})
         await Otp.deleteMany({ userId })
         await Login.deleteMany({ userId })
         await Laboratory.findByIdAndDelete(userId)
