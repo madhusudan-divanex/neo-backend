@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
     profileImage: { type: String },
     contactNumber: { type: String, required: true },
     password: { type: String, required: true },
-    customId: { type: String, required: true },
+    
 
     status: { type: String, enum: ['pending', 'verify'], default: 'pending' }
 

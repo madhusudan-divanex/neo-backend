@@ -45,7 +45,7 @@ const signUpPhar = async (req, res) => {
             }, { new: true });
 
             if (newphar) {
-                 await User.findOneAndUpdate(pharId,{email},{new:true})
+                 await User.findOneAndUpdate({pharId},{email,name},{new:true})
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Pharmacy not updated" });
@@ -75,11 +75,11 @@ const signUpPhar = async (req, res) => {
                 contactNumber,
                 password: hashedPassword,
                 gstNumber, about, logo,
-                customId: nextId
+                
             });
 
             if (newphar) {
-                const userData = await User.create({ name, email, role: 'pharmacy', passwordHash: hashedPassword, pharId: newphar?._id })
+                const userData = await User.create({ customId: nextId,name, email, role: 'pharmacy', passwordHash: hashedPassword, pharId: newphar?._id })
                 newphar.userId = userData?._id
                 await newphar.save()
                 const token = jwt.sign(
@@ -113,9 +113,9 @@ const signInPhar = async (req, res) => {
             );
             return res.status(200).json({ message: "Login success", staffId: empData?._id, user: pharPerson, userId: empData.pharId, isOwner: false, token, success: true })
         }
-        const isExist = await Pharmacy.findOne({ email });
+        const isExist = await User.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Phar not Found', success: false });
-        const hashedPassword = isExist.password
+        const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
@@ -123,13 +123,14 @@ const signInPhar = async (req, res) => {
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
+        const userData=await Pharmacy.findById(isExist?.pharId)
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: isExist, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: userData, isOwner: true, userId: userData._id, token, isNew: false, success: true })
         } else {
-            await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Login success", user: isExist, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
+            await Login.create({ userId: userData._id })
+            return res.status(200).json({ message: "Login success", user: userData, isNew: true, isOwner: true, token, userId: userData._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -139,7 +140,7 @@ const signInPhar = async (req, res) => {
 const verifyOtp = async (req, res) => {
     const { userId, code } = req.body
     try {
-        const isExist = await Pharmacy.findById(userId)
+        const isExist = await User.findById(userId)
         if (!isExist) {
             return res.status(200).json({ message: "Pharmacy not exist", success: false })
         }
@@ -177,7 +178,7 @@ const verifyOtp = async (req, res) => {
 const resendOtp = async (req, res) => {
     const id = req.params.id
     try {
-        const isExist = await Pharmacy.findById(id);
+        const isExist = await User.findById(id);
         if (!isExist) {
             return res.status(404).json({ success: false, message: 'Phar not found' });
         }
@@ -214,7 +215,7 @@ const resendOtp = async (req, res) => {
 const forgotEmail = async (req, res) => {
     const { email } = req.body
     try {
-        const user = await Pharmacy.findOne({ email });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ success: false, message: 'Phar not found' });
         }
@@ -252,10 +253,10 @@ const forgotEmail = async (req, res) => {
 const resetPassword = async (req, res) => {
     const { userId, password } = req.body;
     try {
-        const isExist = await Pharmacy.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(400).json({ message: 'Invalid email' });
         const hashedPassword = await bcrypt.hash(password, 10);
-        const updatePass = await Pharmacy.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
         if (updatePass) {
             return res.status(200).json({ message: "Password reset", userId: isExist._id, success: true })
         } else {
@@ -269,12 +270,12 @@ const resetPassword = async (req, res) => {
 const changePassword = async (req, res) => {
     const { userId, newPassword, oldPassword } = req.body;
     try {
-        const isExist = await Pharmacy.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Invalid email' });
-        const isMatch = await bcrypt.compare(oldPassword, isExist.password);
+        const isMatch = await bcrypt.compare(oldPassword, isExist.passwordHash);
         if (!isMatch) return res.status(200).json({ message: 'Old password is incorrect', success: false });
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        const updatePass = await Pharmacy.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
         if (updatePass) {
             return res.status(200).json({ message: "Password change successfully", userId: isExist._id, success: true })
         } else {
@@ -295,11 +296,16 @@ const updatePhar = async (req, res) => {
         if (alreadyEmail > 1) {
             return res.status(200).json({ message: 'Email already exist' });
         }
+        const userEmail = await Pharmacy.countDocuments({ email })
+        if (userEmail > 1) {
+            return res.status(200).json({ message: 'Email already exist' });
+        }
         if (logo && isExist.logo) {
             safeUnlink(isExist.logo)
         }
         const updatephar = await Pharmacy.findByIdAndUpdate(userId, { email, contactNumber, name, gender, gstNumber, about, logo: logo || isExist.logo }, { new: true })
         if (updatephar) {
+            await User.findOneAndUpdate({pharId},{name:email},{new:true})
             return res.status(200).json({ message: "Pharmacy data change successfully", userId: isExist._id, success: true })
         } else {
             return res.status(200).json({ message: "Error occure in user data", success: false })

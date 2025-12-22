@@ -50,7 +50,7 @@ const signUpLab = async (req, res) => {
             }, { new: true });
 
             if (newLab) {
-                await User.findOneAndUpdate(labId,{email},{new:true})
+                await User.findOneAndUpdate(labId,{email,name},{new:true})
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Lab not updated" });
@@ -65,12 +65,11 @@ const signUpLab = async (req, res) => {
             if (isUser) {
                 return res.status(200).json({ message: "User already exist", success: false })
             }
-            const isLast=await Laboratory.findOne()?.sort({createdAt:-1})
+            const isLast=await User.findOne()?.sort({createdAt:-1})
             const nextId = isLast
             ? String(Number(isLast.customId) + 1).padStart(4, '0')
             : '0001';
             const hashedPassword = await bcrypt.hash(password, 10);
-
             // Create user
             const newLab = await Laboratory.create({
                 name,
@@ -83,7 +82,7 @@ const signUpLab = async (req, res) => {
             });
             
             if (newLab) {
-                const userData=await User.create({name,email,role:'lab',passwordHash:hashedPassword,labId:newLab?._id})
+                const userData=await User.create({name,customId:`LAB-${nextId}`,email,role:'lab',passwordHash:hashedPassword,labId:newLab?._id})
                 newLab.userId=userData?._id
                 await newLab.save()
                 const token = jwt.sign(
@@ -119,9 +118,9 @@ const signInLab = async (req, res) => {
             console.log(labPerson)
             return res.status(200).json({ message: "Login success",user:labPerson, staffId: labPerson.empId, userId: empData.labId,isOwner:false, token, success: true })
         }
-        const isExist = await Laboratory.findOne({ email });
+        const isExist = await User.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Lab not Found', success: false });
-        const hashedPassword = isExist.password
+        const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
@@ -129,13 +128,14 @@ const signInLab = async (req, res) => {
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
+        const userData=await Laboratory.findById(isExist?.labId)
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: isExist,isOwner:true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: userData,isOwner:true, userId: userData._id, token, isNew: false, success: true })
         } else {
-            await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Login success", isNew: true,isOwner:true, token, userId: isExist._id, success: true })
+            await Login.create({ userId: userData._id })
+            return res.status(200).json({ message: "Login success", isNew: true,isOwner:true, token, userId: userData._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -145,7 +145,7 @@ const signInLab = async (req, res) => {
 const verifyOtp = async (req, res) => {
     const { userId, code } = req.body
     try {
-        const isExist = await Laboratory.findById(userId)
+        const userData = await Laboratory.findById(userId)
         if (!isExist) {
             return res.status(200).json({ message: "Lab not exist", success: false })
         }
@@ -220,7 +220,7 @@ const resendOtp = async (req, res) => {
 const forgotEmail = async (req, res) => {
     const { email } = req.body
     try {
-        const user = await Laboratory.findOne({ email });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
@@ -258,10 +258,10 @@ const forgotEmail = async (req, res) => {
 const resetPassword = async (req, res) => {
     const { userId, password } = req.body;
     try {
-        const isExist = await Laboratory.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(400).json({ message: 'Invalid email' });
         const hashedPassword = await bcrypt.hash(password, 10);
-        const updatePass = await Laboratory.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
         if (updatePass) {
             return res.status(200).json({ message: "Password reset", userId: isExist._id, success: true })
         } else {
@@ -275,12 +275,12 @@ const resetPassword = async (req, res) => {
 const changePassword = async (req, res) => {
     const { userId, newPassword, oldPassword } = req.body;
     try {
-        const isExist = await Laboratory.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Invalid email' });
         const isMatch = await bcrypt.compare(oldPassword, isExist.password);
         if (!isMatch) return res.status(200).json({ message: 'Old password is incorrect', success: false });
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        const updatePass = await Laboratory.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
         if (updatePass) {
             return res.status(200).json({ message: "Password change successfully", userId: isExist._id, success: true })
         } else {

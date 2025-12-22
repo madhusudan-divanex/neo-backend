@@ -212,9 +212,14 @@ const getPatientLabAppointment = async (req, res) => {
     const patientId = req.params.id;
     const { page = 1, limit = 10 } = req.query
     try {
-        const isExist = await Patient.findById(patientId);
+        let isExist;
+        if(patientId?.length<24){
+            isExist = await Patient.findOne({customId:patientId});
+        }else{
+            isExist = await Patient.findById(patientId);
+        }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
-        const appointment = await LabAppointment.find({ patientId }).populate('doctorId').sort({ createdAt: -1 })
+        const appointment = await LabAppointment.find({ patientId:isExist?._id }).populate('doctorId').sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         if (appointment) {
@@ -420,7 +425,7 @@ const getLabReport = async (req, res) => {
     const { page = 1, limit = 10 } = req.query
     try {
         let isExist;
-        if (patientId < 24) {
+        if (patientId?.length < 24) {
             isExist = await Patient.findOne({ customId: patientId });
 
         } else {

@@ -15,6 +15,7 @@ import EditRequest from '../../models/EditRequest.js';
 import Rating from '../../models/Rating.js';
 import mongoose from 'mongoose';
 import DoctorAppointment from '../../models/DoctorAppointment.js';
+import User from '../../models/Hospital/User.js';
 
 const signUpDoctor = async (req, res) => {
     const { name, gender, email, contactNumber, password, dob } = req.body;
@@ -23,7 +24,11 @@ const signUpDoctor = async (req, res) => {
         if (isExist) {
             return res.status(200).json({ message: "Doctor already exist", success: false })
         }
-        const isLast = await Doctor.findOne()?.sort({ createdAt: -1 })
+        const isUser = await User.findOne({ email })
+        if (isUser) {
+            return res.status(200).json({ message: "User already exist", success: false })
+        }
+        const isLast = await User.findOne()?.sort({ createdAt: -1 })
         const nextId = isLast
             ? String(Number(isLast.customId) + 1).padStart(4, '0')
             : '0001';
@@ -34,25 +39,11 @@ const signUpDoctor = async (req, res) => {
             gender,
             email,
             contactNumber,
-            password: hashedPassword,
-            customId: 'DOC-'+nextId,
+            password: hashedPassword,            
             dob,
         });
-        if (newDoctor) {
-            const code = generateOTP()
-            const otp = await Otp.create({ userId: newDoctor._id, code })
-            const emailHtml = `
-            Hello ${name}, 
-            Your One-Time Password (OTP) for Neo Health is: ${code} 
-            This OTP is valid for 10 minutes. Please do not share it with anyone.
-            If you did not request this, please ignore this email.
-            Thank you,
-            The Neo Health Team`
-            await sendEmail({
-                to: email,
-                subject: "Your Neo Health OTP Code!",
-                html: emailHtml
-            });
+        if (newDoctor) {            
+            const userData=await User.create({name,customId: 'DOC-'+nextId,email,role:'doctor',passwordHash:hashedPassword,doctorId:newDoctor?._id})
             return res.status(200).json({ success: true, newDoctor, userId: newDoctor._id });
         } else {
             return res.status(200).json({ success: false, message: "Doctor not created" });
@@ -66,39 +57,19 @@ const signUpDoctor = async (req, res) => {
 const signInDoctor = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const isExist = await Doctor.findOne({ email });
+        const isExist = await User.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Doctor not Found', success: false });
-        const hashedPassword = isExist.password
+        const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
-        const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ userId: isExist._id })
-        if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ userId: isExist._id, code })
-        } else {
-
-            const otp = await Otp.create({ userId: isExist._id, code })
-        }
-        const emailHtml = `
-        Hello ${isExist?.name}, 
-            Your One-Time Password (OTP) for Neo Health is: ${code} 
-            This OTP is valid for 10 minutes. Please do not share it with anyone.
-            If you did not request this, please ignore this email.
-            Thank you,
-            The Neo Health Team`
-        await sendEmail({
-            to: email,
-            subject: "You OTP for Neo Health!",
-            html: emailHtml
-        });
+       
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist._id, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", userId: isExist._id, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Email Sent", isNew: true, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Login success", isNew: true, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -182,7 +153,7 @@ const resendOtp = async (req, res) => {
 const forgotEmail = async (req, res) => {
     const email = req.params.email
     try {
-        const user = await Doctor.findOne({ email });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
@@ -221,11 +192,11 @@ const resetPassword = async (req, res) => {
     const { userId, password } = req.body;
     try {
 
-        const isExist = await Doctor.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(400).json({ message: 'Invalid email' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const updatePass = await Doctor.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
         if (updatePass) {
             return res.status(200).json({ message: "Password reset", userId: isExist._id, success: true })
         } else {
@@ -239,12 +210,12 @@ const resetPassword = async (req, res) => {
 const changePassword = async (req, res) => {
     const { userId, newPassword, oldPassword } = req.body;
     try {
-        const isExist = await Doctor.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Invalid email' });
-        const isMatch = await bcrypt.compare(oldPassword, isExist.password);
+        const isMatch = await bcrypt.compare(oldPassword, isExist.passwordHash);
         if (!isMatch) return res.status(200).json({ message: 'Old password is incorrect', success: false });
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        const updatePass = await Doctor.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
         if (updatePass) {
             return res.status(200).json({ message: "Password change successfully", userId: isExist._id, success: true })
         } else {
@@ -264,8 +235,13 @@ const updateDoctor = async (req, res) => {
         if (alreadyEmail > 1) {
             return res.status(200).json({ message: 'Email already exist' });
         }
+        const userEmail = await User.countDocuments({ email })
+        if (userEmail > 1) {
+            return res.status(200).json({ message: 'Email already exist' });
+        }
         const updateDoctor = await Doctor.findByIdAndUpdate(userId, { email, contactNumber, name, gender, dob }, { new: true })
         if (updateDoctor) {
+            await User.findOneAndUpdate({doctorId:userId},{name,email},{new:true})
             return res.status(200).json({ message: "Doctor data change successfully", userId: isExist._id, success: true })
         } else {
             return res.status(200).json({ message: "Error occure in user data", success: false })
@@ -367,6 +343,7 @@ const deleteDoctor = async (req, res) => {
         await Otp.deleteMany({ userId })
         await Login.deleteMany({ userId })
         await Doctor.findByIdAndDelete(userId)
+        await User.findOneAndDelete({doctorId:userId})
         return res.status(200).json({
             success: true,
         });
