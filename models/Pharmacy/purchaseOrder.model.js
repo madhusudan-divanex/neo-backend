@@ -9,7 +9,7 @@ const POProductSchema = new mongoose.Schema({
 });
 
 const POSchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "Pharmacy",required:true },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User",required:true },
     supplierId: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" ,required:true},
     deliveryDate: Date,
     note: String,

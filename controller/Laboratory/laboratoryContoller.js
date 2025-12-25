@@ -9,11 +9,13 @@ import fs from 'fs'
 import Test from "../../models/Laboratory/test.model.js";
 import safeUnlink from "../../utils/globalFunction.js";
 import TestReport from "../../models/testReport.js";
+import User from "../../models/Hospital/User.js";
+import mongoose from "mongoose";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
     try {
-        const laboratory = await Laboratory.find().sort({ createdAt: -1 })
+        const laboratory = await User.find({role:'lab'}).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         if (laboratory) {
@@ -38,7 +40,7 @@ const getAllPermission = async (req, res) => {
             filter.name = { $regex: name, $options: "i" };
         }
 
-        const laboratory = await Laboratory.findById(id);
+        const laboratory = await User.findById(id);
 
         if (!laboratory) {
             return res.status(200).json({
@@ -77,7 +79,7 @@ const getAllPermission = async (req, res) => {
 const addLabPermission = async (req, res) => {
     try {
         const { name, labId, ...permissions } = req.body;
-        const isExist = await Laboratory.findById(labId);
+        const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory not found", success: false })
 
 
@@ -127,7 +129,7 @@ const addLabPermission = async (req, res) => {
 const updateLabPermission = async (req, res) => {
     try {
         const { name, permissionId, labId, ...permissions } = req.body;
-        const isExist = await Laboratory.findById(labId);
+        const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory not found", success: false })
         const isPermExist = await LabPermission.findById(permissionId);
         if (!isPermExist) return res.status(200).json({ message: "Permission not found", success: false })
@@ -162,7 +164,7 @@ const updateLabPermission = async (req, res) => {
 const deleteLabPermission = async (req, res) => {
     const { permissionId, labId } = req.body;
     try {
-        const isLabExist = await Laboratory.findById(labId);
+        const isLabExist = await User.findById(labId);
         if (!isLabExist) return res.status(200).json({ message: "Laboratory not found", success: false })
         const isExist = await LabPermission.findById(permissionId);
         if (!isExist) return res.status(200).json({ message: "Laboratory permission not found", success: false })
@@ -194,7 +196,7 @@ const saveLabStaff = async (req, res) => {
     const contactInformation = JSON.parse(req.body.contactInformation)
     const profileImage = req.files?.['profileImage']?.[0]?.path
     try {
-        const isExist = await Laboratory.findById(labId);
+        const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
 
         const isStaff = await LabStaff.findById(empId);
@@ -440,7 +442,7 @@ const labStaff = async (req, res) => {
     const limitNumber = parseInt(limit) > 0 ? parseInt(limit) : 10;
 
     try {
-        const isExist = await Laboratory.findById(id);
+        const isExist = await User.findById(id);
         if (!isExist) {
             return res.status(404).json({ message: "Laboratory not found", success: false });
         }
@@ -511,7 +513,7 @@ const deleteStaffData = async (req, res) => {
 const addTest = async (req, res) => {
     const { labId, precautions, shortName, testCategory, sampleType, price, component } = req.body
     try {
-        const isExist = await Laboratory.findById(labId);
+        const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
         const isLast=await Test.findOne()?.sort({createdAt:-1})
             const nextId = isLast
@@ -579,12 +581,13 @@ const getTest = async (req, res) => {
     const labId = req.params.id
     const { page, limit = 10 } = req.query
     try {
-        const filter = { labId }
+        const filter = { labId:new mongoose.Types.ObjectId(labId) }
         if (req.query.name) {
             filter.shortName = req.query.name
         }
-        const isExist = await Laboratory.findById(labId);
-        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
+         const isUser = await User.findById(labId);
+        if (!isUser) return res.status(200).json({ message: "Laboratory  not found", success: false })
+        
 
         const data = await Test.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
         const totalTest = await Test.countDocuments(filter)

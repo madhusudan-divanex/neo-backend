@@ -1,17 +1,17 @@
-import mongoose,{ Schema }  from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 
 
 const addressSchema = new Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Pharmacy",
+    ref: "User",
     required: true
   },
   fullAddress: { type: String, required: true },
-  country: { type: String, required: true },
-  state: { type: String, required: true },
-  city: { type: String, required: true },
+  countryId: { type: mongoose.Schema.Types.ObjectId, ref: "Country", required: true },
+  stateId: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },
+  cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', required: true },
   pinCode: { type: String, required: true },
 }, { timestamps: true });
 

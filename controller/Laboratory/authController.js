@@ -82,7 +82,7 @@ const signUpLab = async (req, res) => {
             });
             
             if (newLab) {
-                const userData=await User.create({name,customId:`LAB-${nextId}`,email,role:'lab',passwordHash:hashedPassword,labId:newLab?._id})
+                const userData=await User.create({name,email,role:'lab',passwordHash:hashedPassword,labId:newLab?._id,created_by:'self'})
                 newLab.userId=userData?._id
                 await newLab.save()
                 const token = jwt.sign(
@@ -132,10 +132,10 @@ const signInLab = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: userData,isOwner:true, userId: userData._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: userData,isOwner:true, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: userData._id })
-            return res.status(200).json({ message: "Login success", isNew: true,isOwner:true, token, userId: userData._id, success: true })
+            return res.status(200).json({ message: "Login success",  user: userData,isNew: true,isOwner:true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -277,7 +277,7 @@ const changePassword = async (req, res) => {
     try {
         const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Invalid email' });
-        const isMatch = await bcrypt.compare(oldPassword, isExist.password);
+        const isMatch = await bcrypt.compare(oldPassword, isExist.passwordHash);
         if (!isMatch) return res.status(200).json({ message: 'Old password is incorrect', success: false });
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         const updatePass = await User.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
@@ -287,7 +287,7 @@ const changePassword = async (req, res) => {
             return res.status(200).json({ message: "Error occure in password reset", success: false })
         }
     } catch (err) {
-        console.error(err.message);
+        console.error(err);
         return res.status(500).json({ message: 'Server Error' });
     }
 }
@@ -327,13 +327,14 @@ function generateOTP() {
 const getProfile = async (req, res) => {
     const id = req.params.id
     try {
-        const user = await Laboratory.findById(id).select('-password');
+        const user=await User.findById(id)
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
+        const labData = await Laboratory.findById(user.labId)
         return res.status(200).json({
             success: true,
-            data: user
+            data: labData
         });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -344,29 +345,31 @@ const getProfileDetail = async (req, res) => {
 
     try {
         // 1️⃣ Find user
-        const user = await Laboratory.findById(userId).select("-password");
+        const user=await User.findById(userId)
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "Lab not found"
             });
         }
+        const labData = await Laboratory.findById(user.labId).select("-password");
 
         // 2️⃣ Fetch latest related documents
-        const labPerson = await LabPerson.findOne({ userId }).sort({ createdAt: -1 });
-        const labAddress = await LabAddress.findOne({ userId }).sort({ createdAt: -1 });
-        const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
-        const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const isRequest = Boolean(await EditRequest.exists({ labId: userId }))
+        const labPerson = await LabPerson.findOne({ userId:user?.labId }).sort({ createdAt: -1 });
+        const labAddress = await LabAddress.findOne({ userId:user?.labId }).populate('countryId').populate('stateId')
+        .populate('cityId').sort({ createdAt: -1 });
+        const labImg = await LabImage.findOne({ userId:user?.labId }).sort({ createdAt: -1 });
+        const labLicense = await LabLicense.findOne({ userId:user?.labId }).sort({ createdAt: -1 });
+        const isRequest = Boolean(await EditRequest.exists({ labId: user?.labId }))
 
         // 3️⃣ Fetch ratings
-        const rating = await Rating.find({ labId: userId })
+        const rating = await Rating.find({ labId: user?.labId })
             .populate("patientId")
             .sort({ createdAt: -1 });
 
         // 4️⃣ Calculate average rating
         const avgStats = await Rating.aggregate([
-            { $match: { labId: new mongoose.Types.ObjectId(userId) } },
+            { $match: { labId: new mongoose.Types.ObjectId(user?.labId) } },
             {
                 $group: {
                     _id: null,
@@ -397,7 +400,7 @@ const getProfileDetail = async (req, res) => {
         // 6️⃣ Return final response
         return res.status(200).json({
             success: true,
-            user,
+            user:labData,
             labPerson,
             labAddress,
             labImg,
@@ -435,20 +438,20 @@ const deleteLab = async (req, res) => {
     }
 };
 const labAddress = async (req, res) => {
-    const { userId, fullAddress, country, state, city, pinCode } = req.body;
+    const { userId, fullAddress, countryId, stateId, cityId, pinCode } = req.body;
     try {
         const user = await Laboratory.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await LabAddress.findOne({ userId });
         if (data) {
-            await LabAddress.findByIdAndUpdate(data._id, { fullAddress, country, state, city, pinCode, userId }, { new: true })
+            await LabAddress.findByIdAndUpdate(data._id, { fullAddress, countryId, stateId, cityId, pinCode, userId }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "Lab address update successfully",
             });
         } else {
-            await LabAddress.create({ fullAddress, country, state, city, pinCode, userId })
+            await LabAddress.create({ fullAddress, countryId, stateId, cityId, pinCode, userId })
             return res.status(200).json({
                 success: true,
                 message: "Lab address saved successfully",

@@ -3,7 +3,7 @@ import mongoose, { Schema} from "mongoose";
 const otpSchema=new Schema({
     userId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Laboratory',
+        ref:'User',
         required:true
     },
     code:Number

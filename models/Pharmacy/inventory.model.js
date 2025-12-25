@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const InventorySchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "Pharmacy" },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     medicineName: String,
     schedule: String,
     batchNumber: String,

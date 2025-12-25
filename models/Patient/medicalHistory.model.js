@@ -10,9 +10,9 @@ const historySchema = new Schema({
     allergies: { type: String }    ,
     familyHistory:{
         chronicHistory:String,
-        diseasesInFamiy:String
+        diseasesInFamily:String
     },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
 const MedicalHistory = mongoose.model('medical-history', historySchema)

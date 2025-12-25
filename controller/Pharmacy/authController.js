@@ -45,7 +45,7 @@ const signUpPhar = async (req, res) => {
             }, { new: true });
 
             if (newphar) {
-                 await User.findOneAndUpdate({pharId},{email,name},{new:true})
+                await User.findOneAndUpdate({ pharId }, { email, name }, { new: true })
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Pharmacy not updated" });
@@ -73,13 +73,12 @@ const signUpPhar = async (req, res) => {
                 gender,
                 email,
                 contactNumber,
-                password: hashedPassword,
                 gstNumber, about, logo,
-                
+
             });
 
             if (newphar) {
-                const userData = await User.create({ customId: nextId,name, email, role: 'pharmacy', passwordHash: hashedPassword, pharId: newphar?._id })
+                const userData = await User.create({ name, email, role: 'pharmacy', created_by: 'self', passwordHash: hashedPassword, pharId: newphar?._id })
                 newphar.userId = userData?._id
                 await newphar.save()
                 const token = jwt.sign(
@@ -87,7 +86,7 @@ const signUpPhar = async (req, res) => {
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );
-                return res.status(200).json({ success: true, userId: newphar._id, token });
+                return res.status(200).json({ success: true, userId: userData._id, token });
             } else {
                 return res.status(200).json({ success: false, message: "Pharmacy not created" });
             }
@@ -123,14 +122,14 @@ const signInPhar = async (req, res) => {
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
-        const userData=await Pharmacy.findById(isExist?.pharId)
+        const userData = await Pharmacy.findById(isExist?.pharId)
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: userData, isOwner: true, userId: userData._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: userData, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
         } else {
-            await Login.create({ userId: userData._id })
-            return res.status(200).json({ message: "Login success", user: userData, isNew: true, isOwner: true, token, userId: userData._id, success: true })
+            await Login.create({ userId: isExist._id })
+            return res.status(200).json({ message: "Login success", user: userData, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -305,7 +304,7 @@ const updatePhar = async (req, res) => {
         }
         const updatephar = await Pharmacy.findByIdAndUpdate(userId, { email, contactNumber, name, gender, gstNumber, about, logo: logo || isExist.logo }, { new: true })
         if (updatephar) {
-            await User.findOneAndUpdate({pharId},{name:email},{new:true})
+            await User.findOneAndUpdate({ pharId }, { name: email }, { new: true })
             return res.status(200).json({ message: "Pharmacy data change successfully", userId: isExist._id, success: true })
         } else {
             return res.status(200).json({ message: "Error occure in user data", success: false })
@@ -327,13 +326,14 @@ function generateOTP() {
 const getProfile = async (req, res) => {
     const id = req.params.id
     try {
-        const user = await Pharmacy.findById(id).select('-password');
+        const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ success: false, message: 'Phar not found' });
         }
+        const data = await Pharmacy.findById(user.pharId);
         return res.status(200).json({
             success: true,
-            data: user
+            data
         });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -344,17 +344,20 @@ const getProfileDetail = async (req, res) => {
 
     try {
         // 1️⃣ Find user
-        const user = await Pharmacy.findById(userId).select("-password");
+        const user = await User.findById(userId).select("-password");
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "Pharmacy not found"
             });
         }
+        const data = await Pharmacy.findById(user.pharId)
 
         // 2️⃣ Fetch latest related documents
         const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
-        const pharAddress = await PharAddress.findOne({ userId }).sort({ createdAt: -1 });
+        const pharAddress = await PharAddress.findOne({ userId }).populate('stateId')
+        .populate('countryId')
+        .populate('cityId').sort({ createdAt: -1 });
         const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
         const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
@@ -397,7 +400,7 @@ const getProfileDetail = async (req, res) => {
         // 6️⃣ Return final response
         return res.status(200).json({
             success: true,
-            user,
+            user:data,
             pharPerson,
             pharAddress,
             pharImg,
@@ -423,7 +426,7 @@ const deletePhar = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Phar not found' });
         }
-        await User.deleteOne({pharId:userId})
+        await User.deleteOne({ pharId: userId })
         await Otp.deleteMany({ userId })
         await Login.deleteMany({ userId })
         await Pharmacy.findByIdAndDelete(userId)
@@ -435,20 +438,20 @@ const deletePhar = async (req, res) => {
     }
 };
 const pharAddress = async (req, res) => {
-    const { userId, fullAddress, country, state, city, pinCode } = req.body;
+    const { userId, fullAddress, countryId, stateId, cityId, pinCode } = req.body;
     try {
-        const user = await Pharmacy.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await PharAddress.findOne({ userId });
         if (data) {
-            await PharAddress.findByIdAndUpdate(data._id, { fullAddress, country, state, city, pinCode, userId }, { new: true })
+            await PharAddress.findByIdAndUpdate(data._id, { fullAddress, countryId, stateId, cityId, pinCode, userId }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "Pharmacy address update successfully",
             });
         } else {
-            await PharAddress.create({ fullAddress, country, state, city, pinCode, userId })
+            await PharAddress.create({ fullAddress, countryId, stateId, cityId, pinCode, userId })
             return res.status(200).json({
                 success: true,
                 message: "Pharmacy address saved successfully",
@@ -458,7 +461,7 @@ const pharAddress = async (req, res) => {
         console.log(error)
         return res.status(500).json({
             success: false,
-            message: "Internal Server Error",
+            message: error,
         });
     }
 };
@@ -466,7 +469,7 @@ const pharPerson = async (req, res) => {
     const { userId, name, email, contactNumber, gender } = req.body;
     const photo = req.files?.['photo']?.[0]?.path
     try {
-        const user = await Pharmacy.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await PharPerson.findOne({ userId });
@@ -502,7 +505,7 @@ const pharLicense = async (req, res) => {
         const { userId, pharLicenseNumber } = req.body;
 
         // Check user exists
-        const user = await Pharmacy.findById(userId);
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({
                 message: "User not found",
@@ -642,7 +645,7 @@ const pharImage = async (req, res) => {
     const pharImgFiles = req.files?.['pharImg'] || [];
     console.log(pharImgFiles, thumbnailFile)
     try {
-        const phar = await Pharmacy.findById(userId);
+        const phar = await User.findById(userId);
         if (!phar) return res.status(200).json({ success: false, message: "Pharmacy not found" });
 
         let pharImageData = await PharImage.findOne({ userId });

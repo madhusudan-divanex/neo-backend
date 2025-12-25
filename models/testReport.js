@@ -7,7 +7,7 @@ const requestSchema=new Schema({
     },
     patientId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Patient',required:true
+        ref:'User',required:true
     },
     testId:{
         type:mongoose.Schema.Types.ObjectId,

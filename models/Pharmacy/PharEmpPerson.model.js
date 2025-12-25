@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
     proffesionId: { type: mongoose.Schema.Types.ObjectId, ref: 'phar-emp-prof' },
     employmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'phar-employment' },
     status: { type: String,enum:['active','inactive','onleave'], default: 'active' },
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy', required: true },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     
 }, { timestamps: true });
 

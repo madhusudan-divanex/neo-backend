@@ -1,13 +1,14 @@
-import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, forgotEmail, getCustomProfile, getNameProfile, getPatientDemographic, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
+import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getNameProfile, getPatientDemographic, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { getLabReport, getPatientAppointment } from "../controller/appointmentController.js";
+import { getLabReport, getNearByDoctor, getPatientAppointment } from "../controller/appointmentController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
 
 patient.post('',signUpPatient)
+patient.get('/near-by-doctor',getNearByDoctor)
 patient.get('',authMiddleware,getProfile)
 patient.get('/detail/:id',authMiddleware,getProfileDetail)
 patient.get('/:id',authMiddleware,getCustomProfile)
@@ -27,6 +28,7 @@ patient.post('/kyc',uploader.fields([{ name: 'frontImage', maxCount: 1 },
 patient.post('/prescription', uploader.array('fileUrl'), authMiddleware, addPrescriptions);
 patient.delete('/prescription/:id/:itemId',authMiddleware,deletePrescription)
 patient.post('/medical-history',authMiddleware,patientMedicalHistory)
+patient.post('/family-medical-history',authMiddleware,familyMedicalHistory)
 patient.post('/demographic',authMiddleware,patientDemographic)
 patient.get('/demographic/:id',authMiddleware,getPatientDemographic)
 
@@ -38,7 +40,6 @@ patient.post('/update-image',uploader.fields([{ name: 'profileImage', maxCount: 
 
 patient.get('/appointment/:id',authMiddleware,getPatientAppointment)
 patient.get('/lab-report/:id',authMiddleware,getLabReport)
-
 
 
 

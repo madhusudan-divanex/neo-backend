@@ -19,11 +19,12 @@ import PatientDemographic from '../../models/Patient/demographic.model.js';
 import Prescriptions from '../../models/Prescriptions.js';
 import Patient from '../../models/Patient/patient.model.js';
 import PatientPrescriptions from '../../models/Patient/prescription.model.js';
+import User from '../../models/Hospital/User.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
     try {
-        const isExist = await Pharmacy.findById(pharId)
+        const isExist = await User.findById(pharId)
         if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
         let data;
         const isLast = await Inventory.findOne()?.sort({ createdAt: -1 })
@@ -646,6 +647,7 @@ const deletePO = async (req, res) => {
         const res = await PurchaseOrder.findByIdAndDelete(req.params.id);
         return res.status(200).json({ success: true, message: "PO Deleted" })
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ success: false, message: error.message })
     }
 }
@@ -1118,7 +1120,7 @@ const getAllPharPermission = async (req, res) => {
             filter.name = { $regex: name, $options: "i" };
         }
 
-        const pharmacy = await Pharmacy.findById(id);
+        const pharmacy = await User.findById(id);
 
         if (!pharmacy) {
             return res.status(200).json({
@@ -1163,7 +1165,7 @@ const getAllPharPermission = async (req, res) => {
 const addPharPermission = async (req, res) => {
     try {
         const { name, pharId, ...permissions } = req.body;
-        const isExist = await Pharmacy.findById(pharId);
+        const isExist = await User.findById(pharId);
         if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
 
 
@@ -1248,7 +1250,7 @@ const updatePharPermission = async (req, res) => {
 const deletePharPermission = async (req, res) => {
     const { permissionId, pharId } = req.body;
     try {
-        const isLabExist = await Pharmacy.findById(pharId);
+        const isLabExist = await User.findById(pharId);
         if (!isLabExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
         const isExist = await PharPermission.findById(permissionId);
         if (!isExist) return res.status(200).json({ message: "Pharmacy permission not found", success: false })
@@ -1280,7 +1282,7 @@ const savePharStaff = async (req, res) => {
     const contactInformation = JSON.parse(req.body.contactInformation)
     const profileImage = req.files?.['profileImage']?.[0]?.path
     try {
-        const isExist = await Pharmacy.findById(pharId);
+        const isExist = await User.findById(pharId);
         if (!isExist) return res.status(200).json({ message: "Pharmacy  not found", success: false })
 
         const isStaff = await PharStaff.findById(empId);
@@ -1531,7 +1533,7 @@ const pharStaff = async (req, res) => {
     const limitNumber = parseInt(limit) > 0 ? parseInt(limit) : 10;
 
     try {
-        const isExist = await Pharmacy.findById(id);
+        const isExist = await User.findById(id);
         if (!isExist) {
             return res.status(200).json({ message: "Pharmacy not found", success: false });
         }
@@ -1607,7 +1609,7 @@ const deleteStaffData = async (req, res) => {
 const pharDashboardData = async (req, res) => {
     const pharId = req.params.id;
     try {
-        const isExist = await Pharmacy.findById(pharId);
+        const isExist = await User.findById(pharId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
         const items = await Inventory.find({ pharId })
         const inventoryValue = await items.reduce(
@@ -1626,7 +1628,7 @@ const pharDashboardData = async (req, res) => {
             return count;
         }, 0);
 
-        const h1Compliance = await Inventory.countDocuments({ schedule: 'H1' })
+        const h1Compliance = await Inventory.countDocuments({ schedule: 'H1',pharId })
         const xCompliance = await Inventory.aggregate([
             {
                 $match: { schedule: 'X' },
@@ -1642,7 +1644,7 @@ const pharDashboardData = async (req, res) => {
 
         const hCompliance = await Inventory.aggregate([
             {
-                $match: { schedule: 'H' },
+                $match: { schedule: 'H',pharId },
             },
             {
                 $group: {
@@ -1654,7 +1656,7 @@ const pharDashboardData = async (req, res) => {
         const totalHQuantity = hCompliance[0]?.totalQuantity || 0;
         const h1ComplianceData = await Inventory.aggregate([
             {
-                $match: { schedule: 'H1' },
+                $match: { schedule: 'H1',pharId },
             },
             {
                 $group: {
@@ -1664,9 +1666,9 @@ const pharDashboardData = async (req, res) => {
             },
         ])
         const totalH1Quantity = h1ComplianceData[0]?.totalQuantity || 0;
-        const marginAnalysis = await Inventory.find({ margintType: "Percentage" }).sort({ avgMargin: -1 }).limit(5)
-        const inventory = await Inventory.find().sort({ sellCount: -1 }).limit(5)
-        const suppliers = await Supplier.find().sort({ createdAt: -1 }).limit(5)
+        const marginAnalysis = await Inventory.find({ margintType: "Percentage",pharId }).sort({ avgMargin: -1 }).limit(5)
+        const inventory = await Inventory.find({pharId}).sort({ sellCount: -1 }).limit(5)
+        const suppliers = await Supplier.find({pharId}).sort({ createdAt: -1 }).limit(5)
         const supplierData = await Promise.all(
             suppliers.map(async (supplier) => {
                 const purchaseOrders = await PurchaseOrder.find({

@@ -19,7 +19,7 @@ const permissionSchema=new Schema({
     paymentStatus:{type:Boolean,default:false},
     appointmentStatus:{type:Boolean,default:false},
     chat:{type:Boolean,default:false},
-    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'Laboratory', required: true },
+    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     
 
 },{timestamps:true})

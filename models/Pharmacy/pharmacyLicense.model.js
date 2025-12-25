@@ -9,7 +9,7 @@ const licSchema = new Schema({
     pharCert: [certSchema],
     pharLicenseNumber:{type:String,required:true},
     licenseFile:{type:String,required:true},
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
 const PharLicense = mongoose.model('Phar-license', licSchema)
