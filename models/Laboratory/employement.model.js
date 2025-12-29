@@ -9,7 +9,7 @@ const licSchema = new Schema({
     salary:{type:String,required:true},
     note:{type:String,required:true},
 
-    empId: { type: mongoose.Schema.Types.ObjectId, ref: 'lab-staff', required: true },
+    empId: { type: mongoose.Schema.Types.ObjectId, ref: 'lab-staff', required: true ,index:true},
 }, { timestamps: true })
 
 const EmpEmployement = mongoose.model('lab-employment', licSchema)

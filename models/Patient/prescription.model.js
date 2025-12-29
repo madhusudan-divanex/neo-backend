@@ -10,7 +10,7 @@ const prescriptionsSchema = new Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true
+    required: true,index:true
   },
   prescriptions: [prescriptionItemSchema]
 }, { timestamps: true });

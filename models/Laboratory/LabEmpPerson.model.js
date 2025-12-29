@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
     profileImage: { type: String}  ,
     permissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'lab-permission' },
     status: { type: String,enum:['active','inactive'], default: 'active' },
-    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true,index:true },
     
 }, { timestamps: true });
 

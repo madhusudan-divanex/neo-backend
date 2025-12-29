@@ -1,7 +1,7 @@
 import  mongoose from 'mongoose';
 
 const MedicineRequestSchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true ,index:true},
     medicineId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory", required: true },
     quantity: { type: Number, required: true },
     message: { type: String, default: "" },

@@ -19,15 +19,33 @@ Laboratory Api ->
 Trading->
     Historical data 
 
-Api->
-    Get Prescription data
+Paitent->
+    Change password
+    Get Lab Appointment 
+    Get Lab test Report 
+    Neo Health Card
+    Edit Request 
+    Update Profile 
+    Downlaod Health Card
+     
+    Verify Otp 
+    Kyc 
+    Personal & Demographic Data 
+    Medical History 
+    Family History 
+    Prescription And Reports
     CRD Sell
 Pharmacy->
     Manual Sell 
     Generate Bill 
 
 Pharmacy->
-    CRUD Inventory
+    Notification 
+    Chat
+    Sell (scan)
+Laboratory->
+    Notification
+    Chat
     CRUD Return 
     CRUD Purchase Order
     Signup,Upload Image,contact person 

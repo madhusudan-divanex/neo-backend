@@ -9,7 +9,7 @@ const permissionSchema=new Schema({
     patientList:{type:Boolean,default:false},
     details:{type:Boolean,default:false},
     chat:{type:Boolean,default:false},
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true,index:true },
     
 
 },{timestamps:true})

@@ -122,14 +122,39 @@ const signInPhar = async (req, res) => {
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
+        const [
+            image,
+            address,
+            person,
+            license,
+        ] = await Promise.all([
+            PharImage.findOne({ userId: isExist._id }),
+            PharAddress.findOne({ userId: isExist._id }),
+            PharPerson.findOne({ userId: isExist._id }),
+            PharLicense.findOne({
+                userId: isExist._id,
+            }),
+        ]);
+
+        let nextStep = null;
+
+        if (!image) {
+            nextStep = "/create-account-image";
+        } else if (!address) {
+            nextStep = "/create-account-address";
+        } else if (!person) {
+            nextStep = "/create-account-person";
+        } else if (!license) {
+            nextStep = "/create-account-upload";
+        } 
         const userData = await Pharmacy.findById(isExist?.pharId)
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: userData, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success",nextStep, user: userData, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Login success", user: userData, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Login success",nextStep, user: userData, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -356,8 +381,8 @@ const getProfileDetail = async (req, res) => {
         // 2️⃣ Fetch latest related documents
         const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
         const pharAddress = await PharAddress.findOne({ userId }).populate('stateId')
-        .populate('countryId')
-        .populate('cityId').sort({ createdAt: -1 });
+            .populate('countryId')
+            .populate('cityId').sort({ createdAt: -1 });
         const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
         const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
@@ -400,7 +425,7 @@ const getProfileDetail = async (req, res) => {
         // 6️⃣ Return final response
         return res.status(200).json({
             success: true,
-            user:data,
+            user: data,
             pharPerson,
             pharAddress,
             pharImg,

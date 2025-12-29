@@ -38,15 +38,15 @@ const signUpPatient = async (req, res) => {
         });
 
         if (newPatient) {
-            const code = generateOTP()
-            const isOtpExist = await Otp.findOne({ userId: newPatient._id })
-            if (isOtpExist) {
-                await Otp.findByIdAndDelete(isOtpExist._id)
-                const otp = await Otp.create({ userId: newPatient._id, code })
-            } else {
-                const otp = await Otp.create({ userId: newPatient._id, code })
-            }
-            const user=await User.create(
+            // const code = generateOTP()
+            // const isOtpExist = await Otp.findOne({ userId: newPatient._id })
+            // if (isOtpExist) {
+            //     await Otp.findByIdAndDelete(isOtpExist._id)
+            //     const otp = await Otp.create({ userId: newPatient._id, code })
+            // } else {
+            //     const otp = await Otp.create({ userId: newPatient._id, code })
+            // }
+            const user = await User.create(
                 {
                     patientId: newPatient?._id,
                     email,
@@ -56,8 +56,8 @@ const signUpPatient = async (req, res) => {
                     passwordHash: hashedPassword
                 },
             )
-            await Patient.findByIdAndUpdate(newPatient._id,{userId:user._id},{new:true})
-            return res.status(200).json({ success: true,  userId: user._id });
+            await Patient.findByIdAndUpdate(newPatient._id, { userId: user._id }, { new: true })
+            return res.status(200).json({ success: true, userId: user._id });
         } else {
             return res.status(200).json({ success: false, message: "Patient not created" });
         }
@@ -70,27 +70,27 @@ const signUpPatient = async (req, res) => {
 const signInPatient = async (req, res) => {
     const { contactNumber, password } = req.body;
     try {
-        const isExist = await Patient.findOne({ contactNumber});
+        const isExist = await Patient.findOne({ contactNumber }).populate('userId');
         if (!isExist) return res.status(200).json({ message: 'Patient not Found', success: false });
-        const hashedPassword = isExist.password
+        const hashedPassword = isExist.userId?.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ userId: isExist._id })
+        const isOtpExist = await Otp.findOne({ phone: isExist.contactNumber })
         if (isOtpExist) {
             await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ userId: isExist._id, code })
+            const otp = await Otp.create({ phone: isExist.contactNumber, code })
         } else {
-            const otp = await Otp.create({ userId: isExist._id, code })
+            const otp = await Otp.create({ phone: isExist.contactNumber, code })
         }
 
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist._id, isNew: false, success: true })
+            return res.status(200).json({ message: "Email Sent", userId: isExist.userId._id, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Email Sent", isNew: true, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Email Sent", isNew: true, userId: isExist.userId._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -98,10 +98,10 @@ const signInPatient = async (req, res) => {
     }
 }
 const verifyOtp = async (req, res) => {
-    const { userId, code } = req.body
+    const { phone, code, name, gender, email, contactNumber, password, } = req.body
     try {
-        const isExist = await User.findById(userId)
-        if (!isExist) {
+        const isOtp = await Otp.findOne({ phone })
+        if (!isOtp) {
             return res.status(200).json({ message: "Patient not exist", success: false })
         }
         // const isOtp = await Otp.findOne({ code })
@@ -115,40 +115,115 @@ const verifyOtp = async (req, res) => {
         //     return res.status(200).json({ message: "OTP Expired", success: false });
         // }
         // const isValid = code == (isOtp.code)
-        const isValid = code == "1234"
-        let isNew = true;
-        const isLogin = await Login.findOne({ userId })
-        if (isLogin) {
-            isNew = false;
-        }
-        if (isValid) {
-            const token = jwt.sign(
-                { user: isExist._id },
-                process.env.JWT_SECRET,
-                // { expiresIn: isRemember ? "30d" : "1d" }
-            );
-            return res.status(200).json({ message: "Verify Success", token,patientId:isExist?.patientId, userId: isExist._id, user: isExist, success: true })
+        if (name && gender && email && contactNumber && password) {
+            const isValid = code == "1234"
+            if (isValid) {
+                const isExist = await Patient.findOne({ email })
+                if (isExist) {
+                    return res.status(200).json({ message: "Patient already exist", success: false })
+                }
+                const hashedPassword = await bcrypt.hash(password, 10);
+                const newPatient = await Patient.create({
+                    name,
+                    gender,
+                    email,
+                    contactNumber,
+                });
+
+                if (newPatient) {
+                    const user = await User.create(
+                        {
+                            patientId: newPatient?._id,
+                            email,
+                            name,
+                            role: 'patient',
+                            created_by: 'self',
+                            passwordHash: hashedPassword
+                        },
+                    )
+                    const token = jwt.sign(
+                        { user: user._id },
+                        process.env.JWT_SECRET,
+                        // { expiresIn: isRemember ? "30d" : "1d" }
+                    );
+                    await Patient.findByIdAndUpdate(newPatient._id, { userId: user._id }, { new: true })
+                    return res.status(200).json({ success: true, nextStep: '/kyc', token, userId: user._id });
+                } else {
+                    return res.status(200).json({ success: false, message: "Patient not created" });
+                }
+
+            } else {
+                return res.status(200).json({ message: "Invalid otp", success: false })
+            }
         } else {
-            return res.status(200).json({ message: "Invalid credentials", success: false })
+            const patient = await Patient.findOne({ contactNumber: phone })
+            const user = await User.findById(patient.userId)
+            const userId = patient.userId
+            const [
+                kyc,
+                personal,
+                history,
+                familyHistory,
+                prescription
+            ] = await Promise.all([
+                PatientKyc.findOne({ userId }),
+                PatientDemographic.findOne({ userId }),
+                MedicalHistory.findOne({ userId }),
+                MedicalHistory.findOne({
+                    userId,
+                    familyHistory: { $ne: null }
+                }),
+                PatientPrescriptions.findOne({ userId })
+            ]);
+
+            let nextStep = null;
+
+            if (!kyc) {
+                nextStep = "/kyc";
+            } else if (!personal) {
+                nextStep = "/personal-info";
+            } else if (!history) {
+                nextStep = "/medical-history";
+            } else if (!familyHistory) {
+                nextStep = "/family-medical-history";
+            } else if (!prescription) {
+                nextStep = "/prescriptions-reports";
+            }
+            const isValid = code == "1234"
+            let isNew = true;
+            const isLogin = await Login.findOne({ userId })
+            if (isLogin) {
+                isNew = false;
+            }
+            if (isValid) {
+                const token = jwt.sign(
+                    { user: user._id },
+                    process.env.JWT_SECRET,
+                    // { expiresIn: isRemember ? "30d" : "1d" }
+                );
+                return res.status(200).json({ message: "Verify Success", nextStep, token, patientId: user?.patientId, userId, user: user, success: true })
+            } else {
+                return res.status(200).json({ message: "Invalid credentials", success: false })
+            }
         }
     } catch (err) {
         return res.status(400).json({ success: false, error: err.message });
     }
 };
 const resendOtp = async (req, res) => {
-    const id = req.params.id
+    const { phone } = req.params.id
     try {
-        const isExist = await User.findById(id);
+        const isExist = await Patient.findOne({ phone });
         if (!isExist) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
         const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ userId: isExist._id })
+        const isOtpExist = await Otp.findOne({ phone: isExist.contactNumber })
         if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ userId: isExist._id, code })
+            await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+            const otp = await Otp.create({ phone: isExist.contactNumber, code })
         } else {
-            const otp = await Otp.create({ userId: isExist._id, code })
+            const otp = await Otp.create({ phone: isExist.contactNumber, code })
         }
         const emailHtml = `
             Hello ${isExist?.name}, 
@@ -237,8 +312,9 @@ const changePassword = async (req, res) => {
 }
 const updatePatient = async (req, res) => {
     const { userId, email, contactNumber, name, gender } = req.body;
+    const profileImage = req.files?.['profileImage']?.[0]?.path
     try {
-        const isExist = await Patient.findById(userId);
+        const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
         const alreadyEmail = await Patient.countDocuments({ email })
         if (alreadyEmail > 1) {
@@ -248,7 +324,10 @@ const updatePatient = async (req, res) => {
         if (userEmail > 1) {
             return res.status(200).json({ message: 'Email already exist' });
         }
-        const updatePatient = await Patient.findByIdAndUpdate(userId, { email, contactNumber, name, gender }, { new: true })
+        if(profileImage && alreadyEmail.profileImage){
+            safeUnlink(alreadyEmail.profileImage)
+        }
+        const updatePatient = await Patient.findByIdAndUpdate(isExist.patientId, { email, contactNumber, name, gender,profileImage }, { new: true })
         if (updatePatient) {
             await User.findOneAndUpdate({ patientId: userId }, { name, email }, { new: true })
             return res.status(200).json({ message: "Patient data change successfully", userId: isExist._id, success: true })
@@ -256,6 +335,9 @@ const updatePatient = async (req, res) => {
             return res.status(200).json({ message: "Error occure in user data", success: false })
         }
     } catch (err) {
+        if(fs.existsSync(profileImage)){
+            safeUnlink(profileImage)
+        }
         console.error(err.message);
         if (err.message.includes(' duplicate key error collection')) {
             return res.status(200).json({ message: "Email already exist " })
@@ -271,7 +353,7 @@ function generateOTP() {
 
 const getProfile = async (req, res) => {
     try {
-        const user = await Patient.findById(req.user.user).select('-password');
+        const user = await User.findById(req.user.user).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
@@ -288,52 +370,75 @@ const getCustomProfile = async (req, res) => {
     try {
         let user;
         if (userId?.length < 24) {
-            user = await Patient.findOne({ customId: userId }).select('-password').lean();
+            user = await User.findOne({ customId: userId }).select('-password').lean();
         } else {
-            user = await Patient.findById(userId).select('-password').lean();
+            user = await User.findById(userId).select('-password').lean();
         }
         if (!user) {
             return res.status(200).json({ success: false, message: 'Patient not found' });
         }
-        const ptDemographic = await PatientDemographic.findOne({ userId: user._id }).sort({ createdAt: -1 })
+        const patientData = await Patient.findById(user.patientId).lean()
+        const ptDemographic = await PatientDemographic.findOne({ userId: user.patientId }).sort({ createdAt: -1 })
         res.status(200).json({
             success: true,
-            data: { ...user, dob: ptDemographic?.dob }
+            data: { ...patientData, dob: ptDemographic?.dob }
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };
 const getProfileDetail = async (req, res) => {
-    const userId = req.params.id
     try {
-        let user;
-        if (userId?.length < 24) {
-            user = await Patient.findOne({ customId: userId }).select('-password');
-        } else {
-            user = await Patient.findById(userId).select('-password');
-        }
+        const userId = req.params.id;
+
+        // Determine if it's ObjectId or unique_id
+        const isObjectId = userId?.length === 24;
+
+        const user = await User
+            .findOne(isObjectId ? { _id: userId } : { unique_id: userId })
+            .select('-password')
+            .lean();
+
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-        const fullId = await userId?.length < 24 ? user._id : userId
-        const kyc = await PatientKyc.findOne({ userId: fullId }).sort({ createdAt: -1 })
-        const medicalHistory = await MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 })
-        const demographic = await PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 })
-        const prescription = await PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 })
-        const labAppointment = await LabAppointment.find({ patientId: fullId }).sort({ createdAt: -1 })
+
+        const fullId = user._id;
+
+        // Run all queries in parallel
+        const [
+            patient,
+            kyc,
+            medicalHistory,
+            demographic,
+            prescription,
+            labAppointment,isRequest,allowEdit
+        ] = await Promise.all([
+            Patient.findOne({ userId: fullId }).lean(),
+            PatientKyc.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+            MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+            PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+            PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+            LabAppointment.find({ patientId: fullId }).sort({ createdAt: -1 }).lean(),
+            EditRequest.findOne({ patientId: userId }),
+            EditRequest.exists({patientId:userId,status:'approved'}).then(Boolean)
+        ]);
 
         return res.status(200).json({
             success: true,
-            user,
-            kyc,
+            user: patient,
+            kyc,customId:user.unique_id,role:user.role,
             labAppointment,
-            demographic, prescription, medicalHistory
+            demographic,
+            prescription,
+            medicalHistory,isRequest,allowEdit
         });
+
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
+
 const deletePatient = async (req, res) => {
     const userId = req.user.user
     try {
@@ -358,14 +463,14 @@ const patientKyc = async (req, res) => {
     const frontImage = req.files?.['frontImage']?.[0]?.path
     const backImage = req.files?.['backImage']?.[0]?.path
     try {
-        const user = await Patient.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
         const data = await PatientKyc.findOne({ userId });
         if (data) {
-            if (data.frontImage) {
+            if (frontImage && data.frontImage) {
                 safeUnlink(data.frontImage)
             }
-            if (data.backImage) {
+            if (backImage && data.backImage) {
                 safeUnlink(data.backImage)
             }
             await PatientKyc.findByIdAndUpdate(data._id, { frontImage, backImage, type }, { new: true })
@@ -400,7 +505,7 @@ const patientDemographic = async (req, res) => {
     const { userId, bloodGroup, height, weight, dob } = req.body;
 
     try {
-        const user = await Patient.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await PatientDemographic.findOne({ userId });
@@ -430,7 +535,7 @@ const getPatientDemographic = async (req, res) => {
     const userId = req.params.id;
 
     try {
-        const user = await Patient.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await PatientDemographic.findOne({ userId });
@@ -448,10 +553,37 @@ const getPatientDemographic = async (req, res) => {
         });
     }
 };
+const getPatientKyc = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        const user = await User.findById(userId)
+        if (!user) return res.status(200).json({ message: "User not found", success: false })
+
+        const data = await PatientKyc.findOne({ userId });
+        if (data) {
+            return res.status(200).json({
+                success: true,
+                data,
+                message: "Kyc fetch successfully",
+            });
+        }
+        return res.status(200).json({
+            success: false,
+            message: "Kyc not found ",
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
 const patientMedicalHistory = async (req, res) => {
     const { userId, alcohol, smoking, allergies, medicationDetail, onMedication, chronicCondition, familyHistory } = req.body;
     try {
-        const user = await Patient.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await MedicalHistory.findOne({ userId });
@@ -477,10 +609,38 @@ const patientMedicalHistory = async (req, res) => {
         });
     }
 };
+const getMedicalHistory = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        const user = await User.findById(userId)
+        if (!user) return res.status(200).json({ message: "User not found", success: false })
+
+        const data = await MedicalHistory.findOne({ userId });
+        if (data) {
+            return res.status(200).json({
+                success: true,
+                data,
+                message: "Medical History fetch successfully",
+            });
+        }
+
+        return res.status(200).json({
+            success: false,
+            message: "Medical History not found",
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
 const familyMedicalHistory = async (req, res) => {
     const { userId, familyHistory } = req.body;
     try {
-        const user = await Patient.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await MedicalHistory.findOne({ userId });
@@ -491,7 +651,7 @@ const familyMedicalHistory = async (req, res) => {
                 success: true,
                 message: "Medical History update successfully",
             });
-        } 
+        }
     } catch (error) {
         return res.status(500).json({
             success: false,
@@ -500,89 +660,88 @@ const familyMedicalHistory = async (req, res) => {
     }
 };
 const addPrescriptions = async (req, res) => {
-  try {
-    const { userId } = req.body;
-
-    let prescriptionsData = req.body.prescriptions;
-    console.log( req.body.prescriptions)
-
-    // If prescriptions data comes as JSON string (from multipart/form-data), parse it
-    if (typeof prescriptionsData === "string") {
-      try {
-        prescriptionsData = JSON.parse(prescriptionsData);
-      } catch (err) {
-        return res.status(400).json({ success: false, error: "Invalid prescriptions data JSON" });
-      }
-    }
-
-    // Ensure prescriptionsData is an array
-    if (!Array.isArray(prescriptionsData)) {
-      prescriptionsData = [prescriptionsData];
-    }
-
-    const files = req.files || [];
-
-    // Find existing prescriptions document for the user
-    let userPrescriptionsDoc = await PatientPrescriptions.findOne({ userId });
-
-    if (!userPrescriptionsDoc) {
-      // No existing doc, create new one
-      // Attach uploaded file paths to prescriptions
-      prescriptionsData.forEach((prescription, i) => {
-        if (prescription && files[i]) {
-          prescription.fileUrl = files[i].path;
-        }
-      });
-console.log(prescriptionsData)
-      const created = await PatientPrescriptions.create({
-        userId,
-        prescriptions: prescriptionsData,
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: "Prescriptions created successfully",
-        data: created,
-      });
-    }
-
-    // If doc exists, update or add prescriptions
-    prescriptionsData.forEach((newPresc, index) => {
-      if (!newPresc) return; // skip if undefined
-
-      const existingPresc = userPrescriptionsDoc.prescriptions.id(newPresc._id);
-
-      if (existingPresc) {
-        // Update existing prescription
-        if (files[index]) {
-          safeUnlink(existingPresc.fileUrl);
-          existingPresc.fileUrl = files[index].path;
+    try {
+        const { userId } = req.body;
+        const user = await User.findById(userId)
+        if (!user) return res.status(200).json({ message: "User not found", success: false })
+        let prescriptionsData = req.body.prescriptions;
+        // If prescriptions data comes as JSON string (from multipart/form-data), parse it
+        if (typeof prescriptionsData === "string") {
+            try {
+                prescriptionsData = JSON.parse(prescriptionsData);
+            } catch (err) {
+                return res.status(400).json({ success: false, error: "Invalid prescriptions data JSON" });
+            }
         }
 
-        existingPresc.name = newPresc.name || existingPresc.name;
-        existingPresc.diagnosticName = newPresc.diagnosticName || existingPresc.diagnosticName;
-        // update other fields similarly if needed
-
-      } else {
-        // Add new prescription
-        if (files[index]) {
-          newPresc.fileUrl = files[index].path;
+        // Ensure prescriptionsData is an array
+        if (!Array.isArray(prescriptionsData)) {
+            prescriptionsData = [prescriptionsData];
         }
-        userPrescriptionsDoc.prescriptions.push(newPresc);
-      }
-    });
 
-    await userPrescriptionsDoc.save();
+        const files = req.files || [];
 
-    return res.status(200).json({
-      success: true,
-      message: "Prescriptions updated successfully",
-      data: userPrescriptionsDoc,
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
+        // Find existing prescriptions document for the user
+        let userPrescriptionsDoc = await PatientPrescriptions.findOne({ userId });
+
+        if (!userPrescriptionsDoc) {
+            // No existing doc, create new one
+            // Attach uploaded file paths to prescriptions
+            prescriptionsData.forEach((prescription, i) => {
+                if (prescription && files[i]) {
+                    prescription.fileUrl = files[i].path;
+                }
+            });
+            console.log(prescriptionsData)
+            const created = await PatientPrescriptions.create({
+                userId,
+                prescriptions: prescriptionsData,
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: "Prescriptions created successfully",
+                data: created,
+            });
+        }
+
+        // If doc exists, update or add prescriptions
+        prescriptionsData.forEach((newPresc, index) => {
+            if (!newPresc) return; // skip if undefined
+
+            const existingPresc = userPrescriptionsDoc.prescriptions.id(newPresc._id);
+
+            if (existingPresc) {
+                // Update existing prescription
+                if (files[index]) {
+                    safeUnlink(existingPresc.fileUrl);
+                    existingPresc.fileUrl = files[index].path;
+                }
+
+                existingPresc.name = newPresc.name || existingPresc.name;
+                existingPresc.diagnosticName = newPresc.diagnosticName || existingPresc.diagnosticName;
+                // update other fields similarly if needed
+
+            } else {
+                // Add new prescription
+                if (files[index]) {
+                    newPresc.fileUrl = files[index].path;
+                }
+                userPrescriptionsDoc.prescriptions.push(newPresc);
+            }
+        });
+
+        await userPrescriptionsDoc.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Prescriptions updated successfully",
+            data: userPrescriptionsDoc,
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
 };
 
 
@@ -634,7 +793,7 @@ const updateImage = async (req, res) => {
 const editRequest = async (req, res) => {
     const { patientId, message } = req.body;
     try {
-        const user = await Patient.findById(patientId)
+        const user = await User.findById(patientId)
         if (!user) return res.status(200).json({ message: "Patient not found", success: false })
 
 
@@ -683,5 +842,5 @@ const getNameProfile = async (req, res) => {
 
 export {
     signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
-    getPatientDemographic, getCustomProfile, getNameProfile,familyMedicalHistory
+    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory
 }

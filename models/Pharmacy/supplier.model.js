@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const SupplierSchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true ,index:true},
     name: { type: String, required: true },
     mobileNumber: { type: String, required: true },
     email: { type: String, unique: true },

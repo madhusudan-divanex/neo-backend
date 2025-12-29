@@ -23,6 +23,7 @@ import { generateReportPDF } from '../../utils/pdfMaker.js';
 import LabStaff from '../../models/Laboratory/LabEmpPerson.model.js';
 import EmpAccess from '../../models/Laboratory/empAccess.model.js';
 import User from '../../models/Hospital/User.js';
+import { error } from 'console';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId } = req.body;
@@ -36,8 +37,8 @@ const signUpLab = async (req, res) => {
             if (logo && isExist.logo) {
                 safeUnlink(isExist.logo)
             }
-            const isMax=await Laboratory.countDocuments({email})
-            if(isMax>1){
+            const isMax = await Laboratory.countDocuments({ email })
+            if (isMax > 1) {
                 return res.status(200).json({ message: "Email already exist", success: false })
             }
             // Create user
@@ -50,25 +51,25 @@ const signUpLab = async (req, res) => {
             }, { new: true });
 
             if (newLab) {
-                await User.findOneAndUpdate(labId,{email,name},{new:true})
+                await User.findOneAndUpdate(labId, { email, name }, { new: true })
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Lab not updated" });
             }
-        } else {           
+        } else {
 
             const isExist = await Laboratory.findOne({ email })
             if (isExist) {
                 return res.status(200).json({ message: "Lab already exist", success: false })
             }
-            const isUser = await User.findOne({email})
+            const isUser = await User.findOne({ email })
             if (isUser) {
                 return res.status(200).json({ message: "User already exist", success: false })
             }
-            const isLast=await User.findOne()?.sort({createdAt:-1})
+            const isLast = await User.findOne()?.sort({ createdAt: -1 })
             const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
+                ? String(Number(isLast.customId) + 1).padStart(4, '0')
+                : '0001';
             const hashedPassword = await bcrypt.hash(password, 10);
             // Create user
             const newLab = await Laboratory.create({
@@ -78,12 +79,12 @@ const signUpLab = async (req, res) => {
                 contactNumber,
                 password: hashedPassword,
                 gstNumber, about, logo,
-                customId:nextId
+                customId: nextId
             });
-            
+
             if (newLab) {
-                const userData=await User.create({name,email,role:'lab',passwordHash:hashedPassword,labId:newLab?._id,created_by:'self'})
-                newLab.userId=userData?._id
+                const userData = await User.create({ name, email, role: 'lab', passwordHash: hashedPassword, labId: newLab?._id, created_by: 'self' })
+                newLab.userId = userData?._id
                 await newLab.save()
                 const token = jwt.sign(
                     { user: newLab._id },
@@ -107,16 +108,16 @@ const signUpLab = async (req, res) => {
 const signInLab = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const labPerson = await EmpAccess.findOne({email}).populate('permissionId')
-        if(labPerson && labPerson.password==password){
-            const empData=await LabStaff.findById(labPerson.empId)
+        const labPerson = await EmpAccess.findOne({ email }).populate('permissionId')
+        if (labPerson && labPerson.password == password) {
+            const empData = await LabStaff.findById(labPerson.empId)
             const token = jwt.sign(
                 { user: empData.labId },
                 process.env.JWT_SECRET,
                 // { expiresIn: isRemember ? "30d" : "1d" }
             );
             console.log(labPerson)
-            return res.status(200).json({ message: "Login success",user:labPerson, staffId: labPerson.empId, userId: empData.labId,isOwner:false, token, success: true })
+            return res.status(200).json({ message: "Login success", user: labPerson, staffId: labPerson.empId, userId: empData.labId, isOwner: false, token, success: true })
         }
         const isExist = await User.findOne({ email });
         if (!isExist) return res.status(200).json({ message: 'Lab not Found', success: false });
@@ -128,14 +129,39 @@ const signInLab = async (req, res) => {
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
-        const userData=await Laboratory.findById(isExist?.labId)
+        const userData = await Laboratory.findById(isExist?.labId)
+        const [
+            image,
+            address,
+            person,
+            license,
+        ] = await Promise.all([
+            LabImage.findOne({ userId: isExist._id }),
+            LabAddress.findOne({ userId: isExist._id }),
+            LabPerson.findOne({ userId: isExist._id }),
+            LabLicense.findOne({
+                userId: isExist._id,
+            }),
+        ]);
+
+        let nextStep = null;
+
+        if (!image) {
+            nextStep = "/create-account-image";
+        } else if (!address) {
+            nextStep = "/create-account-address";
+        } else if (!person) {
+            nextStep = "/create-account-person";
+        } else if (!license) {
+            nextStep = "/create-account-upload";
+        }
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: userData,isOwner:true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: userData, nextStep, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: userData._id })
-            return res.status(200).json({ message: "Login success",  user: userData,isNew: true,isOwner:true, token, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Login success", user: userData, nextStep, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -327,7 +353,7 @@ function generateOTP() {
 const getProfile = async (req, res) => {
     const id = req.params.id
     try {
-        const user=await User.findById(id)
+        const user = await User.findById(id)
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
@@ -345,7 +371,7 @@ const getProfileDetail = async (req, res) => {
 
     try {
         // 1️⃣ Find user
-        const user=await User.findById(userId)
+        const user = await User.findById(userId)
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -355,11 +381,11 @@ const getProfileDetail = async (req, res) => {
         const labData = await Laboratory.findById(user.labId).select("-password");
 
         // 2️⃣ Fetch latest related documents
-        const labPerson = await LabPerson.findOne({ userId:user?.labId }).sort({ createdAt: -1 });
-        const labAddress = await LabAddress.findOne({ userId:user?.labId }).populate('countryId').populate('stateId')
-        .populate('cityId').sort({ createdAt: -1 });
-        const labImg = await LabImage.findOne({ userId:user?.labId }).sort({ createdAt: -1 });
-        const labLicense = await LabLicense.findOne({ userId:user?.labId }).sort({ createdAt: -1 });
+        const labPerson = await LabPerson.findOne({ userId }).sort({ createdAt: -1 });
+        const labAddress = await LabAddress.findOne({ userId }).populate('countryId').populate('stateId')
+            .populate('cityId').sort({ createdAt: -1 });
+        const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
+        const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ labId: user?.labId }))
 
         // 3️⃣ Fetch ratings
@@ -400,11 +426,11 @@ const getProfileDetail = async (req, res) => {
         // 6️⃣ Return final response
         return res.status(200).json({
             success: true,
-            user:labData,
+            user: labData,
             labPerson,
             labAddress,
             labImg,
-            labLicense,
+            labLicense, customId: user.unique_id,
             rating,
             avgRating,
             ratingCounts,
@@ -422,11 +448,11 @@ const getProfileDetail = async (req, res) => {
 const deleteLab = async (req, res) => {
     const userId = req.user.user
     try {
-        const user = await Laboratory.findById(userId)
+        const user = await User.findById(userId)
         if (!user) {
             return res.status(404).json({ success: false, message: 'Lab not found' });
         }
-        await User.deleteOne({labId:userId})
+        await User.deleteOne({ labId: userId })
         await Otp.deleteMany({ userId })
         await Login.deleteMany({ userId })
         await Laboratory.findByIdAndDelete(userId)
@@ -440,7 +466,7 @@ const deleteLab = async (req, res) => {
 const labAddress = async (req, res) => {
     const { userId, fullAddress, countryId, stateId, cityId, pinCode } = req.body;
     try {
-        const user = await Laboratory.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await LabAddress.findOne({ userId });
@@ -469,7 +495,7 @@ const labPerson = async (req, res) => {
     const { userId, name, email, contactNumber, gender } = req.body;
     const photo = req.files?.['photo']?.[0]?.path
     try {
-        const user = await Laboratory.findById(userId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await LabPerson.findOne({ userId });
@@ -505,7 +531,7 @@ const labLicense = async (req, res) => {
         const { userId, labLicenseNumber } = req.body;
 
         // Check user exists
-        const user = await Laboratory.findById(userId);
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({
                 message: "User not found",
@@ -644,7 +670,7 @@ const labImage = async (req, res) => {
     const thumbnailFile = req.files?.['thumbnail']?.[0]?.path;
     const labImgFiles = req.files?.['labImg'] || [];
     try {
-        const lab = await Laboratory.findById(userId);
+        const lab = await User.findById(userId);
         if (!lab) return res.status(200).json({ success: false, message: "Lab not found" });
 
         let labImageData = await LabImage.findOne({ userId });
@@ -695,7 +721,7 @@ const labImage = async (req, res) => {
 const editRequest = async (req, res) => {
     const { labId, message } = req.body;
     try {
-        const user = await Laboratory.findById(labId)
+        const user = await User.findById(labId)
         if (!user) return res.status(200).json({ message: "Lab not found", success: false })
         await EditRequest.create({ labId, message, type: 'lab' })
         return res.status(200).json({
@@ -713,7 +739,7 @@ const editRequest = async (req, res) => {
 const deleteLabImage = async (req, res) => {
     const { labId, path, type } = req.body;
     try {
-        const user = await Laboratory.findById(labId)
+        const user = await User.findById(labId)
         if (!user) return res.status(200).json({ message: "Lab not found", success: false })
         if (type == 'thumbnail') {
             await LabImage.findOneAndUpdate({ userId: labId }, { thumbnail: '' }, { new: true })
@@ -740,18 +766,18 @@ const deleteLabImage = async (req, res) => {
 };
 
 const sendReport = async (req, res) => {
-    const { type, appointmentId ,email} = req.body;
+    const { type, appointmentId, email } = req.body;
     try {
         const appointment = await LabAppointment.findById(appointmentId)
         if (!appointment) return res.status(200).json({ message: "Appointment not found", success: false })
         const tests = await Test.find({
             _id: { $in: appointment.testId }
         });
-        const ptData= await Patient.findById(appointment?.patientId)
-        const labData= await Laboratory.findById(appointment?.labId)
+        const ptData = await Patient.findById(appointment?.patientId)
+        const labData = await Laboratory.findById(appointment?.labId)
 
         const testReports = await TestReport.find({ appointmentId })
-        const pdfBuffer = await generateReportPDF(appointment, tests, testReports,ptData,labData);
+        const pdfBuffer = await generateReportPDF(appointment, tests, testReports, ptData, labData);
 
         await sendEmail({
             to: email,
@@ -779,8 +805,122 @@ const sendReport = async (req, res) => {
         });
     }
 };
+const getLabs = async (req, res) => {
+    // Convert query params to numbers
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+
+    try {
+        const users = await User.find({ role: 'lab' }).populate('labId')
+            .limit(limit)
+            .skip((page - 1) * limit).lean();
+        const labIds = await users.map(a => a.labId._id).filter(Boolean)
+        const labAddresses = await LabAddress.find({
+            userId: { $in: labIds }
+        }).populate('countryId stateId cityId', 'name')
+            .lean();
+        const addressMap = {};
+        labAddresses.forEach(addr => {
+            addressMap[addr.userId.toString()] = addr;
+        });
+        const finalData = users.map(app => ({
+            ...app,
+            labAddress: addressMap[app.labId?._id?.toString()] || null
+        }));
+
+
+        const total = await User.countDocuments({ role: 'lab' });
+
+        return res.status(200).json({
+            success: true,
+            data: finalData,
+            pagination: {
+                total,
+                totalPage: Math.ceil(total / limit),
+                currentPage: page
+            }
+        });
+    } catch (err) {
+        console.log(error)
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+const getLabDetail = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        // 1️⃣ Find user
+        const user = await User.findById(userId)
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Lab not found"
+            });
+        }
+        const labData = await Laboratory.findById(user.labId).select("-password");
+        const labImage = await LabImage.findOne({userId:user._id})
+        const labAddress = await LabAddress.findOne({ userId }).populate('countryId').populate('stateId')
+            .populate('cityId').sort({ createdAt: -1 });
+        const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
+        const labTest = await Test.find({labId:user._id}).select('shortName price')
+
+        // 3️⃣ Fetch ratings
+        const rating = await Rating.find({ labId: user?._id })
+            .populate({path:"patientId",select:'-passwordHash',populate:({path:'patientId',select:'name profileImage'})})
+            .sort({ createdAt: -1 });
+
+        // 4️⃣ Calculate average rating
+        const avgStats = await Rating.aggregate([
+            { $match: { labId: new mongoose.Types.ObjectId(user?._id) } },
+            {
+                $group: {
+                    _id: null,
+                    avgRating: { $avg: "$star" },
+                    total: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
+
+        // 5️⃣ Count star ratings
+        const ratingStats = await Rating.aggregate([
+            { $match: { labId: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: "$star",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        ratingStats.forEach(r => {
+            ratingCounts[r._id] = r.count;
+        });
+
+        // 6️⃣ Return final response
+        return res.status(200).json({
+            success: true,
+            user: labData,
+            labAddress,
+            labLicense, customId: user.unique_id,
+            rating,
+            avgRating,
+            ratingCounts,
+            labImage,labTest
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
 export {
     signInLab, updateImage, labLicense, deleteLicense, getProfileDetail, signUpLab, resetPassword, editRequest,
     labPerson, labAddress, forgotEmail, verifyOtp, resendOtp, getProfile, updateLab, changePassword, deleteLab,
-    labImage, deleteLabImage,sendReport
+    labImage, deleteLabImage, sendReport,getLabs,getLabDetail
 }

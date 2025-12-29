@@ -3,15 +3,15 @@ import mongoose, { Schema} from "mongoose";
 const requestSchema=new Schema({
     labId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Laboratory',required:true
+        ref:'User',required:true
     },
     patientId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Patient',required:true
+        ref:'User',required:true
     },
     doctorId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Doctor'
+        ref:'User'
     },
     testId:[{
         type:mongoose.Schema.Types.ObjectId,

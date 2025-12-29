@@ -18,7 +18,7 @@ const licSchema = new Schema({
     totalExperience:{type:String,required:true},
     professionalBio:{type:String,required:true},
     education:[eduSchema],
-    empId: { type: mongoose.Schema.Types.ObjectId, ref: 'phar-staff', required: true },
+    empId: { type: mongoose.Schema.Types.ObjectId, ref: 'phar-staff', required: true,index:true },
 }, { timestamps: true })
 
 const EmpProfesional = mongoose.model('phar-emp-prof', licSchema)

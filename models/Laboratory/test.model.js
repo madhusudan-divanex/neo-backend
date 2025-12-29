@@ -14,7 +14,7 @@ const componentSchema=new Schema({
 const requestSchema=new Schema({
     labId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'User',required:true
+        ref:'User',required:true,index:true
     },
     precautions:{type:String,required:true},
     shortName:{type:String,required:true},

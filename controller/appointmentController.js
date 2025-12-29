@@ -2,6 +2,7 @@ import Doctor from "../models/Doctor/doctor.model.js";
 import DoctorAppointment from "../models/DoctorAppointment.js";
 import User from "../models/Hospital/User.js";
 import LabAppointment from "../models/LabAppointment.js";
+import LabAddress from "../models/Laboratory/labAddress.model.js";
 import Laboratory from "../models/Laboratory/laboratory.model.js";
 import Test from "../models/Laboratory/test.model.js";
 import LabTest from "../models/LabTest.js";
@@ -215,20 +216,58 @@ const getPatientLabAppointment = async (req, res) => {
     try {
         let isExist;
         if (patientId?.length < 24) {
-            isExist = await Patient.findOne({ customId: patientId });
+            isExist = await User.findOne({ unique_id: patientId });
         } else {
-            isExist = await Patient.findById(patientId);
+            isExist = await User.findById(patientId);
         }
-        if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
-        const appointment = await LabAppointment.find({ patientId: isExist?._id }).populate('doctorId').sort({ createdAt: -1 })
-            .skip((page - 1) * 10)
-            .limit(limit)
-        if (appointment) {
-            return res.status(200).json({ message: "Appointment fetch successfully", data: appointment, success: true })
+        if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
+        const appointments = await LabAppointment.find({ patientId: isExist._id })
+            .populate({
+                path: 'testId',
+                select: 'shortName'
+            })
+            .populate({
+                path: 'labId',
+                select: 'name email labId',
+                populate: {
+                    path: 'labId',
+                    model: 'Laboratory',
+                    select: 'logo name'
+                }
+            })
+            .populate({ path: 'doctorId', select: 'name' })
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+            .lean();
+        const labIds = appointments.map(a => a.labId?._id).filter(Boolean);
+        
+        const labAddresses = await LabAddress.find({
+            userId: { $in: labIds }
+        }).populate('countryId stateId cityId', 'name')
+        .lean();
+
+        // Map bana lo fast access ke liye
+        const addressMap = {};
+        labAddresses.forEach(addr => {
+            addressMap[addr.userId.toString()] = addr;
+        });
+
+        // appointment me address attach
+        const finalData = appointments.map(app => ({
+            ...app,
+            labAddress: addressMap[app.labId?._id?.toString()] || null
+        }));
+
+
+        const total = await LabAppointment.countDocuments({ patientId: isExist._id })
+        if (appointments.length > 0) {
+            return res.status(200).json({ message: "Appointment fetch successfully", total, data: finalData, totalPage: Math.ceil(total / limit), success: true })
         } else {
-            return res.status(200).json({ message: "Appointment not fount", success: false })
+            return res.status(200).json({ message: "Appointment not found", success: false })
         }
     } catch (err) {
+        console.log(err)
         return res.status(200).json({ message: 'Server Error' });
     }
 }
@@ -350,11 +389,11 @@ const labDashboardData = async (req, res) => {
     try {
         const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
-        const pendingTestRequest = await LabAppointment.countDocuments({labId:isExist.labId, status: 'pending' })
-        const deliverRequest = await LabAppointment.countDocuments({ labId:isExist.labId, status: 'deliver-report' })
-        const pendingReport = await LabAppointment.countDocuments({ labId:isExist.labId, status: 'pending-report' })
-        const totalTest = await Test.countDocuments({ labId:isExist.labId })
-        const totalTestRequest = await LabAppointment.countDocuments({ labId:isExist.labId })
+        const pendingTestRequest = await LabAppointment.countDocuments({ labId: isExist.labId, status: 'pending' })
+        const deliverRequest = await LabAppointment.countDocuments({ labId: isExist.labId, status: 'deliver-report' })
+        const pendingReport = await LabAppointment.countDocuments({ labId: isExist.labId, status: 'pending-report' })
+        const totalTest = await Test.countDocuments({ labId: isExist.labId })
+        const totalTestRequest = await LabAppointment.countDocuments({ labId: isExist.labId })
         const testRequests = { totalTestRequest }
         const labReports = { pendingReport, deliverRequest, pendingTestRequest }
         return res.status(200).json({
@@ -371,10 +410,10 @@ const labDashboardData = async (req, res) => {
 const bookLabAppointment = async (req, res) => {
     const { patientId, labId, testId, date, fees, status } = req.body;
     try {
-        const isExist = await Laboratory.findById(labId);
+        const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Laboratory not exist' });
 
-        const isPatient = await Patient.findById(patientId);
+        const isPatient = await User.findById(patientId);
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
         const isLast = await LabAppointment?.findOne()?.sort({ createdAt: -1 })
         const nextId = isLast
@@ -460,11 +499,11 @@ const getLabReport = async (req, res) => {
 const getNearByDoctor = async (req, res) => {
     const { page = 1, limit = 10 } = req.query
     try {
-        const doctors = await User.find({role:'doctor'}).sort({ createdAt: -1 })
+        const doctors = await User.find({ role: 'doctor' }).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
 
-        const totalData = await User.countDocuments({role:'doctor'})
+        const totalData = await User.countDocuments({ role: 'doctor' })
 
         return res.status(200).json({
             message: "Report fetch successfully", data: doctors,
@@ -485,5 +524,5 @@ export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
-    getLabReport, getDoctorPrescriptiondata,getNearByDoctor
+    getLabReport, getDoctorPrescriptiondata, getNearByDoctor
 }

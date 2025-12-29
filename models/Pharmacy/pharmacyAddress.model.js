@@ -6,7 +6,7 @@ const addressSchema = new Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true
+    required: true,index:true
   },
   fullAddress: { type: String, required: true },
   countryId: { type: mongoose.Schema.Types.ObjectId, ref: "Country", required: true },

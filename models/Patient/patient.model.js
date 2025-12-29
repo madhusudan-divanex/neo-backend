@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
     gender: { type: String, required: true },
     profileImage: { type: String },
     contactNumber: { type: String, required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },   
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
 
     status: { type: String, enum: ['pending', 'verify'], default: 'pending' }
 

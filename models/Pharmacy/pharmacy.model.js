@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     role:{type:String,default:'parent'},
     allowEdit:{type:Boolean,default:false},
     status: { type: String,enum:['pending','verify'], default: 'pending' } ,
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },
 }, { timestamps: true });
 
 const Pharmacy = mongoose.model('Pharmacy', userSchema);

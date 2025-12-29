@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const ReturnSchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,index:true},
     supplierId: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" },
     deliveryDate: Date,
     status: { type: String, enum: ["Pending", "Completed"], default: "Pending" },
