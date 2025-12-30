@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 import HospitalPatient from "../../models/Hospital/HospitalPatient.js";
 import Counter from "../../models/Hospital/Counter.js";
-
-
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
 
@@ -15,7 +13,7 @@ const generatePatientId = async (hospitalId) => {
   return `PAT-${String(counter.seq).padStart(4, "0")}`;
 };
 
-const addPatient = async (req, res) => {
+export const addPatient = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -37,36 +35,40 @@ const addPatient = async (req, res) => {
 
     // ✅ CREATE PATIENT
     const patient = await HospitalPatient.create(
-      [{
-        ...data,
-        patientId,
-        hospitalId
-      }],
+      [
+        {
+          ...data,
+          patientId,
+          hospitalId
+        }
+      ],
       { session }
     );
 
-    //USER ENTRY
-    const rawPassword = data.mobile.slice(-4) + "@123"; 
+    // USER ENTRY
+    const rawPassword = data.mobile.slice(-4) + "@123";
     const passwordHash = await bcrypt.hash(rawPassword, 10);
+
     const user = await User.create(
-      [{
-        hospitalId,
-        name: data.name,
-        mobile: data.mobile,
-        email: data.email || null,
-        role: "patient",
-        refId: patient[0]._id,
-        passwordHash,
-        status: "Active"
-      }],
+      [
+        {
+          created_by_id: hospitalId,
+          created_by: "hospital",
+          name: data.name,
+          mobile: data.mobile,
+          email: data.email || null,
+          role: "patient",
+          refId: patient[0]._id,
+          passwordHash,
+          status: "Active"
+        }
+      ],
       { session }
     );
-
 
     // ✅ UPDATE PATIENT WITH USER ID
     patient[0].user_id = user[0]._id;
     await patient[0].save({ session });
-    
 
     await session.commitTransaction();
     session.endSession();
@@ -87,10 +89,10 @@ const addPatient = async (req, res) => {
     });
   }
 };
-const listPatients = async (req, res) => {
+
+export const listPatients = async (req, res) => {
   try {
     const hospitalId = req.user.id;
-
     let { page = 1, limit = 10, search = "" } = req.query;
 
     page = Number(page);
@@ -124,10 +126,14 @@ const listPatients = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-const getPatientById = async (req, res) => {
+
+export const getPatientById = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { id } = req.params;
@@ -150,10 +156,14 @@ const getPatientById = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-const updatePatient = async (req, res) => {
+
+export const updatePatient = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { id } = req.params;
@@ -178,10 +188,59 @@ const updatePatient = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-const deletePatient = async (req, res) => {
+
+export const getPatientByPatientId = async (req, res) => {
+  try {
+    const hospitalId = req.user.id;
+    const { patientId } = req.params;
+
+    const patient = await User.findOne({
+      unique_id: patientId
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found"
+      });
+    }
+
+    const patientfind = await User.findOne({
+      unique_id: patientId,
+      created_by_id: hospitalId
+    });
+
+    if (patientfind) {
+      return res.json({
+        success: false,
+        message: "Patient Already Added"
+      });
+    }
+
+    const patientDetail = await HospitalPatient.findOne({
+      user_id: patient._id
+    });
+
+    return res.json({
+      success: true,
+      data: patientDetail
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+export const deletePatient = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { id } = req.params;
@@ -204,15 +263,9 @@ const deletePatient = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-
-export {addPatient,listPatients,generatePatientId,updatePatient,deletePatient,getPatientById}
-
-
-
-
-
-
-

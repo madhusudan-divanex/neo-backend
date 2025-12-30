@@ -1,7 +1,7 @@
-// hospitalDepartmentController
+// controllers/hospitalDepartmentController.js
 import HospitalDepartment from "../../models/Hospital/HospitalDepartment.js";
 
-const createDepartment = async (req, res) => {
+export const createDepartment = async (req, res) => {
   try {
     const hospitalId = req.user.id; // from auth middleware
 
@@ -32,7 +32,6 @@ const createDepartment = async (req, res) => {
       message: "Department added successfully",
       data: department
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -40,7 +39,8 @@ const createDepartment = async (req, res) => {
     });
   }
 };
-const getDepartments = async (req, res) => {
+
+export const getDepartments = async (req, res) => {
   try {
     const hospitalId = req.user.id;
 
@@ -57,22 +57,18 @@ const getDepartments = async (req, res) => {
     // 🔹 FILTER QUERY
     const query = { hospitalId };
 
-    // Search by department name
     if (search) {
       query.departmentName = { $regex: search, $options: "i" };
     }
 
-    // OPD / IPD filter
     if (type) {
       query.type = type;
     }
 
-    // Status filter (if you have status field)
     if (status !== undefined) {
       query.status = status;
     }
 
-    // 🔹 DATA + COUNT
     const [departments, total] = await Promise.all([
       HospitalDepartment.find(query)
         .populate({
@@ -100,7 +96,6 @@ const getDepartments = async (req, res) => {
         totalPages: Math.ceil(total / limit)
       }
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -108,7 +103,8 @@ const getDepartments = async (req, res) => {
     });
   }
 };
-const getDepartmentById = async (req, res) => {
+
+export const getDepartmentById = async (req, res) => {
   try {
     const { id } = req.params;
     const hospitalId = req.user.id;
@@ -131,7 +127,6 @@ const getDepartmentById = async (req, res) => {
       success: true,
       data: department
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -139,7 +134,8 @@ const getDepartmentById = async (req, res) => {
     });
   }
 };
-const updateDepartment = async (req, res) => {
+
+export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
     const hospitalId = req.user.id;
@@ -155,7 +151,6 @@ const updateDepartment = async (req, res) => {
       message: "Department updated successfully",
       data: updated
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -163,7 +158,8 @@ const updateDepartment = async (req, res) => {
     });
   }
 };
-const deleteDepartment = async (req, res) => {
+
+export const deleteDepartment = async (req, res) => {
   try {
     const { id } = req.params;
     const hospitalId = req.user.id;
@@ -177,7 +173,6 @@ const deleteDepartment = async (req, res) => {
       success: true,
       message: "Department deleted successfully"
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -185,5 +180,3 @@ const deleteDepartment = async (req, res) => {
     });
   }
 };
-
-export {createDepartment,getDepartments,getDepartmentById,updateDepartment,deleteDepartment}

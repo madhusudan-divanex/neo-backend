@@ -3,7 +3,7 @@ import Prescription from "../../models/Hospital/Prescription.js";
 /* =========================================
    ADD PRESCRIPTION
 ========================================= */
-const addPrescription = async (req, res) => {
+export const addPrescription = async (req, res) => {
   try {
     const hospitalId = req.user.id;
 
@@ -50,8 +50,10 @@ const addPrescription = async (req, res) => {
   }
 };
 
-
-const getPrescriptionsByPatient = async (req, res) => {
+/* =========================================
+   GET PRESCRIPTIONS BY PATIENT
+========================================= */
+export const getPrescriptionsByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
 
@@ -72,7 +74,11 @@ const getPrescriptionsByPatient = async (req, res) => {
     });
   }
 };
-const getPrescriptionById = async (req, res) => {
+
+/* =========================================
+   GET SINGLE PRESCRIPTION
+========================================= */
+export const getPrescriptionById = async (req, res) => {
   try {
     const prescription = await Prescription.findById(req.params.id)
       .populate("doctorId", "name")
@@ -91,16 +97,21 @@ const getPrescriptionById = async (req, res) => {
       data: prescription
     });
 
-  } catch {
+  } catch (err) {
     res.status(500).json({
       success: false,
       message: "Failed to load prescription"
     });
   }
 };
-const updatePrescription = async (req, res) => {
+
+/* =========================================
+   UPDATE PRESCRIPTION
+========================================= */
+export const updatePrescription = async (req, res) => {
   try {
     const prescription = await Prescription.findById(req.params.id);
+
     if (!prescription) {
       return res.status(404).json({
         success: false,
@@ -120,12 +131,10 @@ const updatePrescription = async (req, res) => {
       message: "Prescription updated"
     });
 
-  } catch {
+  } catch (err) {
     res.status(500).json({
       success: false,
       message: "Update failed"
     });
   }
 };
-
-export default {addPrescription,getPrescriptionById,updatePrescription,getPrescriptionsByPatient}

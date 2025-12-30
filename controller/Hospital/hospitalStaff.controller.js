@@ -25,25 +25,25 @@ export const createHospitalStaff = async (req, res) => {
     // PASSWORD
     // ===============================
     if (!data.accessInfo?.password) {
-  return res.status(400).json({
-    success: false,
-    message: "Password is required"
-  });
-}
+      return res.status(400).json({
+        success: false,
+        message: "Password is required"
+      });
+    }
 
-const salt = await bcrypt.genSalt(10);
-const passwordHash = await bcrypt.hash(
-  data.accessInfo.password,
-  salt
-);
-
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(
+      data.accessInfo.password,
+      salt
+    );
 
     const user = await User.create({
       name: data.personalInfo.name,
       email: data.accessInfo.accessEmail,
       passwordHash,
       role: "staff",
-      hospitalId: data.hospitalId
+      created_by_id: data.hospitalId,
+      created_by: "hospital"
     });
 
     // ===============================
@@ -94,6 +94,7 @@ const passwordHash = await bcrypt.hash(
       permissionType: data.accessInfo.permissionType || "limited"
     };
     data.userId = user._id;
+
     // ===============================
     // CREATE STAFF
     // ===============================
@@ -113,6 +114,7 @@ const passwordHash = await bcrypt.hash(
     });
   }
 };
+
 export const getMyAllStaffList = async (req, res) => {
   try {
     const hospitalId = req.user.id;
@@ -133,6 +135,7 @@ export const getMyAllStaffList = async (req, res) => {
     });
   }
 };
+
 export const getHospitalStaffList = async (req, res) => {
   try {
     const hospitalId = req.user.id;
@@ -150,7 +153,6 @@ export const getHospitalStaffList = async (req, res) => {
     // ---------- FILTER QUERY ----------
     const query = { hospitalId };
 
-    // Search (name, email, mobile)
     if (search) {
       query.$or = [
         { "personalInfo.name": { $regex: search, $options: "i" } },
@@ -159,31 +161,29 @@ export const getHospitalStaffList = async (req, res) => {
       ];
     }
 
-    // Department filter
     if (department) {
       query["employmentInfo.department"] = department;
     }
 
-    // Status filter
     if (status) {
       query.status = status;
     }
 
-    // ---------- DATA ----------
     const [staff, total] = await Promise.all([
       HospitalStaff.find(query)
         .select("-accessInfo.passwordHash")
         .sort({ createdAt: -1 })
         .skip(Number(skip))
         .limit(Number(limit)),
-
       HospitalStaff.countDocuments(query)
     ]);
- const base_url = process.env.BASE_URL;
+
+    const base_url = process.env.BASE_URL;
+
     res.json({
       success: true,
       data: staff,
-      base_url:base_url,
+      base_url,
       pagination: {
         total,
         page: Number(page),
@@ -199,8 +199,9 @@ export const getHospitalStaffList = async (req, res) => {
     });
   }
 };
+
 export const getHospitalStaffByIdNew = async (req, res) => {
-   try {
+  try {
     const hospitalId = req.user.id;
     const { id } = req.params;
 
@@ -218,13 +219,11 @@ export const getHospitalStaffByIdNew = async (req, res) => {
 
     const BASE_URL = process.env.BASE_URL;
 
-    // ✅ Profile image full URL
     if (staff.personalInfo?.profileImage) {
       staff.personalInfo.profileImage =
         `${BASE_URL}/uploads/staff/${staff.personalInfo.profileImage}`;
     }
 
-    // ✅ Certificates full URL
     staff.professionalInfo?.certificates?.forEach(cert => {
       if (cert.certificateFile) {
         cert.certificateFile =
@@ -245,6 +244,7 @@ export const getHospitalStaffByIdNew = async (req, res) => {
     });
   }
 };
+
 export const getHospitalStaffById = async (req, res) => {
   try {
     const hospitalId = req.user.id;
@@ -261,11 +261,13 @@ export const getHospitalStaffById = async (req, res) => {
         message: "Staff not found"
       });
     }
+
     const base_url = process.env.BASE_URL;
+
     res.json({
       success: true,
       data: staff,
-      base_url:base_url
+      base_url
     });
   } catch (err) {
     res.status(500).json({
@@ -274,15 +276,13 @@ export const getHospitalStaffById = async (req, res) => {
     });
   }
 };
+
 export const updateHospitalStaff = async (req, res) => {
   try {
     const { id } = req.params;
     const data = JSON.parse(req.body.data);
     const hospitalId = req.user.id;
 
-    // ===============================
-    // FIND STAFF
-    // ===============================
     const staff = await HospitalStaff.findOne({
       _id: id,
       hospitalId
@@ -295,9 +295,7 @@ export const updateHospitalStaff = async (req, res) => {
       });
     }
 
-    
-    // UPDATE USER (EMAIL / PASSWORD)
-    const user = await User.findOne({_id: staff.userId});
+    const user = await User.findOne({ _id: staff.userId });
 
     if (!user) {
       return res.status(404).json({
@@ -306,7 +304,6 @@ export const updateHospitalStaff = async (req, res) => {
       });
     }
 
-    // 👉 Email change check
     if (
       data.accessInfo.accessEmail &&
       data.accessInfo.accessEmail !== user.email
@@ -326,7 +323,6 @@ export const updateHospitalStaff = async (req, res) => {
       user.email = data.accessInfo.accessEmail;
     }
 
-    // 👉 Password update (OPTIONAL)
     if (data.accessInfo.password) {
       const salt = await bcrypt.genSalt(10);
       user.passwordHash = await bcrypt.hash(
@@ -338,9 +334,6 @@ export const updateHospitalStaff = async (req, res) => {
     user.name = data.personalInfo.name;
     await user.save();
 
-    // ===============================
-    // PROFILE IMAGE
-    // ===============================
     if (req.files?.profileImage?.length) {
       data.personalInfo.profileImage =
         req.files.profileImage[0].filename;
@@ -349,9 +342,6 @@ export const updateHospitalStaff = async (req, res) => {
         staff.personalInfo.profileImage;
     }
 
-    // ===============================
-    // EDUCATION NORMALIZE
-    // ===============================
     data.professionalInfo.education = Array.isArray(
       data.professionalInfo?.educations
     )
@@ -363,26 +353,20 @@ export const updateHospitalStaff = async (req, res) => {
         }))
       : staff.professionalInfo.education || [];
 
-    // ===============================
-    // CERTIFICATES
-    // ===============================
     const uploadedCertificates = req.files?.certificates || [];
 
     data.professionalInfo.certificates = Array.isArray(
-        data.professionalInfo?.certificates
-      )
-        ? data.professionalInfo.certificates.map((c, index) => ({
-            certificateName: c.name || "",   // ✅ ALWAYS THIS
-            certificateFile:
-              uploadedCertificates[index]?.filename ||
-              c.certificateFile ||
-              ""
-          }))
-        : [];
+      data.professionalInfo?.certificates
+    )
+      ? data.professionalInfo.certificates.map((c, index) => ({
+          certificateName: c.name || "",
+          certificateFile:
+            uploadedCertificates[index]?.filename ||
+            c.certificateFile ||
+            ""
+        }))
+      : [];
 
-    // ===============================
-    // ACCESS INFO CLEAN
-    // ===============================
     data.accessInfo = {
       userId: user._id,
       username: data.accessInfo.username,
@@ -392,9 +376,6 @@ export const updateHospitalStaff = async (req, res) => {
         staff.accessInfo.permissionType
     };
 
-    // ===============================
-    // UPDATE STAFF
-    // ===============================
     data.userId = user._id;
     Object.assign(staff, data);
     await staff.save();
@@ -413,6 +394,3 @@ export const updateHospitalStaff = async (req, res) => {
     });
   }
 };
-
-
-

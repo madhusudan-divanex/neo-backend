@@ -1,44 +1,53 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+// models/User.js
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 const UserSchema = new mongoose.Schema(
   {
     unique_id: {
       type: String,
-      unique: true,
+      unique: true
     },
-    name: {
+
+    name: { type: String },
+
+    email: { type: String, required: true, unique: true },
+
+    passwordHash: { type: String, required: true },
+
+    role: { type: String, default: "hospital" },
+
+    // REAL-TIME STATUS
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
+
+    isAvailable: {
+      type: Boolean,
+      default: false
+    },
+
+    lastSeen: {
+      type: Date
+    },
+
+    // WALLET (PAID CHAT / CALL)
+    walletBalance: {
+      type: Number,
+      default: 0
+    },
+
+    // hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic' },
+    created_by: { type: String, required: true },
+    created_by_id: { type: mongoose.Schema.Types.ObjectId },
+    resetOtp: { type: String },
+    resetOtpExpire: { type: Date },
+
+    fcmToken: {
       type: String,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    passwordHash: {
-      type: String,
-      required: true,
-    },
-    role: {
-      type: String,
-      default: 'hospital',
-    },
-    created_by: {
-      type: String,
-      required: true,
-    },
-    created_by_id: {
-      type: mongoose.Schema.Types.ObjectId,
-    },
-    resetOtp: {
-      type: String,
-    },
-    resetOtpExpire: {
-      type: Date,
-    },
-    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'Laboratory' },
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy' },
-    patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient' },
+      default: null
+    }
   },
   { timestamps: true }
 );
@@ -46,7 +55,7 @@ const UserSchema = new mongoose.Schema(
 /**
  * Generate unique 8-digit ID before save
  */
-UserSchema.pre('save', async function () {
+UserSchema.pre("save", async function () {
   if (this.unique_id) return;
 
   while (true) {
@@ -59,13 +68,8 @@ UserSchema.pre('save', async function () {
   }
 });
 
-/**
- * Compare password
- */
 UserSchema.methods.comparePassword = function (plain) {
   return bcrypt.compare(plain, this.passwordHash);
 };
 
-const User = mongoose.model('User', UserSchema);
-
-export default User;
+export default mongoose.model("User", UserSchema);

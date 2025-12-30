@@ -1,9 +1,10 @@
+// controllers/Bed/room.controller.js
 import HospitalRoom from "../../../models/Hospital/HospitalRoom.js";
 
 /* ======================================================
    ADD ROOM
 ====================================================== */
-const addRoom = async (req, res) => {
+export const addRoom = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { floorId, departmentId, roomName } = req.body;
@@ -53,7 +54,7 @@ const addRoom = async (req, res) => {
 /* ======================================================
    LIST ROOMS BY FLOOR
 ====================================================== */
-const listRoomsByFloor = async (req, res) => {
+export const listRoomsByFloor = async (req, res) => {
   try {
     const rooms = await HospitalRoom.find({
       hospitalId: req.user.id,
@@ -78,7 +79,7 @@ const listRoomsByFloor = async (req, res) => {
 /* ======================================================
    GET SINGLE ROOM (EDIT)
 ====================================================== */
-const getRoomById = async (req, res) => {
+export const getRoomById = async (req, res) => {
   try {
     const room = await HospitalRoom.findOne({
       _id: req.params.id,
@@ -107,7 +108,7 @@ const getRoomById = async (req, res) => {
 /* ======================================================
    UPDATE ROOM
 ====================================================== */
-const updateRoom = async (req, res) => {
+export const updateRoom = async (req, res) => {
   try {
     const { floorId, departmentId, roomName } = req.body;
 
@@ -166,4 +167,3 @@ const updateRoom = async (req, res) => {
     });
   }
 };
-export default {updateRoom,getRoomById,listRoomsByFloor,addRoom}

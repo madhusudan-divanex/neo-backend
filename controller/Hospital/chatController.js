@@ -1,15 +1,13 @@
 // controllers/chatController.js
 import mongoose from "mongoose";
-import Conversation from "../../models/Conversation.js";
-import Message from "../../models/Message.js";
-import User from "../../models/Hospital/User.js";
-
+import Conversation from "../../models/Hospital/Conversation.js";
+import Message from "../../models/Hospital/Message.js";
 
 export const CreateConversation = async (req, res) => {
   try {
-    const myId = req.user.id || req.user.user;
+    const myId = req.user.id || req.user.user ;
     const { userId } = req.body;
-    console.log(userId)
+
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
@@ -23,7 +21,7 @@ export const CreateConversation = async (req, res) => {
 
     if (!conversation) {
       conversation = await Conversation.create({
-        participants: [userId,myId]
+        participants: [userId, myId]
       });
 
       await conversation.populate(
@@ -36,7 +34,6 @@ export const CreateConversation = async (req, res) => {
       success: true,
       data: conversation
     });
-
   } catch (err) {
     console.error("CreateConversation Error:", err);
     res.status(500).json({
@@ -45,9 +42,6 @@ export const CreateConversation = async (req, res) => {
     });
   }
 };
-
-
-
 
 export const UploadFile = async (req, res) => {
   res.json({
@@ -60,13 +54,10 @@ export const UploadFile = async (req, res) => {
   });
 };
 
-
-
-
 export const DeleteMessage = async (req, res) => {
   const msg = await Message.findOne({
     _id: req.params.id,
-    sender: req.user.id
+    sender: req.user.id || req.user.user
   });
 
   if (!msg) return res.status(403).json({ message: "Not allowed" });
@@ -78,13 +69,10 @@ export const DeleteMessage = async (req, res) => {
   res.json({ success: true });
 };
 
-
-
-
 export const EditMessage = async (req, res) => {
   const msg = await Message.findOne({
     _id: req.params.id,
-    sender: req.user.id
+    sender: req.user.id || req.user.user
   });
 
   if (!msg) return res.status(403).json({ message: "Not allowed" });
@@ -96,12 +84,10 @@ export const EditMessage = async (req, res) => {
   res.json({ success: true, data: msg });
 };
 
-
-
-
 export const ChatList = async (req, res) => {
   try {
     const userId = req.user.id || req.user.user;
+
     const conversations = await Conversation.find({
       participants: userId
     })
@@ -119,7 +105,7 @@ export const ChatList = async (req, res) => {
         return {
           _id: conv._id,
           participants: conv.participants.filter(
-            p => p._id.toString() !== userId
+            (p) => p._id.toString() !== userId
           ),
           lastMessage: conv.lastMessage,
           lastMessageAt: conv.lastMessageAt,
@@ -127,23 +113,20 @@ export const ChatList = async (req, res) => {
         };
       })
     );
+
     res.json({
       success: true,
       data: result
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-
-
-
 export const UnreadCount = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.id || req.user.user;
 
     const unread = await Message.aggregate([
       {
@@ -178,21 +161,17 @@ export const UnreadCount = async (req, res) => {
       success: true,
       data: unread
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-
-
 export const GetMessage = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const userId = req.user.id || req.user.user; // from auth middleware
+    const userId = req.user.id || req.user.user;
 
-    //Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(conversationId)) {
       return res.status(400).json({
         success: false,
@@ -200,7 +179,6 @@ export const GetMessage = async (req, res) => {
       });
     }
 
-    //Check conversation exists & user is participant
     const conversation = await Conversation.findOne({
       _id: conversationId,
       participants: userId
@@ -213,19 +191,16 @@ export const GetMessage = async (req, res) => {
       });
     }
 
-    //Pagination (optional)
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    //Fetch messages
     const messages = await Message.find({ conversationId })
       .populate("sender", "name role profileImage")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    //Mark messages as seen
     await Message.updateMany(
       {
         conversationId,
@@ -241,7 +216,6 @@ export const GetMessage = async (req, res) => {
       page,
       limit
     });
-
   } catch (err) {
     console.error("GetMessage Error:", err);
     return res.status(500).json({
@@ -250,21 +224,3 @@ export const GetMessage = async (req, res) => {
     });
   }
 };
-export const searchUsers = async (req, res) => {
-  try {
-    const { q } = req.query;
-    const myId = req.user.id || req.user.user;
- 
-    if (!q) return res.json({ success: true, data: [] });
- 
-    const users = await User.find({
-      _id: { $ne: myId },
-      name: { $regex: q, $options: "i" },
-    }).select("_id name email");
- 
-    res.json({ success: true, data: users });
-  } catch (e) {
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
- 

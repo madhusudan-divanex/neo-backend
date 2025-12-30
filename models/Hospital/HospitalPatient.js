@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const HospitalPatientSchema = new mongoose.Schema(
   {
@@ -14,11 +14,12 @@ const HospitalPatientSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+
     user_id: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  default: null
-},
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
 
     name: {
       type: String,
@@ -86,9 +87,8 @@ const HospitalPatientSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const HospitalPatient = mongoose.model(
+export default mongoose.model(
   "HospitalPatient",
   HospitalPatientSchema,
   "hospitalpatient" // 👈 collection name fixed
 );
-export default HospitalPatient

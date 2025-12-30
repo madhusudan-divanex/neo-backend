@@ -2,7 +2,7 @@ import HospitalDoctor from "../../models/Hospital/HospitalDoctor.js";
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
 
-const createHospitalDoctor = async (req, res) => {
+export const createHospitalDoctor = async (req, res) => {
   try {
     const data = JSON.parse(req.body.data);
     data.hospitalId = req.user.id;
@@ -25,25 +25,25 @@ const createHospitalDoctor = async (req, res) => {
     // PASSWORD
     // ===============================
     if (!data.accessInfo?.password) {
-  return res.status(400).json({
-    success: false,
-    message: "Password is required"
-  });
-}
+      return res.status(400).json({
+        success: false,
+        message: "Password is required"
+      });
+    }
 
-const salt = await bcrypt.genSalt(10);
-const passwordHash = await bcrypt.hash(
-  data.accessInfo.password,
-  salt
-);
-
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(
+      data.accessInfo.password,
+      salt
+    );
 
     const user = await User.create({
       name: data.personalInfo.name,
       email: data.accessInfo.accessEmail,
       passwordHash,
       role: "doctor",
-      hospitalId: data.hospitalId
+      created_by_id: data.hospitalId,
+      created_by: "hospital"
     });
 
     // ===============================
@@ -93,9 +93,11 @@ const passwordHash = await bcrypt.hash(
       accessEmail: data.accessInfo.accessEmail,
       permissionType: data.accessInfo.permissionType || "limited"
     };
+
     data.userId = user._id;
+
     // ===============================
-    // CREATE STAFF
+    // CREATE DOCTOR
     // ===============================
     const staff = await HospitalDoctor.create(data);
 
@@ -113,7 +115,8 @@ const passwordHash = await bcrypt.hash(
     });
   }
 };
-const getMyAllStaffList = async (req, res) => {
+
+export const getMyAllStaffList = async (req, res) => {
   try {
     const hospitalId = req.user.id;
 
@@ -133,7 +136,8 @@ const getMyAllStaffList = async (req, res) => {
     });
   }
 };
-const getHospitalDoctorList = async (req, res) => {
+
+export const getHospitalDoctorList = async (req, res) => {
   try {
     const hospitalId = req.user.id;
 
@@ -147,10 +151,8 @@ const getHospitalDoctorList = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    // ---------- FILTER QUERY ----------
     const query = { hospitalId };
 
-    // Search (name, email, mobile)
     if (search) {
       query.$or = [
         { "personalInfo.name": { $regex: search, $options: "i" } },
@@ -159,31 +161,29 @@ const getHospitalDoctorList = async (req, res) => {
       ];
     }
 
-    // Department filter
     if (department) {
       query["employmentInfo.department"] = department;
     }
 
-    // Status filter
     if (status) {
       query.status = status;
     }
 
-    // ---------- DATA ----------
     const [staff, total] = await Promise.all([
       HospitalDoctor.find(query)
         .select("-accessInfo.passwordHash")
         .sort({ createdAt: -1 })
         .skip(Number(skip))
         .limit(Number(limit)),
-
       HospitalDoctor.countDocuments(query)
     ]);
- const base_url = process.env.BASE_URL;
+
+    const base_url = process.env.BASE_URL;
+
     res.json({
       success: true,
       data: staff,
-      base_url:base_url,
+      base_url,
       pagination: {
         total,
         page: Number(page),
@@ -199,8 +199,9 @@ const getHospitalDoctorList = async (req, res) => {
     });
   }
 };
-const getHospitalDoctorByIdNew = async (req, res) => {
-   try {
+
+export const getHospitalDoctorByIdNew = async (req, res) => {
+  try {
     const hospitalId = req.user.id;
     const { id } = req.params;
 
@@ -218,13 +219,11 @@ const getHospitalDoctorByIdNew = async (req, res) => {
 
     const BASE_URL = process.env.BASE_URL;
 
-    // ✅ Profile image full URL
     if (staff.personalInfo?.profileImage) {
       staff.personalInfo.profileImage =
         `${BASE_URL}/uploads/staff/${staff.personalInfo.profileImage}`;
     }
 
-    // ✅ Certificates full URL
     staff.professionalInfo?.certificates?.forEach(cert => {
       if (cert.certificateFile) {
         cert.certificateFile =
@@ -245,7 +244,8 @@ const getHospitalDoctorByIdNew = async (req, res) => {
     });
   }
 };
-const getHospitalDoctorById = async (req, res) => {
+
+export const getHospitalDoctorById = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { id } = req.params;
@@ -261,11 +261,13 @@ const getHospitalDoctorById = async (req, res) => {
         message: "Doctor not found"
       });
     }
+
     const base_url = process.env.BASE_URL;
+
     res.json({
       success: true,
       data: staff,
-      base_url:base_url
+      base_url
     });
   } catch (err) {
     res.status(500).json({
@@ -274,15 +276,13 @@ const getHospitalDoctorById = async (req, res) => {
     });
   }
 };
-const updateHospitalDoctor = async (req, res) => {
+
+export const updateHospitalDoctor = async (req, res) => {
   try {
     const { id } = req.params;
     const data = JSON.parse(req.body.data);
     const hospitalId = req.user.id;
 
-    // ===============================
-    // FIND STAFF
-    // ===============================
     const staff = await HospitalDoctor.findOne({
       _id: id,
       hospitalId
@@ -295,9 +295,7 @@ const updateHospitalDoctor = async (req, res) => {
       });
     }
 
-    
-    // UPDATE USER (EMAIL / PASSWORD)
-    const user = await User.findOne({_id: staff.userId});
+    const user = await User.findOne({ _id: staff.userId });
 
     if (!user) {
       return res.status(404).json({
@@ -306,7 +304,6 @@ const updateHospitalDoctor = async (req, res) => {
       });
     }
 
-    // 👉 Email change check
     if (
       data.accessInfo.accessEmail &&
       data.accessInfo.accessEmail !== user.email
@@ -326,7 +323,6 @@ const updateHospitalDoctor = async (req, res) => {
       user.email = data.accessInfo.accessEmail;
     }
 
-    // 👉 Password update (OPTIONAL)
     if (data.accessInfo.password) {
       const salt = await bcrypt.genSalt(10);
       user.passwordHash = await bcrypt.hash(
@@ -338,9 +334,6 @@ const updateHospitalDoctor = async (req, res) => {
     user.name = data.personalInfo.name;
     await user.save();
 
-    // ===============================
-    // PROFILE IMAGE
-    // ===============================
     if (req.files?.profileImage?.length) {
       data.personalInfo.profileImage =
         req.files.profileImage[0].filename;
@@ -349,9 +342,6 @@ const updateHospitalDoctor = async (req, res) => {
         staff.personalInfo.profileImage;
     }
 
-    // ===============================
-    // EDUCATION NORMALIZE
-    // ===============================
     data.professionalInfo.education = Array.isArray(
       data.professionalInfo?.educations
     )
@@ -363,26 +353,20 @@ const updateHospitalDoctor = async (req, res) => {
         }))
       : staff.professionalInfo.education || [];
 
-    // ===============================
-    // CERTIFICATES
-    // ===============================
     const uploadedCertificates = req.files?.certificates || [];
 
     data.professionalInfo.certificates = Array.isArray(
-        data.professionalInfo?.certificates
-      )
-        ? data.professionalInfo.certificates.map((c, index) => ({
-            certificateName: c.name || "",   // ✅ ALWAYS THIS
-            certificateFile:
-              uploadedCertificates[index]?.filename ||
-              c.certificateFile ||
-              ""
-          }))
-        : [];
+      data.professionalInfo?.certificates
+    )
+      ? data.professionalInfo.certificates.map((c, index) => ({
+          certificateName: c.name || "",
+          certificateFile:
+            uploadedCertificates[index]?.filename ||
+            c.certificateFile ||
+            ""
+        }))
+      : [];
 
-    // ===============================
-    // ACCESS INFO CLEAN
-    // ===============================
     data.accessInfo = {
       userId: user._id,
       username: data.accessInfo.username,
@@ -392,9 +376,6 @@ const updateHospitalDoctor = async (req, res) => {
         staff.accessInfo.permissionType
     };
 
-    // ===============================
-    // UPDATE STAFF
-    // ===============================
     data.userId = user._id;
     Object.assign(staff, data);
     await staff.save();
@@ -413,7 +394,8 @@ const updateHospitalDoctor = async (req, res) => {
     });
   }
 };
-const deleteDoctor = async (req, res) => {
+
+export const deleteDoctor = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { id } = req.params;
@@ -443,8 +425,3 @@ const deleteDoctor = async (req, res) => {
     });
   }
 };
-
-
-
-export {createHospitalDoctor,deleteDoctor,updateHospitalDoctor,getHospitalDoctorById,getHospitalDoctorByIdNew,getHospitalDoctorList,getMyAllStaffList}
-

@@ -9,24 +9,29 @@ import lab from './routes/laboratory.js'
 import pharmacy from './routes/pharmacy.js'
 import path from 'path';
 import { fileURLToPath } from 'url';
-import authRoutes from './routes/Hospital/auth.js';
-import hospitalRoutes from './routes/Hospital/hospital.js';
-import adminRoutes from './routes/Hospital/admin.js';
+// import authRoutes from './routes/Hospital/auth.js';
+// import hospitalRoutes from './routes/Hospital/hospital.js';
+// import adminRoutes from './routes/Hospital/admin.js';
+// import departmentRoutes from "./routes/Hospital/department.routes.js";
+// import fileRoutes from './routes/Hospital/fileRoute.js'
+// import locations from './routes/Hospital/location.js'
+// import hospitalStaff from './routes/Hospital/hospitalStaff.js'
+// import hospitalDoctor from './routes/Hospital/hospitalDoctor.js'
+// import hospitalPatient from './routes/Hospital/hospitalPatient.js'
+// import bed from './routes/Hospital/bed.js'
+// import hospitalPrescription from './routes/Hospital/prescription.js'
+
+import authRoutes from "./routes/Hospital/auth.js";
+import hospitalRoutes from "./routes/Hospital/hospital.js";
+import adminRoutes from "./routes/Hospital/admin.js";
 import departmentRoutes from "./routes/Hospital/department.routes.js";
-import fileRoutes from './routes/Hospital/fileRoute.js'
-import locations from './routes/Hospital/location.js'
-import hospitalStaff from './routes/Hospital/hospitalStaff.js'
-import hospitalDoctor from './routes/Hospital/hospitalDoctor.js'
-import hospitalPatient from './routes/Hospital/hospitalPatient.js'
-import bed from './routes/Hospital/bed.js'
-import hospitalPrescription from './routes/Hospital/prescription.js'
+import messageRoutes from "./routes/Hospital/chat.routes.js";
 import './seed/seedLocation.js'
 import http from 'http'
 import { Server } from 'socket.io'
-import chat from './routes/Hospital/chat.js'
-import Message from './models/Message.js'
+import Message from './models/Hospital/Message.js'
 import User from './models/Hospital/User.js'
-import Conversation from './models/Conversation.js'
+import Conversation from './models/Hospital/Conversation.js'
 import jwt from 'jsonwebtoken';
 dotenv.config()
 const app = express()
@@ -54,12 +59,12 @@ const io = new Server(server, {
 // 🔐 SOCKET JWT AUTH MIDDLEWARE
 io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
-    
+
     if (!token) return next(new Error("Unauthorized"));
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("decoded",decoded)
+        console.log("decoded", decoded)
         socket.userId = decoded.id || decoded.user;
 
         console.log("🔐 Socket Auth:", decoded.user);
@@ -97,7 +102,7 @@ io.on("connection", (socket) => {
     // ================= CHAT =================
     socket.on("send-message", async ({ toUserId, message = "", file = null }) => {
         try {
-            console.log(socket.userId , toUserId)
+            console.log(socket.userId, toUserId)
             if (!socket.userId || socket.userId === toUserId) return;
             const senderId = socket.userId;
 
@@ -317,18 +322,31 @@ app.use('/pharmacy', pharmacy)
 
 
 
-app.use("/api", fileRoutes);
+
+
+const fileRoute = (await import("./routes/Hospital/fileRoute.js")).default;
+const locationRoutes = (await import("./routes/Hospital/location.routes.js")).default;
+const staffRoutes = (await import("./routes/Hospital/hospitalStaff.routes.js")).default;
+const doctorRoutes = (await import("./routes/Hospital/hospitalDoctor.routes.js")).default;
+const patientRoutes = (await import("./routes/Hospital/hospitalPatient.routes.js")).default;
+const bedRoutes = (await import("./routes/Hospital/bed.routes.js")).default;
+const prescriptionRoutes = (await import("./routes/Hospital/prescription.routes.js")).default;
+const commanRoutes = (await import("./routes/Hospital/comman.routes.js")).default;
+
+app.use("/api", fileRoute);
+app.use("/api/chat", messageRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/hospital", hospitalRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/location", locations);
-app.use("/api/hospital-staff", hospitalStaff);
-app.use("/api/hospital-doctor", hospitalDoctor);
-app.use("/api/patients", hospitalPatient);
+app.use("/api/location", locationRoutes);
+app.use("/api/hospital-staff", staffRoutes);
+app.use("/api/hospital-doctor", doctorRoutes);
+app.use("/api/patients", patientRoutes);
 app.use("/api/hospital/departments", departmentRoutes);
-app.use("/api/bed", bed);
-app.use("/api/prescription", hospitalPrescription);
-app.use("/api/chat", chat);
+app.use("/api/bed", bedRoutes);
+app.use("/api/prescription", prescriptionRoutes);
+app.use("/api/comman", commanRoutes);
+
 
 
 server.listen(process.env.PORT, () => {

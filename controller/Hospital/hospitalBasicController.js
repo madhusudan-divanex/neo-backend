@@ -2,28 +2,35 @@ import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import User from "../../models/Hospital/User.js";
 import { saveToGrid } from "../../services/gridfsService.js";
 
-const saveBasic = async (req, res) => {
-    try {
-        const hospital = await HospitalBasic.findById(req.user.hospitalId);
+// ================= SAVE BASIC DETAILS =================
+export const saveBasic = async (req, res) => {
+  try {
+    const hospital = await HospitalBasic.findById(req.user.created_by_id);
 
-        Object.assign(hospital, req.body);
+    Object.assign(hospital, req.body);
 
-        if (req.file) {
-            const file = await saveToGrid(req.file.buffer, req.file.originalname, req.file.mimetype);
-            hospital.logoFileId = file._id.toString();
-        }
-
-        await hospital.save();
-
-        res.json({ message: "Basic details saved", hospital });
-    } catch (err) {
-        res.status(500).json({ message: "Server error" });
+    if (req.file) {
+      const file = await saveToGrid(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+      hospital.logoFileId = file._id.toString();
     }
+
+    await hospital.save();
+
+    res.json({ message: "Basic details saved", hospital });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
-const PatientList = async (req, res) => {
+
+// ================= PATIENT LIST =================
+export const PatientList = async (req, res) => {
   try {
     const patients = await User.find({
-      hospitalId: req.user.id,
+      created_by_id: req.user.id,
       role: "patient"
     }).select("-password");
 
@@ -33,13 +40,11 @@ const PatientList = async (req, res) => {
   }
 };
 
-/* ===============================
-   DOCTOR LIST
-================================ */
-const DoctorList = async (req, res) => {
+// ================= DOCTOR LIST =================
+export const DoctorList = async (req, res) => {
   try {
     const doctors = await User.find({
-      hospitalId: req.user.id,
+      created_by_id: req.user.id,
       role: "doctor"
     }).select("-password");
 
@@ -48,13 +53,12 @@ const DoctorList = async (req, res) => {
     res.status(500).json({ message: "Failed to load doctors" });
   }
 };
-/* ===============================
-   STAFF LIST
-================================ */
-const StaffList = async (req, res) => {
+
+// ================= STAFF LIST =================
+export const StaffList = async (req, res) => {
   try {
     const staff = await User.find({
-      hospitalId: req.user.id,
+      created_by_id: req.user.id,
       role: { $in: ["staff", "nurse", "receptionist"] }
     }).select("-password");
 
@@ -63,5 +67,3 @@ const StaffList = async (req, res) => {
     res.status(500).json({ message: "Failed to load staff" });
   }
 };
-
-export default {saveBasic,StaffList,DoctorList,PatientList}

@@ -3,7 +3,7 @@ import HospitalBed from "../../../models/Hospital/HospitalBed.js";
 /* ======================================================
    ADD BED
 ====================================================== */
-const addBed = async (req, res) => {
+export const addBed = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { floorId, departmentId, roomId, bedName, perDayFees } = req.body;
@@ -54,7 +54,10 @@ const addBed = async (req, res) => {
   }
 };
 
-const getBedById = async (req, res) => {
+/* ======================================================
+   GET BED BY ID
+====================================================== */
+export const getBedById = async (req, res) => {
   try {
     const bed = await HospitalBed.findOne({
       _id: req.params.id,
@@ -69,12 +72,19 @@ const getBedById = async (req, res) => {
     }
 
     res.json({ success: true, data: bed });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 
-const updateBed = async (req, res) => {
+/* ======================================================
+   UPDATE BED
+====================================================== */
+export const updateBed = async (req, res) => {
   try {
     const { floorId, departmentId, roomId, bedName, perDayFees } = req.body;
 
@@ -105,12 +115,19 @@ const updateBed = async (req, res) => {
       message: "Bed updated successfully",
       data: bed
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 
-const deleteBed = async (req, res) => {
+/* ======================================================
+   DELETE BED (SOFT DELETE)
+====================================================== */
+export const deleteBed = async (req, res) => {
   try {
     const bed = await HospitalBed.findOneAndUpdate(
       {
@@ -132,8 +149,11 @@ const deleteBed = async (req, res) => {
       success: true,
       message: "Bed deleted successfully"
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-export default {addBed,getBedById,updateBed,deleteBed}

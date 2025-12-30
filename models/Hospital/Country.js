@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const CountrySchema = new mongoose.Schema({
   name: String,
@@ -9,5 +9,4 @@ const CountrySchema = new mongoose.Schema({
   longitude: String
 });
 
-const Country = mongoose.model("Country", CountrySchema);
-export default Country
+export default mongoose.model("Country", CountrySchema);

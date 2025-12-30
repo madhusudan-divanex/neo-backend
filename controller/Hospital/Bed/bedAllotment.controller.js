@@ -6,7 +6,7 @@ import HospitalDoctor from "../../../models/Hospital/HospitalDoctor.js";
 /* =====================================================
    ADD BED ALLOTMENT
 ===================================================== */
-const addAllotment = async (req, res) => {
+export const addAllotment = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { bedDetails, allotmentDetails, attendingStaff } = req.body;
@@ -77,17 +77,17 @@ const addAllotment = async (req, res) => {
       }));
 
     /* ---------- CREATE ALLOTMENT ---------- */
-  const allotment = await BedAllotment.create({
-  hospitalId,
-  patientId: allotmentDetails.patientId,
-  bedId: bed._id,
-  primaryDoctorId: allotmentDetails.doctorId,
-  allotmentDate: allotmentDetails.allotmentDate,
-  expectedDischargeDate: allotmentDetails.expectedDischargeDate,
-  admissionReason: allotmentDetails.reason,
-  note: allotmentDetails.note,
-  attendingStaff: formattedStaff
-});
+    const allotment = await BedAllotment.create({
+      hospitalId,
+      patientId,
+      bedId: bed._id,
+      primaryDoctorId: doctorId,
+      allotmentDate,
+      expectedDischargeDate,
+      admissionReason: reason,
+      note,
+      attendingStaff: formattedStaff
+    });
 
     /* ---------- UPDATE BED ---------- */
     bed.status = "Booked";
@@ -114,7 +114,7 @@ const addAllotment = async (req, res) => {
 /* =====================================================
    DISCHARGE PATIENT
 ===================================================== */
-const dischargePatient = async (req, res) => {
+export const dischargePatient = async (req, res) => {
   try {
     const { allotmentId } = req.params;
 
@@ -155,11 +155,10 @@ const dischargePatient = async (req, res) => {
   }
 };
 
-
 /* =====================================================
    GET ALLOTMENT BY ID (EDIT PAGE)
 ===================================================== */
-const getAllotmentById = async (req, res) => {
+export const getAllotmentById = async (req, res) => {
   try {
     const allotment = await BedAllotment.findById(req.params.id)
       .populate("patientId", "name email _id")
@@ -181,17 +180,17 @@ const getAllotmentById = async (req, res) => {
       });
     }
 
-
     const hospitalPatient = await HospitalPatient.findOne({
       user_id: allotment.patientId._id
     });
 
-    // 3️⃣ Attach hospital patient data
     const response = allotment.toObject();
     response.hospitalPatient = hospitalPatient || null;
 
-
-    res.json({ success: true, data: response });
+    res.json({
+      success: true,
+      data: response
+    });
 
   } catch (err) {
     console.error(err);
@@ -202,12 +201,10 @@ const getAllotmentById = async (req, res) => {
   }
 };
 
-
-
 /* =====================================================
    UPDATE ALLOTMENT
 ===================================================== */
-const updateAllotment = async (req, res) => {
+export const updateAllotment = async (req, res) => {
   try {
     const { allotmentDetails, attendingStaff } = req.body;
 
@@ -221,7 +218,8 @@ const updateAllotment = async (req, res) => {
 
     /* ---------- UPDATE BASIC FIELDS ---------- */
     allotment.primaryDoctorId = allotmentDetails.doctorId;
-    allotment.expectedDischargeDate = allotmentDetails.expectedDischargeDate;
+    allotment.expectedDischargeDate =
+      allotmentDetails.expectedDischargeDate;
     allotment.admissionReason = allotmentDetails.reason;
     allotment.note = allotmentDetails.note;
 
@@ -249,6 +247,3 @@ const updateAllotment = async (req, res) => {
     });
   }
 };
-
-
-export default {addAllotment,updateAllotment,getAllotmentById,dischargePatient}

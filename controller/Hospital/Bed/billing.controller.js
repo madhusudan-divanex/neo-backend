@@ -1,6 +1,6 @@
-import BedAllotment from "../../../models/Hospital/BedAllotment.js";
+import BedAllotment from "../../../models/Hospital/BedAllotment";
 
-const calculateStayAmount = async (req, res) => {
+export const calculateStayAmount = async (req, res) => {
   const allotment = await BedAllotment
     .findById(req.params.allotmentId)
     .populate("bedId");
@@ -24,4 +24,3 @@ const calculateStayAmount = async (req, res) => {
     totalAmount: amount
   });
 };
-export default {calculateStayAmount}

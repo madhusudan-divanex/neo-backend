@@ -1,11 +1,20 @@
-import express from 'express'
-import { register, login,forgotPassword,verifyOtp,resetPassword } from "../../controller/Hospital/authController.js";
+import express from "express";
 
-const authRoutes=express.Router()
-authRoutes.post("/register", register);
-authRoutes.post("/login", login);
-authRoutes.post("/forgot-password", forgotPassword);
-authRoutes.post("/verify-otp", verifyOtp);
-authRoutes.post("/reset-password", resetPassword);
+import auth from "../../middleware/auth.js";
+import {
+  register,
+  login,
+  forgotPassword,
+  verifyOtp,
+  resetPassword
+} from "../../controller/Hospital/authController.js";
 
-export default authRoutes
+const router = express.Router();
+
+router.post("/register", register);
+router.post("/login", login);
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-otp", verifyOtp);
+router.post("/reset-password", resetPassword);
+
+export default router;

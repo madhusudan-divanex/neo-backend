@@ -1,12 +1,16 @@
+// controllers/Bed/floor.controller.js
 import HospitalFloor from "../../../models/Hospital/HospitalFloor.js";
 
-const addFloor = async (req, res) => {
+export const addFloor = async (req, res) => {
   try {
     const hospitalId = req.user.id;
     const { floorName } = req.body;
 
     if (!floorName) {
-      return res.status(400).json({ success: false, message: "Floor name required" });
+      return res.status(400).json({
+        success: false,
+        message: "Floor name required"
+      });
     }
 
     const floor = await HospitalFloor.create({
@@ -14,26 +18,56 @@ const addFloor = async (req, res) => {
       floorName
     });
 
-    res.json({ success: true, data: floor });
+    res.json({
+      success: true,
+      data: floor
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-const listFloors = async (req, res) => {
-  const floors = await HospitalFloor.find({
-    hospitalId: req.user.id,
-    status: "Active"
-  });
-  res.json({ success: true, data: floors });
+
+export const listFloors = async (req, res) => {
+  try {
+    const floors = await HospitalFloor.find({
+      hospitalId: req.user.id,
+      status: "Active"
+    });
+
+    res.json({
+      success: true,
+      data: floors
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-const deleteFloor = async (req, res) => {
-  await HospitalFloor.findByIdAndUpdate(req.params.id, {
-    status: "Inactive"
-  });
-  res.json({ success: true, message: "Floor removed" });
+export const deleteFloor = async (req, res) => {
+  try {
+    await HospitalFloor.findByIdAndUpdate(req.params.id, {
+      status: "Inactive"
+    });
+
+    res.json({
+      success: true,
+      message: "Floor removed"
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
-const getFloorById = async (req, res) => {
+
+export const getFloorById = async (req, res) => {
   try {
     const floor = await HospitalFloor.findOne({
       _id: req.params.id,
@@ -58,7 +92,8 @@ const getFloorById = async (req, res) => {
     });
   }
 };
-const updateFloor = async (req, res) => {
+
+export const updateFloor = async (req, res) => {
   try {
     const { floorName } = req.body;
 
@@ -90,7 +125,3 @@ const updateFloor = async (req, res) => {
     });
   }
 };
-
-export default {addFloor,getFloorById,updateFloor,deleteFloor,listFloors}
-
-

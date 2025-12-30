@@ -1,60 +1,69 @@
-import express from 'express'
-const router = express.Router();
+import express from "express";
+import multer from "multer";
+
 import auth from "../../middleware/auth.js";
 
-import multer from"multer";
+import * as basic from "../../controller/Hospital/hospitalBasicController.js";
+import * as images from "../../controller/Hospital/hospitalImageController.js";
+import * as address from "../../controller/Hospital/hospitalAddressController.js";
+import * as contact from "../../controller/Hospital/hospitalContactController.js";
+import * as cert from "../../controller/Hospital/hospitalCertificateController.js";
+import * as kyc from "../../controller/Hospital/kycController.js";
+import * as profile from "../../controller/Hospital/profileController.js";
+
+const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-import basic from "../../controller/Hospital/hospitalBasicController.js";
-import images from "../../controller/Hospital/hospitalImageController.js";
-import address from "../../controller/Hospital/hospitalAddressController.js";
-import contact from "../../controller/Hospital/hospitalContactController.js";
-import cert from "../../controller/Hospital/hospitalCertificateController.js";
-import kyc from "../../controller/Hospital/kycController.js";
-import profile from "../../controller/Hospital/profileController.js";
-
-
+// ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
 router.put("/update-hospital-profile", auth, profile.updateProfile);
 router.post("/edit-request", auth, profile.sendEditRequest);
-router.post("/edit-request/:requestId/approve", auth, profile.approveEditRequest);
+router.post(
+  "/edit-request/:requestId/approve",
+  auth,
+  profile.approveEditRequest
+);
 
-
-// Step 1 Basic
+// ================= STEP 1 : BASIC =================
 router.post("/basic", auth, upload.single("logo"), basic.saveBasic);
 
-// Step 2 Images
+// ================= STEP 2 : IMAGES =================
 router.post(
-    "/images",
-    upload.fields([
-        { name: "thumbnail", maxCount: 1 },
-        { name: "gallery", maxCount: 5 }
-    ]),
-    auth,
-    images.uploadImages
+  "/images",
+  upload.fields([
+    { name: "thumbnail", maxCount: 1 },
+    { name: "gallery", maxCount: 5 }
+  ]),
+  auth,
+  images.uploadImages
 );
 
-// Step 3 Address
+// ================= STEP 3 : ADDRESS =================
 router.post("/address", auth, address.saveAddress);
 
-// Step 4 Contact
-router.post("/contact", auth, upload.single("profilePhoto"), contact.saveContact);
-
-// Step 5 Certificates
+// ================= STEP 4 : CONTACT =================
 router.post(
-    "/certificate",
-    upload.single("file"),   // first
-    auth,                    // then token check
-    cert.uploadCertificate
+  "/contact",
+  auth,
+  upload.single("profilePhoto"),
+  contact.saveContact
 );
 
-// Submit KYC
+// ================= STEP 5 : CERTIFICATE =================
+router.post(
+  "/certificate",
+  upload.single("file"),
+  auth,
+  cert.uploadCertificate
+);
+
+// ================= KYC =================
 router.post("/submit-kyc", auth, kyc.submitKyc);
 router.post("/change-password", auth, profile.changePassword);
 
-
-router.get('/patient-list', auth,  basic.PatientList);
-router.get('/doctor-list', auth,  basic.DoctorList);
-router.get('/staff-list', auth,  basic.StaffList);
+// ================= LISTS =================
+router.get("/patient-list", auth, basic.PatientList);
+router.get("/doctor-list", auth, basic.DoctorList);
+router.get("/staff-list", auth, basic.StaffList);
 
 export default router;

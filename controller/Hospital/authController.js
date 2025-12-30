@@ -1,11 +1,18 @@
-import User from "../../models/Hospital/User.js";
-import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 
+import User from "../../models/Hospital/User.js";
+import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 
-const resetPassword = async (req, res) => {
+import HospitalImages from "../../models/Hospital/HospitalImage.js";
+import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
+import HospitalContact from "../../models/Hospital/HospitalContact.js";
+import HospitalCertificate from "../../models/Hospital/HospitalCertificate.js";
+import Kyc from "../../models/Hospital/KycLog.js";
+
+// ================= RESET PASSWORD =================
+export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
 
@@ -22,18 +29,19 @@ const resetPassword = async (req, res) => {
     const hashed = await bcrypt.hash(newPassword, 10);
 
     user.passwordHash = hashed;
-    user.resetOtp = null;           // clear OTP
+    user.resetOtp = null;
     user.resetOtpExpire = null;
 
     await user.save();
 
     res.json({ message: "Password reset successfully" });
-
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
-const verifyOtp = async (req, res) => {
+
+// ================= VERIFY OTP =================
+export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -48,12 +56,13 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP expired" });
 
     res.json({ message: "OTP verified successfully" });
-
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
-const forgotPassword = async (req, res) => {
+
+// ================= FORGOT PASSWORD =================
+export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -63,18 +72,16 @@ const forgotPassword = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // ---------- Correct Fields ----------
     user.resetOtp = otp;
     user.resetOtpExpire = Date.now() + 10 * 60 * 1000;
 
     await user.save();
 
-    // --------------- Send OTP Email ----------------
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        pass: process.env.MAIL_PASS
       }
     });
 
@@ -82,72 +89,83 @@ const forgotPassword = async (req, res) => {
       from: process.env.MAIL_USER,
       to: email,
       subject: "Your Password Reset OTP",
-      text: `Your OTP is ${otp}`,
+      text: `Your OTP is ${otp}`
     });
 
     res.json({ message: "OTP sent successfully" });
-
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
-const register = async (req, res) => {
-    try {
-        const { name, email, password, hospitalName } = req.body;
 
-        const exists = await User.findOne({ email });
-        if (exists) return res.status(400).json({ message: "User already exists" });
+// ================= REGISTER =================
+export const register = async (req, res) => {
+  try {
+    const { name, email, password, hospitalName } = req.body;
 
-        const passwordHash = await bcrypt.hash(password, 10);
+    const exists = await User.findOne({ email });
+    if (exists)
+      return res.status(400).json({ message: "User already exists" });
 
-        const hospital = await HospitalBasic.create({ hospitalName });
+    const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = await User.create({
-            name,
-            email,
-            passwordHash,
-            role: "hospital",
-            hospitalId: hospital._id
-        });
+    const hospital = await HospitalBasic.create({ hospitalName });
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+    const user = await User.create({
+      name,
+      email,
+      passwordHash,
+      role: "hospital",
+      created_by_id: hospital._id,
+      created_by: "hospital"
+    });
 
-        res.json({ token, user });
-    } catch (err) {
-        res.status(500).json({ message: "Server error", error: err.message });
-    }
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET
+    );
+
+    res.json({ token, user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 };
-const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
-        if (!user) return res.status(404).json({ message: "Invalid email" });
+// ================= LOGIN =================
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-        const match = await user.comparePassword(password);
-        if (!match) return res.status(400).json({ message: "Invalid password" });
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(404).json({ message: "Invalid email" });
 
-        const token = jwt.sign(
-            { id: user._id, role: user.role, hospitalId: user.hospitalId },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-        );
+    const match = await user.comparePassword(password);
+    if (!match)
+      return res.status(400).json({ message: "Invalid password" });
 
-        res.json({
-            message: "Login successful",
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                hospitalId: user.hospitalId
-            }
-        });
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        created_by_id: user.created_by_id
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1y" }
+    );
 
-    } catch (err) {
-        res.status(500).json({ message: "Server error" });
-    }
-}
-
-export {resetPassword,verifyOtp,forgotPassword,register,login}
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        created_by_id: user.created_by_id
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};

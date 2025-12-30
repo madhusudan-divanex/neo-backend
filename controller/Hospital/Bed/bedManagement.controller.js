@@ -3,7 +3,7 @@ import HospitalRoom from "../../../models/Hospital/HospitalRoom.js";
 import HospitalBed from "../../../models/Hospital/HospitalBed.js";
 import BedAllotment from "../../../models/Hospital/BedAllotment.js";
 
-const bedManagementList = async (req, res) => {
+export const bedManagementList = async (req, res) => {
   try {
     const hospitalId = req.user.id;
 
@@ -27,18 +27,17 @@ const bedManagementList = async (req, res) => {
         const beds = await HospitalBed.find({
           hospitalId,
           roomId: room._id
-        }).lean(); // 👈 IMPORTANT
+        }).lean();
 
         const bedIds = beds.map(b => b._id);
 
-        // 🔥 Fetch active allotments for these beds
+        // 🔥 Active allotments
         const allotments = await BedAllotment.find({
           hospitalId,
           bedId: { $in: bedIds },
           status: "Active"
         }).select("bedId").lean();
 
-        // Map bedId => allotmentId
         const allotmentMap = {};
         allotments.forEach(a => {
           allotmentMap[a.bedId.toString()] = a._id;
@@ -67,12 +66,10 @@ const bedManagementList = async (req, res) => {
     res.json({ success: true, data: result });
 
   } catch (err) {
-    console.error(err);
+    console.error("bedManagementList error:", err);
     res.status(500).json({
       success: false,
       message: "Failed to load bed management"
     });
   }
 };
-
-export default {bedManagementList}

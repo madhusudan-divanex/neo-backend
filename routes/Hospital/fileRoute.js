@@ -1,16 +1,20 @@
 // routes/fileRoute.js
-import express from 'express'
-const fileRoutes = express.Router();
-import mongoose from 'mongoose';
+import express from "express";
+import mongoose from "mongoose";
 import { ObjectId } from "mongodb";
 
-fileRoutes.get("/file/:id", async (req, res) => {
+const router = express.Router();
+
+router.get("/file/:id", async (req, res) => {
   try {
     const fileId = new ObjectId(req.params.id);
 
-    const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
-      bucketName: "uploads"
-    });
+    const bucket = new mongoose.mongo.GridFSBucket(
+      mongoose.connection.db,
+      {
+        bucketName: "uploads"
+      }
+    );
 
     const downloadStream = bucket.openDownloadStream(fileId);
 
@@ -19,11 +23,10 @@ fileRoutes.get("/file/:id", async (req, res) => {
     });
 
     downloadStream.pipe(res);
-
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-export default fileRoutes;
+export default router;
