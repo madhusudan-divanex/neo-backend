@@ -47,7 +47,10 @@ const UserSchema = new mongoose.Schema(
     fcmToken: {
       type: String,
       default: null
-    }
+    },
+    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'Laboratory' },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy' },
+    patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient' },
   },
   { timestamps: true }
 );
