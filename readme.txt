@@ -27,6 +27,11 @@ Paitent->
     Edit Request 
     Update Profile 
     Downlaod Health Card
+
+Pending 
+Cancel 
+visited
+pending-report
      
     Verify Otp 
     Kyc 

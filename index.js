@@ -21,6 +21,13 @@ import hospitalPatient from './routes/Hospital/hospitalPatient.js'
 import bed from './routes/Hospital/bed.js'
 import hospitalPrescription from './routes/Hospital/prescription.js'
 import './seed/seedLocation.js'
+import http from 'http'
+import { Server } from 'socket.io'
+import chat from './routes/Hospital/chat.js'
+import Message from './models/Message.js'
+import User from './models/Hospital/User.js'
+import Conversation from './models/Conversation.js'
+import jwt from 'jsonwebtoken';
 dotenv.config()
 const app = express()
 app.use(cors())
@@ -33,6 +40,273 @@ const __dirname = path.dirname(__filename);
 // Serve uploads folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+const server = http.createServer(app);
+
+// 🔹 SOCKET.IO INIT
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+
+// 🔐 SOCKET JWT AUTH MIDDLEWARE
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    
+    if (!token) return next(new Error("Unauthorized"));
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("decoded",decoded)
+        socket.userId = decoded.id || decoded.user;
+
+        console.log("🔐 Socket Auth:", decoded.user);
+        next();
+    } catch (err) {
+        return next(new Error("Invalid token"));
+    }
+});
+
+
+// ================= SOCKET LOGIC =================
+const onlineUsers = new Map(); // userId -> socketId
+
+io.on("connection", (socket) => {
+    console.log("🔌 Socket connected:", socket.id);
+    onlineUsers.set(socket.userId, socket.id);
+
+    io.emit("online-users", Array.from(onlineUsers.keys()));
+
+    // REGISTER USER
+    //  socket.on("register", (userId) => {
+
+    //   // Remove old socket if exists
+    //   if (onlineUsers.has(userId)) {
+    //     const oldSocketId = onlineUsers.get(userId);
+    //     io.sockets.sockets.get(oldSocketId)?.disconnect(true);
+    //   }
+
+    //   onlineUsers.set(userId, socket.id);
+    //   socket.userId = userId;
+
+    //   io.emit("online-users", Array.from(onlineUsers.keys()));
+    // });
+
+    // ================= CHAT =================
+    socket.on("send-message", async ({ toUserId, message = "", file = null }) => {
+        try {
+            console.log(socket.userId , toUserId)
+            if (!socket.userId || socket.userId === toUserId) return;
+            const senderId = socket.userId;
+
+            // Find or create conversation
+            let conversation = await Conversation.findOne({
+                participants: { $all: [senderId, toUserId] }
+            });
+
+            if (!conversation) {
+                conversation = await Conversation.create({
+                    participants: [senderId, toUserId]
+                });
+            }
+
+            // Save message
+            const msg = await Message.create({
+                conversationId: conversation._id,
+                sender: senderId,
+                message: message || "",
+                file: file || null
+            });
+
+            // Update conversation
+            conversation.lastMessage = message
+                ? message
+                : file
+                    ? "📎 Attachment"
+                    : "";
+            conversation.lastMessageAt = new Date();
+            await conversation.save();
+
+            // Emit to receiver
+            const receiverSocket = onlineUsers.get(toUserId);
+            if (receiverSocket) {
+                console.log("receiverSocket if", receiverSocket)
+                io.to(receiverSocket).emit("receive-message", {
+                    conversationId: conversation._id,
+                    sender: { _id: senderId },
+                    message: msg.message,
+                    file: msg.file,
+                    createdAt: msg.createdAt
+                });
+            }
+
+        } catch (err) {
+            console.error("Chat error:", err);
+        }
+    });
+
+
+    // ================= CALL SIGNALING =================
+    socket.on("call-user", async ({ toUserId, callType, offer }) => {
+        socket.callStartTime = new Date();
+
+        socket.callLog = await CallLog.create({
+            caller: socket.userId,
+            receiver: toUserId,
+            callType,
+            startTime: socket.callStartTime
+        });
+
+        const receiverSocket = onlineUsers.get(toUserId);
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("incoming-call", {
+                fromUserId: socket.userId,
+                offer,
+                callType
+            });
+        }
+    });
+    socket.on("set-availability", async (status) => {
+        await User.findByIdAndUpdate(socket.userId, {
+            isAvailable: status
+        });
+        io.emit("doctor-status-update", {
+            doctorId: socket.userId,
+            status
+        });
+    });
+    socket.on("start-paid-chat", async ({ doctorId }) => {
+        socket.chatSession = await ChatSession.create({
+            doctor: doctorId,
+            patient: socket.userId,
+            startTime: new Date(),
+            perMinuteCharge: 20,
+            status: "active"
+        });
+    });
+    socket.on("end-paid-chat", async () => {
+        if (!socket.chatSession) return;
+
+        const endTime = new Date();
+        const minutes = Math.max(
+            1,
+            Math.ceil((endTime - socket.chatSession.startTime) / 60000)
+        );
+
+        socket.chatSession.endTime = endTime;
+        socket.chatSession.totalAmount =
+            minutes * socket.chatSession.perMinuteCharge;
+        socket.chatSession.status = "ended";
+
+        await socket.chatSession.save();
+    });
+    socket.on("typing", ({ toUserId }) => {
+        console.log("toUserId TYPING", toUserId)
+        const receiverSocket = onlineUsers.get(toUserId);
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("user-typing", {
+                fromUserId: socket.userId
+            });
+        }
+    });
+    socket.on("stop-typing", ({ toUserId }) => {
+        const receiverSocket = onlineUsers.get(toUserId);
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("user-stop-typing", {
+                fromUserId: socket.userId
+            });
+        }
+    });
+    socket.on("end-call", async ({ toUserId }) => {
+        // save call log
+        if (socket.callLog) {
+            socket.callLog.endTime = new Date();
+            socket.callLog.duration =
+                (socket.callLog.endTime - socket.callLog.startTime) / 1000;
+
+            socket.callLog.status =
+                socket.callLog.duration < 2 ? "missed" : "completed";
+
+            await socket.callLog.save();
+            socket.callLog = null;
+        }
+
+        // notify other user
+        const receiverSocket = onlineUsers.get(toUserId);
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("call-ended");
+        }
+    });
+
+
+    // socket.on("end-call", async () => {
+    //   if (!socket.callLog) return;
+
+    //   socket.callLog.endTime = new Date();
+    //   socket.callLog.duration =
+    //     (socket.callLog.endTime - socket.callLog.startTime) / 1000;
+
+    //   socket.callLog.status =
+    //     socket.callLog.duration < 2 ? "missed" : "completed";
+
+    //   await socket.callLog.save();
+    // });
+
+
+    socket.on("answer-call", ({ toUserId, answer }) => {
+        const receiverSocket = onlineUsers.get(toUserId);
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("call-answered", {
+                answer
+            });
+        }
+    });
+
+    socket.on("ice-candidate", ({ toUserId, candidate }) => {
+        const receiverSocket = onlineUsers.get(toUserId);
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("ice-candidate", candidate);
+        }
+    });
+
+
+    socket.on("reject-call", async ({ toUserId }) => {
+        const receiverSocket = onlineUsers.get(toUserId);
+
+        // update call log
+        if (socket.callLog) {
+            socket.callLog.endTime = new Date();
+            socket.callLog.status = "rejected";
+            await socket.callLog.save();
+        }
+
+        if (receiverSocket) {
+            io.to(receiverSocket).emit("call-rejected");
+        }
+    });
+
+
+
+    socket.on("disconnect", async () => {
+        if (socket.userId) {
+            onlineUsers.delete(socket.userId);
+
+            await User.findByIdAndUpdate(socket.userId, {
+                isOnline: false,
+                isAvailable: false,
+                lastSeen: new Date()
+            });
+
+            io.emit("online-users", Array.from(onlineUsers.keys()));
+        }
+
+        console.log("❌ Socket disconnected:", socket.id);
+    });
+
+});
+
 app.use('/patient', patient)
 app.use('/doctor', doctor)
 app.use('/appointment', appointment)
@@ -43,7 +317,7 @@ app.use('/pharmacy', pharmacy)
 
 
 
-app.use("/api",fileRoutes);
+app.use("/api", fileRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/hospital", hospitalRoutes);
 app.use("/api/admin", adminRoutes);
@@ -54,9 +328,9 @@ app.use("/api/patients", hospitalPatient);
 app.use("/api/hospital/departments", departmentRoutes);
 app.use("/api/bed", bed);
 app.use("/api/prescription", hospitalPrescription);
+app.use("/api/chat", chat);
 
 
-
-app.listen(process.env.PORT, () => {
+server.listen(process.env.PORT, () => {
     console.log("Start")
 })

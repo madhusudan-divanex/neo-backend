@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { getLabReport, getNearByDoctor, getPatientAppointment } from "../controller/appointmentController.js";
-import { favoriteController, getPatientFavorite } from "../controller/Patient/patientController.js";
+import { favoriteController, getMyRating, getPatientFavorite } from "../controller/Patient/patientController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
@@ -46,6 +46,7 @@ patient.get('/lab-report/:id',authMiddleware,getLabReport)
 
 patient.post('/favorite',authMiddleware,favoriteController)
 patient.get('/favorite/:id',authMiddleware,getPatientFavorite)
+patient.get('/my-rating/:id',authMiddleware,getMyRating)
 
 
 export default patient
