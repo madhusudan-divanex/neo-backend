@@ -420,8 +420,8 @@ const getProfileDetail = async (req, res) => {
             PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             LabAppointment.find({ patientId: fullId }).sort({ createdAt: -1 }).lean(),
-            EditRequest.findOne({ patientId: userId }),
-            EditRequest.exists({patientId:userId,status:'approved'}).then(Boolean)
+            EditRequest.findOne({ patientId: fullId }),
+            EditRequest.exists({patientId:fullId,status:'approved'}).then(Boolean)
         ]);
 
         return res.status(200).json({
@@ -525,6 +525,7 @@ const patientDemographic = async (req, res) => {
             });
         }
     } catch (error) {
+        console.log(error)
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",

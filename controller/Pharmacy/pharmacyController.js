@@ -44,6 +44,13 @@ const addInventry = async (req, res) => {
                 status: 'Approved'
             }
         }
+        if (isExist.role == 'hospital') {
+            data.hospitalId = pharId
+            data.type = 'hospital'
+        } else {
+            data.pharId = pharId
+            data.type = 'pharmacy'
+        }
         const item = await Inventory.create(data);
 
         return res.status(200).json({ success: true, message: "Inventory added successfully" });
@@ -55,7 +62,7 @@ const addInventry = async (req, res) => {
 }
 const inventoryList = async (req, res) => {
     try {
-        const pharId = req.params.id;
+        const ownerId = req.params.id
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
@@ -63,9 +70,18 @@ const inventoryList = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Search filters
-        const { search, schedule, status } = req.query;
+        const { search, schedule, status, type = 'pharmacy' } = req.query;
 
-        let filter = { pharId };
+        let filter = {};
+        if (type === 'hospital') {
+            filter.hospitalId = new mongoose.Types.ObjectId(ownerId);
+            filter.type = 'hospital';
+
+        } else {
+            // default → lab
+            filter.pharId = new mongoose.Types.ObjectId(ownerId);
+            // filter.type = 'pharmacy';
+        }
 
         // Search by name (medicineName)
         if (search) {
@@ -196,12 +212,14 @@ const inventoryDelete = async (req, res) => {
 const medicineData = async (req, res) => {
     try {
         const name = req.params.name;
+        const pharId = req.params.pharId;
+
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
         const [items, total] = await Promise.all([
-            Inventory.find({ medicineName: name })
+            Inventory.find({ medicineName: name, pharId })
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -278,14 +296,15 @@ const medicineData = async (req, res) => {
 };
 const getMedicineRequestsList = async (req, res) => {
     try {
-        const pharId = req.params.id;
+        const ownerId = req.params.id
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = Math.min(parseInt(req.query.limit) || 10, 100);
         const search = req.query.search?.trim();
         const status = req.query.status;
+        const { type = 'pharmacy' } = req.query
 
         // ✅ Validate ObjectId
-        if (!mongoose.Types.ObjectId.isValid(pharId)) {
+        if (!mongoose.Types.ObjectId.isValid(ownerId)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid pharmacy id"
@@ -296,8 +315,16 @@ const getMedicineRequestsList = async (req, res) => {
 
         // ✅ Base match
         const matchStage = {
-            pharId: new mongoose.Types.ObjectId(pharId)
         };
+        if (type === 'hospital') {
+            matchStage.hospitalId = new mongoose.Types.ObjectId(ownerId);
+            matchStage.type = 'hospital';
+
+        } else {
+            // default → lab
+            matchStage.pharId = new mongoose.Types.ObjectId(ownerId);
+            // matchStage.type = 'pharmacy';
+        }
 
         if (status && status !== "all") {
             matchStage.status = status;
@@ -388,18 +415,19 @@ const getMedicineRequestsList = async (req, res) => {
 
 const sendMedicineRequest = async (req, res) => {
     try {
-        const { medicineId, quantity, message, pharId, schedule } = req.body;
+        const { medicineId, quantity, message, pharId, schedule, hospitalId, type } = req.body;
 
         // Check medicine exists and is H1 schedule
-        const medicine = await Inventory.findOne({ _id: medicineId, pharId, schedule });
+        const medicine = await Inventory.findOne({ _id: medicineId, schedule });
         if (!medicine) return res.status(200).json({ success: false, message: "Medicine not found or not H1 schedule" });
 
         const newRequest = new MedicineRequest({
             pharId,
             medicineId,
             quantity,
+            hospitalId,
             message,
-            success: 'Pending'
+            success: 'Pending', type
         });
 
         await newRequest.save();
@@ -717,18 +745,22 @@ const addSupplier = async (req, res) => {
 }
 
 const getSupplier = async (req, res) => {
-    const pharId = req.params.id;
+    const ownerId = req.params.id;
     try {
-        const { name = "", sort = "score" } = req.query;
+        const { name = "", sort = "score", type = 'pharmacy' } = req.query;
 
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
         const filter = {
-            pharId,
             name: { $regex: name, $options: "i" }
         };
+        if (type == 'pharmacy') {
+            filter.pharId = ownerId
+        } else {
+            filter.hospitalId = ownerId
+        }
 
         // Get total count of suppliers matching the filter
         const total = await Supplier.countDocuments(filter);
@@ -743,11 +775,17 @@ const getSupplier = async (req, res) => {
         // Fetch Purchase Orders and calculate the total quantity per supplier
         const supplierData = await Promise.all(
             suppliers.map(async (supplier) => {
-                const purchaseOrders = await PurchaseOrder.find({
-                    supplierId: supplier._id,
-                    pharId: pharId,
-                    // status: "received" // Only include received orders
-                });
+                const purchaseOrders = type === 'hospital' ?
+                    await PurchaseOrder.find({
+                        supplierId: supplier._id,
+                        hospitalId: ownerId,
+                        // status: "received" // Only include received orders
+                    })
+                    : await PurchaseOrder.find({
+                        supplierId: supplier._id,
+                        pharId: ownerId,
+                        // status: "received" // Only include received orders
+                    });
                 const totalQuantity = purchaseOrders.reduce((sum, order) => {
                     return sum + order.products.reduce((productSum, product) => productSum + product.quantity, 0);
                 }, 0);
@@ -849,30 +887,51 @@ async function validateProductsAvailability(pharId, products) {
     }
     return { ok: true }
 }
+async function validateHospitalProductsAvailability(hospitalId, products) {
+    for (const p of products) {
+        const inv = await Inventory.findOne({ _id: p.inventoryId, hospitalId });
+        if (!inv) {
+            return { ok: false, message: `Inventory item not found for id ${p.inventoryId}` };
+        }
+        if (inv.quantity < p.quantity) {
+            return { ok: false, message: `Insufficient stock for ${inv.medicineName}` }
+        }
+    }
+    return { ok: true }
+}
 
 
 const createReturn = async (req, res) => {
     try {
-        const { supplierId, deliveryDate, products, reason, pharId, status } = req.body;
+        const { supplierId, deliveryDate, products, reason, pharId, status, type, hospitalId } = req.body;
 
 
         if (!supplierId || !Array.isArray(products) || products.length === 0) {
             return res.status(400).json({ success: false, message: "supplierId and products are required" });
         }
         // Optional: check supplier exists
-        const supplier = await Supplier.findOne({ _id: supplierId, pharId });
-        if (!supplier) return res.status(400).json({ success: false, message: "Supplier not found" });
+        if (pharId) {
+            const supplier = await Supplier.findOne({ _id: supplierId, pharId });
+            if (!supplier) return res.status(400).json({ success: false, message: "Supplier not found" });
+            const validation = await validateProductsAvailability(pharId, products);
+            if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
+        } else {
+            const supplier = await Supplier.findOne({ _id: supplierId, hospitalId });
+            if (!supplier) return res.status(400).json({ success: false, message: "Supplier not found" });
+            const validation = await validateHospitalProductsAvailability(hospitalId, products);
+            if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
+        }
+
 
         // Validate inventory and availability
-        const validation = await validateProductsAvailability(pharId, products);
-        if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
+
 
         const ret = await Return.create({
             pharId,
             supplierId,
             deliveryDate,
             products,
-            reason, status
+            reason, status, type, hospitalId
         });
 
         res.status(201).json({ success: true, data: ret, message: "Return generated" });
@@ -883,9 +942,18 @@ const createReturn = async (req, res) => {
 
 const listReturns = async (req, res) => {
     try {
-        const pharId = req.params.id;
-        const { page = 1, limit = 10, status, search } = req.query;
-        const matchStage = { pharId: new mongoose.Types.ObjectId(req.params.id) };
+        const ownerId = req.params.id;
+        const { page = 1, limit = 10, status, search ,type='pharmacy'} = req.query;
+        const matchStage = {  };
+        if (type === 'hospital') {
+            matchStage.hospitalId = new mongoose.Types.ObjectId(ownerId);
+            matchStage.type = 'hospital';
+
+        } else {
+            // default → lab
+            matchStage.pharId = new mongoose.Types.ObjectId(ownerId);
+            // matchStage.type = 'pharmacy';
+        }
         if (status !== 'all') matchStage.status = status;
         if (search) {
             matchStage["supplier.name"] = { $regex: search, $options: "i" };
@@ -983,7 +1051,6 @@ const listReturns = async (req, res) => {
         ];
 
         const result = await Return.aggregate(pipeline)
-
         const total = result[0].totalCount[0]?.count || 0;
         return res.status(200).json({
             success: true, data: result[0].data,
@@ -1019,16 +1086,23 @@ const getReturnById = async (req, res) => {
 // UPDATE RETURN (only while Pending)
 const updateReturn = async (req, res) => {
     try {
-        const { supplierId, deliveryDate, status, products, reason, pharId, returnId } = req.body;
+        const { supplierId, deliveryDate, status, products, reason, pharId, returnId ,hospitalId} = req.body;
 
-        const ret = await Return.findOne({ _id: returnId, pharId });
+        const ret = await Return.findOne({ _id: returnId });
         if (!ret) return res.status(200).json({ success: false, message: "Return not found" });
 
         // If products changed, validate availability
         if (products) {
-            const validation = await validateProductsAvailability(pharId, products);
-            if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
-            ret.products = products;
+            if(pharId){
+                const validation = await validateProductsAvailability(pharId, products);
+                if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
+                ret.products = products;
+            }
+            if(hospitalId){
+                const validation = await validateHospitalProductsAvailability(hospitalId, products);
+                if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
+                ret.products = products;
+            }
         }
 
         if (deliveryDate) ret.deliveryDate = deliveryDate;
@@ -1215,7 +1289,7 @@ const addPharPermission = async (req, res) => {
 const updatePharPermission = async (req, res) => {
     try {
         const { name, permissionId, pharId, ...permissions } = req.body;
-        const isExist = await Pharmacy.findById(pharId);
+        const isExist = await User.findById(pharId);
         if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
         const isPermExist = await PharPermission.findById(permissionId);
         if (!isPermExist) return res.status(200).json({ message: "Permission not found", success: false })
@@ -1295,6 +1369,7 @@ const savePharStaff = async (req, res) => {
             return res.status(200).json({
                 success: true,
                 message: "Staff updated",
+                empId
             });
         } else {
             const staf = await PharStaff.create({ name, address, dob, state, gender, city, pinCode, contactInformation, pharId, profileImage });
@@ -1464,6 +1539,13 @@ const saveEmpAccess = async (req, res) => {
         let data;
         await PharStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
         if (isExist) {
+            const alreadyEmail = await EmpAccess.countDocuments({ email })
+            if (alreadyEmail > 1) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Email already exists",
+                });
+            }
             data = await EmpAccess.findOneAndUpdate({ empId: empId }, { userName, email, password, permissionId }, { new: true });
             if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
             return res.status(200).json({
@@ -1472,6 +1554,13 @@ const saveEmpAccess = async (req, res) => {
                 data
             });
         } else {
+            const alreadyEmail = await EmpAccess.findOne({ email })
+            if (alreadyEmail) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Email already exists",
+                });
+            }
             data = await EmpAccess.create(req.body);
             employee.accessId = data?._id
             await employee.save()
@@ -1628,7 +1717,7 @@ const pharDashboardData = async (req, res) => {
             return count;
         }, 0);
 
-        const h1Compliance = await Inventory.countDocuments({ schedule: 'H1',pharId })
+        const h1Compliance = await Inventory.countDocuments({ schedule: 'H1', pharId })
         const xCompliance = await Inventory.aggregate([
             {
                 $match: { schedule: 'X' },
@@ -1644,7 +1733,7 @@ const pharDashboardData = async (req, res) => {
 
         const hCompliance = await Inventory.aggregate([
             {
-                $match: { schedule: 'H',pharId },
+                $match: { schedule: 'H', pharId },
             },
             {
                 $group: {
@@ -1656,7 +1745,7 @@ const pharDashboardData = async (req, res) => {
         const totalHQuantity = hCompliance[0]?.totalQuantity || 0;
         const h1ComplianceData = await Inventory.aggregate([
             {
-                $match: { schedule: 'H1',pharId },
+                $match: { schedule: 'H1', pharId },
             },
             {
                 $group: {
@@ -1666,9 +1755,9 @@ const pharDashboardData = async (req, res) => {
             },
         ])
         const totalH1Quantity = h1ComplianceData[0]?.totalQuantity || 0;
-        const marginAnalysis = await Inventory.find({ margintType: "Percentage",pharId }).sort({ avgMargin: -1 }).limit(5)
-        const inventory = await Inventory.find({pharId}).sort({ sellCount: -1 }).limit(5)
-        const suppliers = await Supplier.find({pharId}).sort({ createdAt: -1 }).limit(5)
+        const marginAnalysis = await Inventory.find({ margintType: "Percentage", pharId }).sort({ avgMargin: -1 }).limit(5)
+        const inventory = await Inventory.find({ pharId }).sort({ sellCount: -1 }).limit(5)
+        const suppliers = await Supplier.find({ pharId }).sort({ createdAt: -1 }).limit(5)
         const supplierData = await Promise.all(
             suppliers.map(async (supplier) => {
                 const purchaseOrders = await PurchaseOrder.find({

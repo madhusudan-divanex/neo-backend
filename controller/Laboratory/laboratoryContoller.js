@@ -15,7 +15,7 @@ import mongoose from "mongoose";
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
     try {
-        const laboratory = await User.find({role:'lab'}).sort({ createdAt: -1 })
+        const laboratory = await User.find({ role: 'lab' }).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         if (laboratory) {
@@ -511,15 +511,24 @@ const deleteStaffData = async (req, res) => {
     }
 };
 const addTest = async (req, res) => {
-    const { labId, precautions, shortName, testCategory, sampleType, price, component } = req.body
+    const { labId, precautions, shortName, testCategory, sampleType, price, component, type, hospitalId } = req.body
     try {
-        const isExist = await User.findById(labId);
+        let isExist = null;
+
+        if (labId) {
+            isExist = await User.findById(labId);
+        }
+
+        if (!isExist && hospitalId) {
+            isExist = await User.findById(hospitalId);
+        }
+
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
-        const isLast=await Test.findOne()?.sort({createdAt:-1})
-            const nextId = isLast
+        const isLast = await Test.findOne()?.sort({ createdAt: -1 })
+        const nextId = isLast
             ? String(Number(isLast.customId) + 1).padStart(4, '0')
             : '0001';
-        const isStaff = await Test.create({customId:nextId, labId, precautions, shortName, testCategory, sampleType, price, component });
+        const isStaff = await Test.create({ customId: nextId, labId, hospitalId, precautions, shortName, testCategory, sampleType, price, component, type });
 
         if (isStaff) {
             return res.status(200).json({
@@ -537,12 +546,12 @@ const addTest = async (req, res) => {
     }
 };
 const updateTest = async (req, res) => {
-    const { testId, precautions, shortName, testCategory, sampleType, price, component } = req.body
+    const { testId, precautions, shortName, testCategory, sampleType, price, component, type, hospitalId } = req.body
     try {
         const isExist = await Test.findById(testId);
         if (!isExist) return res.status(200).json({ message: "Test  not found", success: false })
 
-        const update = await Test.findByIdAndUpdate(testId, { precautions, shortName, testCategory, sampleType, price, component }, { new: true });
+        const update = await Test.findByIdAndUpdate(testId, { precautions, shortName, testCategory, sampleType, price, component, type }, { new: true });
 
         if (update) {
             return res.status(200).json({
@@ -578,16 +587,33 @@ const labTestAction = async (req, res) => {
     }
 };
 const getTest = async (req, res) => {
-    const labId = req.params.id
-    const { page, limit = 10 } = req.query
+    const ownerId = req.params.id
+    const { page, limit = 10,type='lab' ,name} = req.query
     try {
-        const filter = { labId:new mongoose.Types.ObjectId(labId) }
-        if (req.query.name) {
-            filter.shortName = req.query.name
+        const user = await User.findById(ownerId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User not found"
+            });
         }
-         const isUser = await User.findById(labId);
-        if (!isUser) return res.status(200).json({ message: "Laboratory  not found", success: false })
-        
+
+        const filter = {};
+
+        // Decide filter based on type
+        if (type === 'hospital') {
+            filter.hospitalId = new mongoose.Types.ObjectId(ownerId);
+            filter.type = 'hospital';
+
+        } else {
+            // default → lab
+            filter.labId = new mongoose.Types.ObjectId(ownerId);
+            filter.type = 'lab';
+        }
+        if(name){
+            filter.name=name
+        }
+
 
         const data = await Test.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
         const totalTest = await Test.countDocuments(filter)
@@ -604,6 +630,7 @@ const getTest = async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -716,5 +743,5 @@ const getTestReport = async (req, res) => {
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,
     labStaffData, deleteStaffData, labStaff, updateLabPermission, addTest, getTest, deleteTest, labStaffAction, deleteSubEmpProffesional,
-    getTestData, updateTest, labTestAction, saveReport,getTestReport
+    getTestData, updateTest, labTestAction, saveReport, getTestReport
 }

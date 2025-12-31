@@ -428,7 +428,7 @@ const getProfileDetail = async (req, res) => {
             user: data,
             pharPerson,
             pharAddress,
-            pharImg,
+            pharImg,customId:user.unique_id,
             pharLicense,
             rating,
             avgRating,
@@ -724,7 +724,7 @@ const pharImage = async (req, res) => {
 const editRequest = async (req, res) => {
     const { pharId, message } = req.body;
     try {
-        const user = await Pharmacy.findById(pharId)
+        const user = await User.findById(pharId)
         if (!user) return res.status(200).json({ message: "Pharmacy not found", success: false })
         await EditRequest.create({ pharId, message, type: 'pharmacy' })
         return res.status(200).json({

@@ -14,9 +14,9 @@ const componentSchema=new Schema({
 const requestSchema=new Schema({
     labId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'User',required:true,index:true
+        ref:'User',index:true
     },
-    precautions:{type:String,required:true},
+    precautions:{type:String},
     shortName:{type:String,required:true},
     component:[componentSchema],
     testCategory:{type:String,required:true},
@@ -24,7 +24,8 @@ const requestSchema=new Schema({
     price:{type:String,required:true},
     customId: { type: String, required: true },
     status:{type:String,enum:['active','inactive'],default:'inactive'},
-    cancelMessage:String
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital',index:true },
+    type:{type:String,enum:['lab','hospital'],default:'lab'}
 
 },{timestamps:true})
 const Test= mongoose.model('Test', requestSchema);

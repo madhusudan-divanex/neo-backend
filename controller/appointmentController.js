@@ -412,11 +412,11 @@ const labDashboardData = async (req, res) => {
     try {
         const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
-        const pendingTestRequest = await LabAppointment.countDocuments({ labId: isExist.labId, status: 'pending' })
-        const deliverRequest = await LabAppointment.countDocuments({ labId: isExist.labId, status: 'deliver-report' })
-        const pendingReport = await LabAppointment.countDocuments({ labId: isExist.labId, status: 'pending-report' })
-        const totalTest = await Test.countDocuments({ labId: isExist.labId })
-        const totalTestRequest = await LabAppointment.countDocuments({ labId: isExist.labId })
+        const pendingTestRequest = await LabAppointment.countDocuments({ labId: isExist._id, status: 'pending' })
+        const deliverRequest = await LabAppointment.countDocuments({ labId: isExist._id, status: 'deliver-report' })
+        const pendingReport = await LabAppointment.countDocuments({ labId: isExist._id, status: 'pending-report' })
+        const totalTest = await Test.countDocuments({ labId: isExist._id })
+        const totalTestRequest = await LabAppointment.countDocuments({ labId: isExist._id })
         const testRequests = { totalTestRequest }
         const labReports = { pendingReport, deliverRequest, pendingTestRequest }
         return res.status(200).json({

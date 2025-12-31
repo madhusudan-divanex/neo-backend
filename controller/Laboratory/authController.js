@@ -91,7 +91,7 @@ const signUpLab = async (req, res) => {
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );
-                return res.status(200).json({ success: true, userId: newLab._id, token });
+                return res.status(200).json({ success: true, userId: userData?._id, token });
             } else {
                 return res.status(200).json({ success: false, message: "Lab not created" });
             }
@@ -158,10 +158,10 @@ const signInLab = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success", user: userData, nextStep, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", user: isExist, nextStep, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
         } else {
-            await Login.create({ userId: userData._id })
-            return res.status(200).json({ message: "Login success", user: userData, nextStep, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
+            await Login.create({ userId: isExist._id })
+            return res.status(200).json({ message: "Login success", user: isExist, nextStep, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -386,7 +386,7 @@ const getProfileDetail = async (req, res) => {
             .populate('cityId').sort({ createdAt: -1 });
         const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const isRequest = Boolean(await EditRequest.exists({ labId: user?.labId }))
+        const isRequest = Boolean(await EditRequest.exists({ labId: user?._id }))
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?.labId })
@@ -811,10 +811,10 @@ const getLabs = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
 
     try {
-        const users = await User.find({ role: 'lab' }).populate('labId')
+        const users = await User.find({ role: 'lab' }).select('-passwordHash').populate('labId')
             .limit(limit)
             .skip((page - 1) * limit).lean();
-        const labIds = await users.map(a => a.labId._id).filter(Boolean)
+        const labIds = await users.map(a => a._id)
         const labAddresses = await LabAddress.find({
             userId: { $in: labIds }
         }).populate('countryId stateId cityId', 'name')
@@ -825,7 +825,7 @@ const getLabs = async (req, res) => {
         });
         const finalData = users.map(app => ({
             ...app,
-            labAddress: addressMap[app.labId?._id?.toString()] || null
+            labAddress: addressMap[app?._id?.toString()] || null
         }));
 
 

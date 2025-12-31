@@ -71,7 +71,7 @@ pharmacy.get('/inventory/:id', authMiddleware, inventoryList);
 pharmacy.get('/inventory-data/:id', authMiddleware, inventoryGetById);
 pharmacy.put('/inventory', authMiddleware, inventoryUpdate);
 pharmacy.delete('/inventory/:id', authMiddleware, inventoryDelete);
-pharmacy.get('/medicine-data/:name', authMiddleware, medicineData);
+pharmacy.get('/medicine-data/:name/:pharId', authMiddleware, medicineData);
 
 
 pharmacy.post('/medicine-request', authMiddleware, sendMedicineRequest);

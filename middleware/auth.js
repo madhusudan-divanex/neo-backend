@@ -8,9 +8,9 @@ export default async function auth(req, res, next) {
   const token = req.header('Token')?auth: auth.split(' ')[1];
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // const user = await User.findById(payload.id);
-    // if (!user) return res.status(401).json({ message: 'Invalid token' });
-    req.user = payload;
+    const user = await User.findById(payload.id?payload.id:payload.user);
+    if (!user) return res.status(401).json({ message: 'Invalid token' });
+    req.user = user;
     next();
   } catch (err) {
     console.log(err)
