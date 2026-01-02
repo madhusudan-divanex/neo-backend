@@ -722,6 +722,7 @@ const getTestReport = async (req, res) => {
             appointmentId,
         } = req.body;
         const isExist = await TestReport.findOne({ testId, appointmentId }).populate('testId')
+        .populate({path:'labId',select:'-passwordHash',populate:"labId"}).populate('appointmentId')
         if (isExist) {
             return res.status(201).json({
                 success: true,

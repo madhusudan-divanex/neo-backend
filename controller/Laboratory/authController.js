@@ -806,45 +806,85 @@ const sendReport = async (req, res) => {
     }
 };
 const getLabs = async (req, res) => {
-    // Convert query params to numbers
-    const limit = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
 
-    try {
-        const users = await User.find({ role: 'lab' }).select('-passwordHash').populate('labId')
-            .limit(limit)
-            .skip((page - 1) * limit).lean();
-        const labIds = await users.map(a => a._id)
-        const labAddresses = await LabAddress.find({
-            userId: { $in: labIds }
-        }).populate('countryId stateId cityId', 'name')
-            .lean();
-        const addressMap = {};
-        labAddresses.forEach(addr => {
-            addressMap[addr.userId.toString()] = addr;
-        });
-        const finalData = users.map(app => ({
-            ...app,
-            labAddress: addressMap[app?._id?.toString()] || null
-        }));
+  try {
+    // 1️⃣ Fetch lab users
+    const users = await User.find({ role: 'lab' })
+      .select('-passwordHash')
+      .populate('labId')
+      .limit(limit)
+      .skip((page - 1) * limit)
+      .lean();
 
+    const labIds = users.map(u => u._id);
 
-        const total = await User.countDocuments({ role: 'lab' });
+    // 2️⃣ Fetch addresses
+    const labAddresses = await LabAddress.find({
+      userId: { $in: labIds }
+    })
+      .populate('countryId stateId cityId', 'name')
+      .lean();
 
-        return res.status(200).json({
-            success: true,
-            data: finalData,
-            pagination: {
-                total,
-                totalPage: Math.ceil(total / limit),
-                currentPage: page
-            }
-        });
-    } catch (err) {
-        console.log(error)
-        return res.status(500).json({ success: false, message: err.message });
-    }
+    const addressMap = {};
+    labAddresses.forEach(addr => {
+      addressMap[addr.userId.toString()] = addr;
+    });
+
+    // 3️⃣ Fetch rating stats (AVG + COUNT)
+    const ratingStats = await Rating.aggregate([
+      {
+        $match: {
+          labId: { $in: labIds }
+        }
+      },
+      {
+        $group: {
+          _id: "$labId",
+          avgRating: { $avg: "$star" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const ratingMap = {};
+    ratingStats.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // 4️⃣ Merge everything
+    const finalData = users.map(user => ({
+      ...user,
+      labAddress: addressMap[user._id.toString()] || null,
+      avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
+      totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+    }));
+
+    const total = await User.countDocuments({ role: 'lab' });
+
+    return res.status(200).json({
+      success: true,
+      data: finalData,
+      pagination: {
+        total,
+        totalPage: Math.ceil(total / limit),
+        currentPage: page
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
+
 const getLabDetail = async (req, res) => {
     const userId = req.params.id;
 

@@ -391,12 +391,12 @@ const getLabAppointmentData = async (req, res) => {
         if (appointmentId.length < 24) {
             isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'testId', select: 'shortName price' })
                 .populate({ path: 'patientId', select: '-passwordHash',populate:({path:'patientId',select:'name email contactNumber gender'}) })
-                .populate({ path: 'labId', select: '-passwordHash',populate:({path:'labId',select:'name logo'}) }).lean();           
+                .populate({ path: 'labId', select: '-passwordHash',populate:({path:'labId',select:'name logo gstNumber'}) }).lean();           
         } else {
 
             isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
                 .populate({ path: 'patientId', select: '-passwordHash',populate:({path:'patientId',select:'name email contactNumber gender'}) })
-                .populate({ path: 'labId', select: '-passwordHash',populate:({path:'labId',select:'name logo'}) }).lean();
+                .populate({ path: 'labId', select: '-passwordHash',populate:({path:'labId',select:'name logo gstNumber'}) }).lean();
         }
         const labAddress=await LabAddress.findOne({userId:isExist?.labId?._id}).populate('countryId stateId cityId', 'name')
         const labReports=await TestReport.find({appointmentId:isExist?._id}).populate('testId')
@@ -496,7 +496,7 @@ const getLabReport = async (req, res) => {
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
         const appointment = await TestReport.find({ patientId: isExist?._id }).populate('appointmentId').populate({ path: 'labId', select: 'name customId ' })
-            .populate({ path: 'testId', select: 'shortName customId' }).sort({ createdAt: -1 })
+            .populate({ path: 'testId'}).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         const totalData = await TestReport.countDocuments({ patientId: isExist?._id })

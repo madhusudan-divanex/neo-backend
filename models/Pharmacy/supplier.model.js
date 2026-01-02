@@ -9,7 +9,7 @@ const SupplierSchema = new mongoose.Schema({
     city: { type: String },
     pincode: { type: String },
     score: { type: Number, default: 0 },
-    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital', index: true },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic', index: true },
     type: { type: String, enum: ['pharmacy', 'hospital'], default: 'pharmacy' },
 }, { timestamps: true });
 

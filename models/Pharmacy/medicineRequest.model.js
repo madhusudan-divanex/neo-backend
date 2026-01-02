@@ -6,7 +6,7 @@ const MedicineRequestSchema = new mongoose.Schema({
     quantity: { type: Number, required: true },
     message: { type: String, default: "" },
     status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
-    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital', index: true },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic', index: true },
     type: { type: String, enum: ['pharmacy', 'hospital'], default: 'pharmacy' },
 }, { timpstamp: true });
 

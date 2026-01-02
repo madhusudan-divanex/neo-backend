@@ -3,7 +3,7 @@ import mongoose, { Schema} from "mongoose";
 const requestSchema=new Schema({
     labId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'Laboratory',required:true
+        ref:'User',required:true
     },
     patientId:{
         type:mongoose.Schema.Types.ObjectId,

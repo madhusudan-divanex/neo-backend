@@ -88,6 +88,74 @@ async function getMyRating(req, res) {
         });
     }
 }
+async function getPatientFavoriteData(req, res) {
+  const userId = req.params.id;
+  if (!userId) {
+    return res.status(400).json({
+      message: "userId is required",
+      success: false
+    });
+  }
+
+  const { limit = 10, page = 1, type } = req.query;
+
+  try {
+    let filter = { userId };
+
+    // 🔹 type based filtering
+    if (type === "lab") {
+      filter.labId = { $ne: null };
+    } else if (type === "hospital") {
+      filter.hospitalId = { $ne: null };
+    } else if (type === "doctor") {
+      filter.doctorId = { $ne: null };
+    }
+     const [labCount, hospitalCount, doctorCount] = await Promise.all([
+      Favorite.countDocuments({ userId, labId: { $ne: null } }),
+      Favorite.countDocuments({ userId, hospitalId: { $ne: null } }),
+      Favorite.countDocuments({ userId, doctorId: { $ne: null } })
+    ]);
+    const myFavorite = await Favorite.find(filter)
+      .populate({
+        path: "labId",
+        populate: { path: "labId" }
+      })
+      .populate({
+        path: "hospitalId",
+        populate: { path: "hospitalId" }
+      })
+      .populate({
+        path: "doctorId",
+        populate: { path: "doctorId" }
+      })
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip((page - 1) * limit)
+      .lean();
+
+    return res.status(200).json({
+      message: "Favorite data fetched",
+      data: myFavorite,
+      success: true,
+      counts: {
+        lab: labCount,
+        hospital: hospitalCount,
+        doctor: doctorCount
+      },
+      pagination: {
+        currentPage: Number(page),
+        limit: Number(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false
+    });
+  }
+}
 
 
-export { favoriteController, getPatientFavorite ,getMyRating}
+export { favoriteController, getPatientFavorite ,getMyRating,getPatientFavoriteData}

@@ -7,6 +7,7 @@ import Kyc from "../../models/Hospital/KycLog.js";
 import EditRequest from "../../models/Hospital/HospitalEditRequest.js";
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
+import Rating from "../../models/Rating.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -204,5 +205,92 @@ export const approveEditRequest = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getHospitals = async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+
+  try {
+    // 1️⃣ Fetch lab users
+    const users = await User.find({ role: 'hospital',created_by:'hospital' })
+      .select('-passwordHash')
+      .limit(limit)
+      .skip((page - 1) * limit)
+      .lean();
+
+    const hospitalIds = users.map(u => u.created_by_id);
+
+    // 2️⃣ Fetch addresses
+    const hospitalBasics = await HospitalBasic.find({
+      _id: { $in: hospitalIds }
+    })
+    const hospitalAddresses = await HospitalAddress.find({
+      userId: { $in: hospitalIds }
+    })
+      .populate('countryId stateId cityId', 'name')
+      .lean();
+
+    const addressMap = {};
+    hospitalAddresses.forEach(addr => {
+      addressMap[addr._id.toString()] = addr;
+    });
+    const basicMap = {};
+    hospitalBasics.forEach(addr => {
+      basicMap[addr._id.toString()] = addr;
+    });
+
+    // 3️⃣ Fetch rating stats (AVG + COUNT)
+    const ratingStats = await Rating.aggregate([
+      {
+        $match: {
+          hospitalId: { $in: hospitalIds }
+        }
+      },
+      {
+        $group: {
+          _id: "$hospitalId",
+          avgRating: { $avg: "$star" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const ratingMap = {};
+    ratingStats.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // 4️⃣ Merge everything
+    const finalData = users.map(user => ({
+      ...user,
+      hospitalAddress: addressMap[user._id.toString()] || null,
+      basic: basicMap[user._id?.toString()] || null,
+      avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
+      totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+    }));
+
+    const total = await User.countDocuments({ role: 'hospital' });
+
+    return res.status(200).json({
+      success: true,
+      data: finalData,
+      pagination: {
+        total,
+        totalPage: Math.ceil(total / limit),
+        currentPage: page
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };

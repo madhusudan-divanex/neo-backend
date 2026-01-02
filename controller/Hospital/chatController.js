@@ -209,7 +209,6 @@ export const GetMessage = async (req, res) => {
       },
       { $set: { seen: true } }
     );
-
     return res.json({
       success: true,
       data: messages.reverse(),

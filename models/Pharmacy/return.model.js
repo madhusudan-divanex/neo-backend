@@ -11,7 +11,7 @@ const ReturnSchema = new mongoose.Schema({
             quantity: Number,
         }
     ],
-    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital', index: true },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic', index: true },
     type: { type: String, enum: ['pharmacy', 'hospital'], default: 'pharmacy' },
     reason: String,
 }, { timestamps: true });

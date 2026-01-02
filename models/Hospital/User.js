@@ -51,6 +51,8 @@ const UserSchema = new mongoose.Schema(
     labId: { type: mongoose.Schema.Types.ObjectId, ref: 'Laboratory' },
     pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy' },
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient' },
+    doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic' },
   },
   { timestamps: true }
 );

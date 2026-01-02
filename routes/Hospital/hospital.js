@@ -14,6 +14,7 @@ import * as profile from "../../controller/Hospital/profileController.js";
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+router.get("",  profile.getHospitals);
 // ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
 router.put("/update-hospital-profile", auth, profile.updateProfile);

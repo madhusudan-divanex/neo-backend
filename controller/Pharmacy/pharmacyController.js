@@ -1110,7 +1110,6 @@ const updateReturn = async (req, res) => {
         if (supplierId) ret.supplierId = supplierId;
         if (status) ret.status = status;
 
-
         await ret.save();
         return res.status(200).json({ success: true, data: ret, message: "Return Updated" });
     } catch (err) {
