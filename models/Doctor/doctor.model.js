@@ -6,8 +6,9 @@ const userSchema = new mongoose.Schema({
     gender: { type: String, required: true },
     dob: { type: Date, required: true }    ,
     contactNumber: { type: String, required: true },
-    password: { type: String, required: true }  , 
     profileImage: { type: String}  ,
+     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
+    
     status: { type: String,enum:['pending','verify'], default: 'pending' }      
 
 }, { timestamps: true });

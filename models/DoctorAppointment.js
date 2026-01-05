@@ -3,21 +3,31 @@ import mongoose, { Schema } from "mongoose";
 const requestSchema = new Schema({
     doctorId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Doctor', required: true
+        ref: 'User', required: true
     },
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Patient', required: true
+        ref: 'User', required: true
     },
     date: { type: Date, required: true },
-    customId:{type:String,required:true},
+    customId: { type: String, required: true },
     fees: { type: String, required: true },
     note: { type: Date },
-    customId: { type: String, required: true },
+    labTest: {
+        lab: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        labTests: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Test'
+        }]
+    },
     prescriptionId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'prescriptions'
     },
+    paymentStatus:{type:String,enum:['due','paid'],default:'due'},
     status: { type: String, enum: ['pending', 'approved', 'completed', 'rejected', 'cancel'], default: 'pending', index: true },
     cancelMessage: String
 

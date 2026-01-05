@@ -1,3 +1,4 @@
+import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import Doctor from "../models/Doctor/doctor.model.js";
 import DoctorAppointment from "../models/DoctorAppointment.js";
 import User from "../models/Hospital/User.js";
@@ -14,15 +15,15 @@ import TestReport from "../models/testReport.js";
 const bookDoctorAppointment = async (req, res) => {
     const { patientId, doctorId, date, fees } = req.body;
     try {
-        const isExist = await Doctor.findById(doctorId);
+        const isExist = await User.findOne({ role: 'doctor', _id: doctorId });
         if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
 
-        const isPatient = await Patient.findById(patientId);
+        const isPatient = await User.findOne({ role: 'patient', _id: patientId });
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
-        const isLast = await DoctorAppointment.findOne().sort({ createdAt: -1 })
+        const isLast = await DoctorAppointment.findOne().sort({ createdAt: -1 });
         const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
+            ? String(Number(isLast.customId.slice(3)) + 1).padStart(4, "0")
+            : "0001";
 
         const book = await DoctorAppointment.create({ patientId, doctorId, date, fees, customId: 'DAP' + nextId })
         if (book) {
@@ -35,31 +36,88 @@ const bookDoctorAppointment = async (req, res) => {
     }
 }
 const getDoctorAppointment = async (req, res) => {
-    const doctorId = req.params.id;
-    const { page, limit, status = '' } = req.query
     try {
-        let filter = { doctorId }
-        if (status !== '') {
-            filter.status = status
+        const doctorId = req.params.id;
+
+        // Parse pagination params with defaults
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const status = req.query.status || '';
+        const statuses = req.query.statuses || ''
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+
+        const skip = (page - 1) * limit;
+
+        let filter = { doctorId };
+        if (status) {
+            filter.status = status;
         }
-        const isExist = await Doctor.findById(doctorId);
-        if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
-        const appointment = await DoctorAppointment.find(filter).populate('prescriptionId').populate({ path: 'patientId', select: '-password' }).sort({ createdAt: -1 })
-            .skip((page - 1) * 10)
-            .limit(limit)
-        if (appointment) {
-            return res.status(200).json({ message: "Appointment fetch successfully", data: appointment, success: true })
-        } else {
-            return res.status(200).json({ message: "Appointment not fount", success: false })
+        if (statuses) {
+            filter.status = { $in: statuses.split(',') };
         }
+        const start = startDate && startDate !== 'null' ? new Date(startDate) : null;
+        const end = endDate && endDate !== 'null' ? new Date(endDate) : null;
+
+        if (start || end) {
+            filter.date = {};
+            if (start && !isNaN(start)) {
+                filter.date.$gte = start;
+            }
+            if (end && !isNaN(end)) {
+                end.setHours(23, 59, 59, 999); // include full day
+                filter.date.$lte = end;
+            }
+        }
+
+
+
+        // Check doctor exists
+        const isExist = await User.findOne({ _id: doctorId, role: 'doctor' });
+        if (!isExist) {
+            return res.status(404).json({ message: 'Doctor not exist', success: false });
+        }
+
+        // Count total appointments
+        const totalRecords = await DoctorAppointment.countDocuments(filter);
+
+        // Fetch appointments with pagination
+        const appointments = await DoctorAppointment.find(filter)
+            .populate('prescriptionId')
+            .populate({
+                path: 'patientId',
+                select: '-passwordHash',
+                populate: {
+                    path: 'patientId',
+                    select: 'profileImage'
+                }
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Appointments fetched successfully',
+            data: appointments,
+            pagination: {
+                totalRecords,
+                totalPages: Math.ceil(totalRecords / limit),
+                currentPage: page,
+                limit
+            }
+        });
+
     } catch (err) {
-        return res.status(200).json({ message: 'Server Error' });
+        console.error(err);
+        return res.status(500).json({ message: 'Server Error', success: false });
     }
-}
+};
+
 const actionDoctorAppointment = async (req, res) => {
     const { doctorId, appointmentId, status, note } = req.body;
     try {
-        const isExist = await Doctor.findById(doctorId);
+        const isExist = await User.findOne({ _id: doctorId, role: 'doctor' });
         if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
 
         const isPatient = await DoctorAppointment.findById(appointmentId);
@@ -214,13 +272,49 @@ const getPatientAppointment = async (req, res) => {
     const patientId = req.params.id;
     const { page = 1, limit = 10 } = req.query
     try {
-        const isExist = await Patient.findById(patientId);
-        if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
-        const appointment = await DoctorAppointment.find({ patientId }).populate('prescriptionId').populate({ path: 'doctorId', select: '-password' }).sort({ createdAt: -1 })
-            .skip((page - 1) * 10)
-            .limit(limit)
-        if (appointment) {
-            return res.status(200).json({ message: "Appointment fetch successfully", data: appointment, success: true })
+        let isExist;
+        if (patientId?.length < 24) {
+            isExist = await User.findOne({ unique_id: patientId });
+        } else {
+            isExist = await User.findById(patientId);
+        }
+        if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
+        const appointments = await DoctorAppointment.find({ patientId }).populate('prescriptionId')
+            .populate({
+                path: 'doctorId', select: '-passwordHash', populate: {
+                    path: 'doctorId',
+                    model: 'Doctor',
+                }
+            }).sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+            .lean();
+        const doctorIds = appointments.map(a => a.doctorId?._id).filter(Boolean);
+
+        const doctorAddresses = await DoctorAbout.find({
+            userId: { $in: doctorIds }
+        }).populate('countryId stateId cityId', 'name')
+            .lean();
+
+        const addressMap = {};
+        doctorAddresses.forEach(addr => {
+            addressMap[addr.userId.toString()] = addr;
+        });
+
+        // appointment me address attach
+        const finalData = appointments.map(app => ({
+            ...app,
+            doctorAddress: addressMap[app.doctorId?._id?.toString()] || null
+        }));
+
+
+        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
+        const totalLabApt = await LabAppointment.countDocuments({ patientId: isExist._id })
+        if (appointments?.length > 0) {
+            return res.status(200).json({
+                message: "Appointment fetch successfully", totalDoctorApt, totalLabApt,
+                data: finalData, totalPage: Math.ceil(totalDoctorApt / limit), success: true
+            })
         } else {
             return res.status(200).json({ message: "Appointment not fount", success: false })
         }
@@ -260,11 +354,11 @@ const getPatientLabAppointment = async (req, res) => {
             .limit(Number(limit))
             .lean();
         const labIds = appointments.map(a => a.labId?._id).filter(Boolean);
-        
+
         const labAddresses = await LabAddress.find({
             userId: { $in: labIds }
         }).populate('countryId stateId cityId', 'name')
-        .lean();
+            .lean();
 
         // Map bana lo fast access ke liye
         const addressMap = {};
@@ -390,18 +484,18 @@ const getLabAppointmentData = async (req, res) => {
         let isExist;
         if (appointmentId.length < 24) {
             isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'testId', select: 'shortName price' })
-                .populate({ path: 'patientId', select: '-passwordHash',populate:({path:'patientId',select:'name email contactNumber gender'}) })
-                .populate({ path: 'labId', select: '-passwordHash',populate:({path:'labId',select:'name logo gstNumber'}) }).lean();           
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
+                .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean();
         } else {
 
             isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
-                .populate({ path: 'patientId', select: '-passwordHash',populate:({path:'patientId',select:'name email contactNumber gender'}) })
-                .populate({ path: 'labId', select: '-passwordHash',populate:({path:'labId',select:'name logo gstNumber'}) }).lean();
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
+                .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean();
         }
-        const labAddress=await LabAddress.findOne({userId:isExist?.labId?._id}).populate('countryId stateId cityId', 'name')
-        const labReports=await TestReport.find({appointmentId:isExist?._id}).populate('testId')
+        const labAddress = await LabAddress.findOne({ userId: isExist?.labId?._id }).populate('countryId stateId cityId', 'name')
+        const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
-        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist,labAddress,labReports, success: true })
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, labAddress, labReports, success: true })
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -496,7 +590,7 @@ const getLabReport = async (req, res) => {
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
         const appointment = await TestReport.find({ patientId: isExist?._id }).populate('appointmentId').populate({ path: 'labId', select: 'name customId ' })
-            .populate({ path: 'testId'}).sort({ createdAt: -1 })
+            .populate({ path: 'testId' }).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit)
         const totalData = await TestReport.countDocuments({ patientId: isExist?._id })
@@ -543,9 +637,32 @@ const getNearByDoctor = async (req, res) => {
         return res.status(200).json({ message: 'Server Error' });
     }
 }
+const getDoctorAppointmentData = async (req, res) => {
+    const appointmentId = req.params.id;
+    try {
+        let isExist;
+        if (appointmentId.length < 24) {
+            isExist = await DoctorAppointment.findOne({ customId: appointmentId })
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
+                .populate({ path: 'doctorId', select: '-passwordHash', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean();
+        } else {
+
+            isExist = await DoctorAppointment.findById(appointmentId)
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
+                .populate({ path: 'doctorId', select: '-passwordHash', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean();
+        }
+        const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).populate('countryId stateId cityId', 'name')
+        // const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
+        if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress,  success: true })
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
 export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
-    getLabReport, getDoctorPrescriptiondata, getNearByDoctor,cancelLabAppointment
+    getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData
 }

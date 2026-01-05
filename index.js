@@ -319,6 +319,27 @@ app.use('/doctor', doctor)
 app.use('/appointment', appointment)
 app.use('/lab', lab)
 app.use('/pharmacy', pharmacy)
+app.use('/user/:id', async (req, res) => {
+    const userId = req.params.id
+    try {
+        let user;
+        if (userId < 24) {
+            user = await User.findOne({ unique_id: userId }).select('-password').lean();
+        } else {
+            user = await User.findOne({ _id: userId }).select('-password').lean();
+        }
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        // const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
+        res.status(200).json({
+            success: true,
+            data: user
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+})
 
 
 

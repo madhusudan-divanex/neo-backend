@@ -15,7 +15,7 @@ const workSchema = new Schema({
 const eduWorkSchema = new Schema({
     education: [educationSchema],
     work: [workSchema],     
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
 const DoctorEduWork = mongoose.model('Doctor-EduWork', eduWorkSchema)

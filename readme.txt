@@ -8,6 +8,14 @@
 /lab/image
 /appointment/lab/:id
 
+Patient->
+    Lab Report
+    Favorite
+    Chat 
+Pharmacy->
+    Chat 
+Laboratory->
+    Chat
 Laboratory Api ->
     Get Appointment for lab 
     Add/Get Staff
@@ -16,8 +24,24 @@ Laboratory Api ->
     Staff access 
     Lab images
 
-Trading->
-    Historical data 
+Doctor->
+    Create Acccount 
+    Kyc 
+    Medical License 
+    Education 
+    Address 
+    Chagne  password 
+    Edit Request
+
+Admin->
+    npm i 
+    npm run dev 
+Frontend->
+    npm i --force 
+    npm run start 
+Backend->
+    npm i 
+    npx nodemon
 
 Paitent->
     Change password

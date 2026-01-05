@@ -1,9 +1,8 @@
 import mongoose, { Schema} from "mongoose";
 
 const otpSchema=new Schema({
-    userId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'Doctor',
+    phone:{
+        type:String,
         required:true
     },
     code:Number
