@@ -25,7 +25,7 @@ const requestSchema = new Schema({
     },
     prescriptionId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'prescriptions'
+        ref: 'Prescriptions'
     },
     paymentStatus:{type:String,enum:['due','paid'],default:'due'},
     status: { type: String, enum: ['pending', 'approved', 'completed', 'rejected', 'cancel'], default: 'pending', index: true },

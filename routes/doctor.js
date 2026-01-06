@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
-import { doctorDashboard, getPatientHistory } from "../controller/Doctor/doctorController.js";
+import { doctorDashboard, getOccupiedSlots, getPatientHistory } from "../controller/Doctor/doctorController.js";
 const doctor=express.Router()
 const uploader = getUploader('doctor');
 
@@ -47,4 +47,5 @@ doctor.get('/appointment/:id',authMiddleware,getDoctorAppointment)
 doctor.get('/appointment-data/:id',authMiddleware,getDoctorAppointmentData)
 doctor.get('/dashboard/:id',authMiddleware,doctorDashboard)
 doctor.get('/patient-history/:id',authMiddleware,getPatientHistory)
+doctor.get('/occupied-slots/:doctorId/:date',getOccupiedSlots)
 export default doctor

@@ -97,7 +97,40 @@ const getPatientHistory = async (req, res) => {
   }
 };
 
- 
+const getOccupiedSlots=async(req,res)=>{
+  try {
+      const { doctorId, date } = req.params;
+
+    // Parse the date to start and end of the day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Find all appointments for this doctor on that date
+    const appointments = await DoctorAppointment.find({
+      doctorId,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // Extract times as strings like "08.00 PM"
+    const occupiedTimes = appointments.map(app => {
+      const hours = app.date.getHours();
+      const minutes = app.date.getMinutes();
+      let meridiem = hours >= 12 ? "PM" : "AM";
+      let hour12 = hours % 12;
+      if (hour12 === 0) hour12 = 12;
+      const minuteStr = minutes.toString().padStart(2, "0");
+      return `${hour12}.${minuteStr} ${meridiem}`;
+    });
+
+    return res.json({ success: true, occupiedTimes });
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({message:"Internal server error"})
+  }
+}
 
 
-export { doctorDashboard, getPatientHistory }
+export { doctorDashboard, getPatientHistory ,getOccupiedSlots}

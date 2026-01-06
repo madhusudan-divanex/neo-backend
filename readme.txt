@@ -25,14 +25,20 @@ Laboratory Api ->
     Lab images
 
 Doctor->
-    Create Acccount 
-    Kyc 
-    Medical License 
-    Education 
-    Address 
-    Chagne  password 
-    Edit Request
-
+    Dashboard 
+    Appointment Requests
+    Approve/ reject Appointment 
+    Appointment list
+    
+Patient->
+    Doctors 
+    Doctor Details 
+    Book doctor appointment 
+    Like Doctor 
+    My doctor Appointments 
+    Appointment details
+    Cancel Appointment 
+    Rate Doctor
 Admin->
     npm i 
     npm run dev 

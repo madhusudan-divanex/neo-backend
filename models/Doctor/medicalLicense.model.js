@@ -7,7 +7,7 @@ const licenseSchema = new Schema({
 });
 const licSchema = new Schema({
     medicalLicense: [licenseSchema],
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
 const MedicalLicense = mongoose.model('medical-license', licSchema)

@@ -10,12 +10,12 @@ const medicanSchema = new Schema({
 const requestSchema = new Schema({
     doctorId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Doctor',
+        ref: 'User',
         required: true
     },
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Patient',
+        ref: 'User',
         required: true
     },
     appointmentId: {

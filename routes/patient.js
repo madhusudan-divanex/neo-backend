@@ -1,9 +1,9 @@
-import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getMedicalHistory, getNameProfile, getPatientDemographic, getPatientKyc, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
+import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getMedicalHistory, getNameProfile, getPatientDemographic, getPatientKyc, getPatientProfile, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { getLabReport, getNearByDoctor, getPatientAppointment } from "../controller/appointmentController.js";
-import { favoriteController, getMyRating, getPatientFavorite, getPatientFavoriteData } from "../controller/Patient/patientController.js";
+import { favoriteController, getMyRating, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail } from "../controller/Patient/patientController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
@@ -13,6 +13,7 @@ patient.get('/near-by-doctor',getNearByDoctor)
 patient.get('',authMiddleware,getProfile)
 patient.get('/detail/:id',authMiddleware,getProfileDetail)
 patient.get('/:id',getCustomProfile)
+patient.get('/profile-detail/:id',getPatientProfile)
 patient.get('/search/:name',authMiddleware,getNameProfile)
 
 patient.post('/signin',signInPatient)
@@ -48,6 +49,6 @@ patient.post('/favorite',authMiddleware,favoriteController)
 patient.get('/favorite/:id',authMiddleware,getPatientFavorite)
 patient.get('/favorite-data/:id',authMiddleware,getPatientFavoriteData)
 patient.get('/my-rating/:id',authMiddleware,getMyRating)
-
-
+patient.get('/prescriptions/:id',authMiddleware,getPatientPrescriptions)
+patient.get('/appointment-test-detail/:id',authMiddleware,getPrescriptionLabDetail)
 export default patient

@@ -8,7 +8,7 @@ const prescriptionItemSchema = new Schema({
 const addressSchema = new Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Doctor",
+    ref: "User",
     required: true
   },
   hospitalName: { type: String, required: true },

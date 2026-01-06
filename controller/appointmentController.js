@@ -35,6 +35,29 @@ const bookDoctorAppointment = async (req, res) => {
         return res.status(200).json({ message: 'Server Error' });
     }
 }
+const updateDoctorAppointment = async (req, res) => {
+    const { patientId, doctorId, date, fees, labTest, appointmentId } = req.body;
+    try {
+        const isExist = await User.findOne({ role: 'doctor', _id: doctorId });
+        if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
+
+        const isPatient = await User.findOne({ role: 'patient', _id: patientId });
+        if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
+        const isLast = await DoctorAppointment.findOne().sort({ createdAt: -1 });
+        const nextId = isLast
+            ? String(Number(isLast.customId.slice(3)) + 1).padStart(4, "0")
+            : "0001";
+
+        const book = await DoctorAppointment.findByIdAndUpdate(appointmentId, { patientId, doctorId, date, fees, labTest }, { new: true })
+        if (book) {
+            return res.status(200).json({ message: "Appointment updated successfully", success: true })
+        } else {
+            return res.status(200).json({ message: "Appointment not found", success: false })
+        }
+    } catch (err) {
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
 const getDoctorAppointment = async (req, res) => {
     try {
         const doctorId = req.params.id;
@@ -136,8 +159,8 @@ const actionDoctorAppointment = async (req, res) => {
 const cancelDoctorAppointment = async (req, res) => {
     const { patientId, appointmentId, cancelMessage } = req.body;
     try {
-        const isExist = await Doctor.findById(patientId);
-        if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
+        const isExist = await User.findById(patientId);
+        if (!isExist) return res.status(200).json({ message: 'User not exist' });
 
         const isPatient = await DoctorAppointment.findById(appointmentId);
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
@@ -173,19 +196,19 @@ const cancelLabAppointment = async (req, res) => {
 }
 
 const doctorPrescription = async (req, res) => {
-    const { patientId, doctorId, medications, diagnosis, status, notes, appointmentId } = req.body;
+    const { patientId, doctorId, medications, diagnosis, status, notes, appointmentId, labTest } = req.body;
     try {
-        const isExist = await Doctor.findById(doctorId);
+        const isExist = await User.findOne({ role: 'doctor', _id: doctorId });
         if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
 
-        const isPatient = await Patient.findById(patientId);
+        const isPatient = await User.findOne({ role: 'patient', _id: patientId });
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
 
         const isAppointment = await DoctorAppointment.findById(appointmentId);
         if (!isAppointment) return res.status(200).json({ message: 'Appointment not exist' });
-        const isLast = await Prescriptions.findOne()?.sort({ createdAt: -1 })
+        const isLast = await Prescriptions.findOne().sort({ createdAt: -1 })
         const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
+            ? String(Number(isLast.customId?.slice(3)) + 1).padStart(4, '0')
             : '0001';
         const add = await Prescriptions.create({ patientId, doctorId, medications, diagnosis, status, notes, appointmentId, customId: 'PRC' + nextId })
         if (add) {
@@ -195,6 +218,7 @@ const doctorPrescription = async (req, res) => {
             return res.status(200).json({ message: "Presctiption not added", success: false })
         }
     } catch (err) {
+        console.log(err)
         return res.status(200).json({ message: 'Server Error' });
     }
 }
@@ -217,13 +241,50 @@ const getDoctorPrescriptiondata = async (req, res) => {
         return res.status(200).json({ message: 'Server Error' });
     }
 }
-const editDoctorPrescription = async (req, res) => {
-    const { patientId, doctorId, medications, diagnosis, status, notes, prescriptionId, appointmentId } = req.body;
+const deleteDoctorPrescription = async (req, res) => {
+    const prescriptionId = req.params.id;
     try {
-        const isExist = await Doctor.findById(doctorId);
+        let isExist;
+        if (prescriptionId.length < 24) {
+            isExist = await Prescriptions.findOneAndDelete({ customId: prescriptionId })
+        } else {
+            isExist = await Prescriptions.findByIdAndDelete(prescriptionId)
+        }
+        if (!isExist) return res.status(200).json({ message: 'Prescription not deleted' });
+        await DoctorAppointment.findByIdAndUpdate(
+            isExist.appointmentId,
+            { $unset: { prescriptionId: "" } } // ya agar aap delete karna chahte ho: Appointment.findByIdAndDelete(...)
+        );
+        return res.status(200).json({ message: "Presctiption deleted", success: true })
+
+    } catch (err) {
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
+const prescriptionAction = async (req, res) => {
+    const { prescriptionId, status } = req.body;
+    try {
+        const isExist = await Prescriptions.findById(prescriptionId);
+        if (!isExist) return res.status(200).json({ message: 'Prescription not exist' });
+
+
+        const update = await Prescriptions.findByIdAndUpdate(prescriptionId, { status }, { new: true })
+        if (update) {
+            return res.status(200).json({ message: "Prescription updated successfully", success: true })
+        } else {
+            return res.status(200).json({ message: "Prescription not updated", success: false })
+        }
+    } catch (err) {
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
+const editDoctorPrescription = async (req, res) => {
+    const { patientId, doctorId, medications, diagnosis, status, notes, prescriptionId, appointmentId, labTest } = req.body;
+    try {
+        const isExist = await User.findOne({ _id: doctorId, role: 'doctor' });
         if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
 
-        const isPatient = await Patient.findById(patientId);
+        const isPatient = await User.findOne({ _id: patientId, role: 'patient' });
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
 
         const isAppointment = await DoctorAppointment.findById(appointmentId);
@@ -232,13 +293,14 @@ const editDoctorPrescription = async (req, res) => {
         const isPrescriptions = await Prescriptions.findById(prescriptionId);
         if (!isPrescriptions) return res.status(200).json({ message: 'Patient not exist' });
 
-        const add = await Prescriptions.create({ patientId, doctorId, medications, diagnosis, status, notes, appointmentId })
+        const add = await Prescriptions.findByIdAndUpdate(prescriptionId, { labTest, patientId, doctorId, medications, diagnosis, status, notes, appointmentId }, { new: true })
         if (add) {
             return res.status(200).json({ message: "Presctiption update successfully", success: true })
         } else {
             return res.status(200).json({ message: "Presctiption not added", success: false })
         }
     } catch (err) {
+        console.log(err)
         return res.status(200).json({ message: 'Server Error' });
     }
 }
@@ -643,18 +705,69 @@ const getDoctorAppointmentData = async (req, res) => {
         let isExist;
         if (appointmentId.length < 24) {
             isExist = await DoctorAppointment.findOne({ customId: appointmentId })
-                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
-                .populate({ path: 'doctorId', select: '-passwordHash', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean();
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender profileImage' }) })
+                .populate({ path: 'doctorId', select: '-passwordHash', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean()
+                .populate({
+                    path: 'labTest.lab',
+                    select: 'name',
+                })
+                .populate({
+                    path: 'labTest.labTests',
+                    select: 'shortName price'
+                })
+                .populate('prescriptionId').lean();
         } else {
 
             isExist = await DoctorAppointment.findById(appointmentId)
-                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
-                .populate({ path: 'doctorId', select: '-passwordHash', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean();
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender profileImage' }) })
+                .populate({ path: 'doctorId', select: '-passwordHash', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean()
+                .populate({
+                    path: 'labTest.lab',
+                    select: 'name',
+                })
+                .populate({
+                    path: 'labTest.labTests',
+                    select: 'shortName price'
+                })
+                .populate('prescriptionId').lean();
         }
         const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).populate('countryId stateId cityId', 'name')
         // const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
-        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress,  success: true })
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress, success: true })
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
+const getDoctorPastAppointment = async (req, res) => {
+    const patientId = req.params.patientId;
+    const doctorId = req.params.doctorId
+    const { page = 1, limit = 10 } = req.query
+    try {
+        let isExist;
+        if (patientId?.length < 24) {
+            isExist = await User.findOne({ unique_id: patientId });
+        } else {
+            isExist = await User.findById(patientId);
+        }
+        if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
+        const appointments = await DoctorAppointment.find({ patientId }).populate('prescriptionId')
+            .sort({ createdAt: -1 })
+            // .skip((page - 1) * limit)
+            // .limit(Number(limit))
+            .lean();
+
+
+        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
+        if (appointments?.length > 0) {
+            return res.status(200).json({
+                message: "Appointment fetch successfully", totalDoctorApt,
+                data: appointments, totalPage: Math.ceil(totalDoctorApt / limit), success: true
+            })
+        } else {
+            return res.status(200).json({ message: "Appointment not fount", success: false })
+        }
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -664,5 +777,6 @@ export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
-    getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData
+    getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData,
+    getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment
 }

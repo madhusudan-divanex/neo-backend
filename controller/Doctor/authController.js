@@ -845,6 +845,7 @@ const getDoctors = async (req, res) => {
         const users = await User.find({ role: 'doctor', created_by: 'self' })
             .select('-passwordHash')
             .populate('doctorId')
+            .sort({createdAt:-1})
             .limit(limit)
             .skip((page - 1) * limit)
             .lean();

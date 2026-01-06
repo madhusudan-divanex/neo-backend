@@ -5,7 +5,7 @@ import Message from "../../models/Hospital/Message.js";
 
 export const CreateConversation = async (req, res) => {
   try {
-    const myId = req.user.id || req.user.user ;
+    const myId = req.user.id || req.user.user;
     const { userId } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {

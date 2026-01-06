@@ -438,6 +438,50 @@ const getProfileDetail = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
+const getPatientProfile = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        // Determine if it's ObjectId or unique_id
+        const isObjectId = userId?.length === 24;
+
+        const user = await User
+            .findOne(isObjectId ? { _id: userId } : { unique_id: userId })
+            .select('-password')
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Patient not found' });
+        }
+
+        const fullId = user._id;
+
+        // Run all queries in parallel
+        const [
+            patient,            
+            medicalHistory,
+            demographic,
+            prescription,
+        ] = await Promise.all([
+            Patient.findOne({ userId: fullId }).lean(),
+            MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+            PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+            PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            user: patient,
+            customId:user.unique_id,role:user.role,
+            demographic,
+            prescription,
+            medicalHistory,
+        });
+
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
 
 const deletePatient = async (req, res) => {
     const userId = req.user.user
@@ -843,5 +887,5 @@ const getNameProfile = async (req, res) => {
 
 export {
     signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
-    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory
+    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory,getPatientProfile
 }
