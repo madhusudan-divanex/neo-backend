@@ -15,6 +15,7 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.get("",  profile.getHospitals);
+router.get("/list",  profile.getHospitalList);
 // ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
 router.put("/update-hospital-profile", auth, profile.updateProfile);

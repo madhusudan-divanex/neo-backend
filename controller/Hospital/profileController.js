@@ -294,3 +294,24 @@ export const getHospitals = async (req, res) => {
     });
   }
 };
+export const getHospitalList = async (req, res) => {
+
+  try {
+    // 1️⃣ Fetch lab users
+    const users = await User.find({ role: 'hospital',created_by:'hospital' })
+      .lean();   
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+      
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};

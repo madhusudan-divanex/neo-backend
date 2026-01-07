@@ -1131,7 +1131,6 @@ const completeReturn = async (req, res) => {
 
         // Start transaction (if your MongoDB supports it)
         session.startTransaction();
-
         for (const p of ret.products) {
             const inv = await Inventory.findOne({ _id: p.inventoryId, pharId }).session(session);
             if (!inv) {
@@ -1146,11 +1145,9 @@ const completeReturn = async (req, res) => {
             inv.quantity = inv.quantity - p.quantity;
             await inv.save({ session });
         }
-
         // Mark return completed
         ret.status = "Completed";
         await ret.save({ session });
-
         await session.commitTransaction();
         session.endSession();
 

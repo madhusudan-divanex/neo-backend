@@ -25,20 +25,18 @@ Laboratory Api ->
     Lab images
 
 Doctor->
-    Dashboard 
-    Appointment Requests
-    Approve/ reject Appointment 
-    Appointment list
+    Appointment Detail 
+    Add/Edit/Delete Prescription 
+    Active/Inacitve Prescription 
+    Past Appointment 
+    Downlaod Prescription
+    Prescriptions
+    Patient Detail 
+    Add Lab Test
     
 Patient->
-    Doctors 
-    Doctor Details 
-    Book doctor appointment 
-    Like Doctor 
-    My doctor Appointments 
-    Appointment details
-    Cancel Appointment 
-    Rate Doctor
+    Downlaod Prescription
+    
 Admin->
     npm i 
     npm run dev 
@@ -88,6 +86,12 @@ Laboratory->
     edit request
     change password 
     profile
+
+Admin->
+    Advertisment (select provider) only on home page accerdian 
+    Home page description (text editor)
+
+    
 Api->
     Test Report
     Get Appointment Data

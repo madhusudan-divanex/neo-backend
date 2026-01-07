@@ -7,6 +7,7 @@ import LabAddress from "../models/Laboratory/labAddress.model.js";
 import Laboratory from "../models/Laboratory/laboratory.model.js";
 import Test from "../models/Laboratory/test.model.js";
 import LabTest from "../models/LabTest.js";
+import PatientDemographic from "../models/Patient/demographic.model.js";
 import Patient from "../models/Patient/patient.model.js";
 import Prescriptions from "../models/Prescriptions.js";
 import Rating from "../models/Rating.js";
@@ -98,7 +99,7 @@ const getDoctorAppointment = async (req, res) => {
         // Check doctor exists
         const isExist = await User.findOne({ _id: doctorId, role: 'doctor' });
         if (!isExist) {
-            return res.status(404).json({ message: 'Doctor not exist', success: false });
+            return res.status(200).json({ message: 'Doctor not exist', success: false });
         }
 
         // Count total appointments
@@ -355,7 +356,7 @@ const getPatientAppointment = async (req, res) => {
 
         const doctorAddresses = await DoctorAbout.find({
             userId: { $in: doctorIds }
-        }).populate('countryId stateId cityId', 'name')
+        }).populate('countryId stateId cityId', 'name').populate({path:'hospitalName',select:'name'})
             .lean();
 
         const addressMap = {};
@@ -378,7 +379,7 @@ const getPatientAppointment = async (req, res) => {
                 data: finalData, totalPage: Math.ceil(totalDoctorApt / limit), success: true
             })
         } else {
-            return res.status(200).json({ message: "Appointment not fount", success: false })
+            return res.status(200).json({ message: "Appointment not found", success: false })
         }
     } catch (err) {
         console.log(err)
@@ -510,7 +511,7 @@ const getLabAppointment = async (req, res) => {
         // PATIENT NAME FILTER (requires lookup after populate)
         let appointmentQuery = LabAppointment.find(filter)
             .populate({ path: 'testId', select: 'shortName' })
-            .populate({ path: 'patientId', select: '-password' })
+            .populate({ path: 'patientId', select: '-passwordHash', populate: { path: "patientId", select: 'profileImage' } })
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
@@ -546,18 +547,21 @@ const getLabAppointmentData = async (req, res) => {
         let isExist;
         if (appointmentId.length < 24) {
             isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'testId', select: 'shortName price' })
-                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
-                .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean();
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
+                .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
+                .populate({ path: 'doctorId', select: '-passwordHash' })
         } else {
 
             isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
-                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender' }) })
-                .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean();
+                .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
+                .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
+                .populate({ path: 'doctorId', select: '-passwordHash' })
         }
         const labAddress = await LabAddress.findOne({ userId: isExist?.labId?._id }).populate('countryId stateId cityId', 'name')
         const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
+        const demographic = await PatientDemographic.findOne({ userId: isExist.patientId._id })
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
-        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, labAddress, labReports, success: true })
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, labAddress, labReports, demographic, success: true })
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: 'Server Error' });
@@ -587,7 +591,7 @@ const labDashboardData = async (req, res) => {
 }
 
 const bookLabAppointment = async (req, res) => {
-    const { patientId, labId, testId, date, fees, status } = req.body;
+    const { patientId, labId, testId, date, fees, status, doctorId, doctorAp } = req.body;
     try {
         const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Laboratory not exist' });
@@ -598,7 +602,7 @@ const bookLabAppointment = async (req, res) => {
         const nextId = isLast
             ? String(Number(isLast.customId) + 1).padStart(4, '0')
             : '0001';
-        const book = await LabAppointment.create({ patientId, labId, testId, date, fees, customId: nextId, status })
+        const book = await LabAppointment.create({ patientId, labId, testId, date, fees, customId: nextId, status, doctorAp, doctorId })
         if (book) {
             return res.status(200).json({ message: "Appointment book successfully", success: true })
         } else {
@@ -668,7 +672,7 @@ const getLabReport = async (req, res) => {
                 success: true
             })
         } else {
-            return res.status(200).json({ message: "Report not fount", success: false })
+            return res.status(200).json({ message: "Report not found", success: false })
         }
     } catch (err) {
         console.log(err)
@@ -731,7 +735,7 @@ const getDoctorAppointmentData = async (req, res) => {
                 })
                 .populate('prescriptionId').lean();
         }
-        const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).populate('countryId stateId cityId', 'name')
+        const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).populate({path:'hospitalName',select:'name'}).populate('countryId stateId cityId', 'name')
         // const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
         return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress, success: true })
@@ -742,7 +746,6 @@ const getDoctorAppointmentData = async (req, res) => {
 }
 const getDoctorPastAppointment = async (req, res) => {
     const patientId = req.params.patientId;
-    const doctorId = req.params.doctorId
     const { page = 1, limit = 10 } = req.query
     try {
         let isExist;
@@ -753,20 +756,63 @@ const getDoctorPastAppointment = async (req, res) => {
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
         const appointments = await DoctorAppointment.find({ patientId }).populate('prescriptionId')
-            .sort({ createdAt: -1 })
-            // .skip((page - 1) * limit)
-            // .limit(Number(limit))
-            .lean();
+            .populate({
+                path: 'labTest.lab',
+                model: 'User',
+                populate: { path: 'labId', select: 'logo' }
+            })
+            .populate({
+                path: 'labTest.labTests',
+                model: 'Test'
+            }).lean();
 
+        const appointmentIds = appointments.map(a => a._id);
 
+        const labAppointments = await LabAppointment.find({
+            doctorAp: { $in: appointmentIds }
+        }).lean();
+
+        const labApptIds = labAppointments.map(l => l._id);
+
+        const reports = await TestReport.find({
+            appointmentId: { $in: labApptIds }
+        }).lean();
+        const reportMap = {};
+
+        for (const report of reports) {
+            const labApptId = report.appointmentId.toString();
+            if (!reportMap[labApptId]) {
+                reportMap[labApptId] = [];
+            }
+            reportMap[labApptId].push(report);
+        }
+        const labAppointmentMap = {};
+
+        for (const labAppt of labAppointments) {
+            const doctorApptId = labAppt.doctorAp.toString();
+
+            labAppt.reports = reportMap[labAppt._id.toString()] || [];
+
+            if (!labAppointmentMap[doctorApptId]) {
+                labAppointmentMap[doctorApptId] = [];
+            }
+            labAppointmentMap[doctorApptId].push(labAppt);
+        }
+        const finalAppointments = appointments.map(appt => {
+            const labAppts = labAppointmentMap[appt._id.toString()] || [];
+            return {
+                ...appt,
+                labAppointment: labAppts.length > 0 ? labAppts[0] : null
+            };
+        });
         const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
         if (appointments?.length > 0) {
             return res.status(200).json({
                 message: "Appointment fetch successfully", totalDoctorApt,
-                data: appointments, totalPage: Math.ceil(totalDoctorApt / limit), success: true
+                data: finalAppointments, totalPage: Math.ceil(totalDoctorApt / limit), success: true
             })
         } else {
-            return res.status(200).json({ message: "Appointment not fount", success: false })
+            return res.status(200).json({ message: "Appointment not found", success: false })
         }
     } catch (err) {
         console.log(err)

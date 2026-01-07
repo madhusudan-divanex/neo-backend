@@ -371,7 +371,7 @@ const getProfileDetail = async (req, res) => {
         const doctor = await Doctor.findById(user.doctorId)
         const kyc = await DoctorKyc.findOne({ userId }).sort({ createdAt: -1 })
         const medicalLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 })
-        const aboutDoctor = await DoctorAbout.findOne({ userId }).populate('countryId stateId cityId', 'name isoCode').sort({ createdAt: -1 })
+        const aboutDoctor = await DoctorAbout.findOne({ userId }).populate({path:'hospitalName',select:'name'}).populate('countryId stateId cityId', 'name isoCode').sort({ createdAt: -1 })
         const eduWork = await DoctorEduWork.findOne({ userId }).sort({ createdAt: -1 })
         const rating = await Rating.find({ doctorId: userId }).populate('patientId').sort({ createdAt: -1 })
         const isRequest = await EditRequest.findOne({ doctorId: userId });
@@ -410,6 +410,7 @@ const getProfileDetail = async (req, res) => {
             medicalLicense, aboutDoctor, eduWork, rating, avgRating, customId: user.unique_id
         });
     } catch (err) {
+        console.log(err)
         return res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -537,7 +538,7 @@ const getDoctorAbout = async (req, res) => {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
-        const data = await DoctorAbout.findOne({ userId }).populate('countryId').populate('stateId').populate('cityId');
+        const data = await DoctorAbout.findOne({ userId }).populate({path:'hospitalName',select:'name'}).populate('countryId').populate('stateId').populate('cityId');
         if (data) {
             return res.status(200).json({
                 success: true,
@@ -857,6 +858,7 @@ const getDoctors = async (req, res) => {
             userId: { $in: doctorIds }
         })
             .populate('countryId stateId cityId', 'name')
+            .populate({path:'hospitalName',select:'name'})
             .lean();
 
         const addressMap = {};
@@ -930,7 +932,7 @@ const getDoctorData = async (req, res) => {
         }
         const doctorData = await Doctor.findById(user.doctorId).select("-password");
         const doctorAbout = await DoctorAbout.findOne({ userId }).populate('countryId').populate('stateId')
-            .populate('cityId').sort({ createdAt: -1 });
+            .populate('cityId').populate({path:'hospitalName',select:'name'}).sort({ createdAt: -1 });
         const doctorLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 });
         const uniquePatientIds = await DoctorAppointment.distinct(
             "patientId",

@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
-import { doctorDashboard, getOccupiedSlots, getPatientHistory } from "../controller/Doctor/doctorController.js";
+import { doctorDashboard, getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending } from "../controller/Doctor/doctorController.js";
 const doctor=express.Router()
 const uploader = getUploader('doctor');
 
@@ -11,6 +11,7 @@ const uploader = getUploader('doctor');
 doctor.post('',signUpDoctor)
 doctor.get('/all-doctors',getDoctors)
 doctor.get('',authMiddleware,getProfile)
+doctor.get('/patient',authMiddleware,getPatientPending)
 doctor.get('/detail/:id',authMiddleware,getProfileDetail)
 doctor.get('/data/:id',getDoctorData)
 doctor.get('/:id',authMiddleware,getCustomProfile)
@@ -48,4 +49,6 @@ doctor.get('/appointment-data/:id',authMiddleware,getDoctorAppointmentData)
 doctor.get('/dashboard/:id',authMiddleware,doctorDashboard)
 doctor.get('/patient-history/:id',authMiddleware,getPatientHistory)
 doctor.get('/occupied-slots/:doctorId/:date',getOccupiedSlots)
+doctor.get('/patient-lab-report/:doctorId/:patientId',getDoctorPatientReport)
+
 export default doctor

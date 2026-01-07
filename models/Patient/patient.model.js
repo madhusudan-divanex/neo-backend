@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
     contactNumber: { type: String, required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
 
-    status: { type: String, enum: ['pending', 'verify'], default: 'pending' }
+    status: { type: String, enum: ['pending', 'approved','rejected'], default: 'pending' }
 
 }, { timestamps: true });
 

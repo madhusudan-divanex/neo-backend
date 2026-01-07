@@ -9,6 +9,11 @@ import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import LabAddress from "../../models/Laboratory/labAddress.model.js";
 import Test from "../../models/Laboratory/test.model.js";
 import LabImage from "../../models/Laboratory/labImages.model.js";
+import LabAppointment from "../../models/LabAppointment.js";
+import TestReport from "../../models/testReport.js";
+import ProfileStatus from "../../models/ProfileStatus.js";
+import Patient from "../../models/Patient/patient.model.js";
+import User from "../../models/Hospital/User.js";
 
 async function favoriteController(req, res) {
   const { userId, labId, hospitalId, doctorId } = req.body;
@@ -365,7 +370,6 @@ async function getPatientFavoriteData(req, res) {
         { $skip: (page - 1) * Number(limit) },
         { $limit: Number(limit) }
       ]);
-
     }
     const [labCount, hospitalCount, doctorCount] = await Promise.all([
       Favorite.countDocuments({ userId, labId: { $ne: null } }),
@@ -417,7 +421,7 @@ async function getPatientPrescriptions(req, res) {
         const doctorId = item.doctorId?._id;
         const doctor = await Doctor.findOne({ userId: doctorId })
         console.log(doctorId, item)
-        const doctorAbout = await DoctorAbout.findOne({ userId: doctorId });
+        const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).populate({path:'hospitalName',select:'name'});
         return {
           prescription: item,
           doctor,
@@ -454,14 +458,16 @@ async function getPrescriptionLabDetail(req, res) {
       const labAddress=await LabAddress.findOne({userId:appointments.labTest.lab}).lean()
       const labTests=await Test.find({_id:{$in:appointments.labTest.labTests}}).lean()
       const labImage=await LabImage.findOne({userId:appointments.labTest.lab}).lean()
-      return res.status(200).json({message:"lab data fetched",success:true,labData:{...labData,labImg:labImage.thumbnail},labAddress,labTests})
+      const labStatus=await LabAppointment.findOne({doctorAp:appointmentId}).select('status')
+      const labReport=labStatus? await TestReport.find({appointmentId:labStatus?._id}).populate('testId') :[]
+      return res.status(200).json({message:"lab data fetched",labStatus,success:true,labReport,
+        labData:{...labData,labImg:labImage.thumbnail},labAddress,labTests})
 
     }
 
     return res.status(200).json({
-      message: "Prescription fetched successfully",
-      data: finalData,
-      success: true,
+      message: "Lab data not found",
+      success: false,
     });
 
   } catch (error) {
@@ -472,5 +478,19 @@ async function getPrescriptionLabDetail(req, res) {
     });
   }
 }
+async function profileAction(req,res) {
+  const {doctorId,patientId,status,note}=req.body
+  try {
+    const isExist=await User.findById(patientId)
+    if(!isExist) return res.status(200).json({success:false,message:"patient not found"})
+    await Patient.findByIdAndUpdate(isExist.patientId,{status},{new:true})
+    await ProfileStatus.create({patientId,doctorId,status,note})
+    return res.status(200).json({message:"Profile updated",success:true})
 
-export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions,getPrescriptionLabDetail }
+  } catch (error) {
+    console.log(error)
+    return res.status(200).json({message:"Server error",success:false})
+  }
+}
+
+export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions,getPrescriptionLabDetail ,profileAction}

@@ -24,7 +24,7 @@ const requestSchema=new Schema({
       status: String, 
     },
   ],
-    comment:{type:String,required:true}
+    comment:{type:String,}
 
 },{timestamps:true})
 const TestReport= mongoose.model('test-report', requestSchema);
