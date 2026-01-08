@@ -447,7 +447,7 @@ const getPatientProfile = async (req, res) => {
 
         const user = await User
             .findOne(isObjectId ? { _id: userId } : { unique_id: userId })
-            .select('-password')
+            .select('-passwordHash')
             .lean();
 
         if (!user) {

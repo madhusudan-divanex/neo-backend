@@ -8,6 +8,8 @@ import EditRequest from "../../models/Hospital/HospitalEditRequest.js";
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
 import Rating from "../../models/Rating.js";
+import Doctor from "../../models/Doctor/doctor.model.js";
+import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -61,7 +63,7 @@ export const getProfile = async (req, res) => {
       contact = {
         ...rawContact._doc,
         profilePhotoUrl: rawContact.profilePhotoId
-          ? `${req.protocol}://${req.get("host")}/api/file/${rawContact.profilePhotoId}`
+          ? `${process.env.BACKEND_URL}://${req.get("host")}/api/file/${rawContact.profilePhotoId}`
           : null
       };
     }
@@ -71,7 +73,7 @@ export const getProfile = async (req, res) => {
 
     // Images
     const allImages = await HospitalImages.find({ hospitalId });
-    const baseUrl = `${req.protocol}://${req.get("host")}/api/file/`;
+    const baseUrl = `${process.env.BACKEND_URL}://${req.get("host")}/api/file/`;
 
     const thumbnail = allImages
       .filter(img => img.type === "thumbnail")
@@ -214,33 +216,16 @@ export const getHospitals = async (req, res) => {
 
   try {
     // 1️⃣ Fetch lab users
-    const users = await User.find({ role: 'hospital',created_by:'hospital' })
-      .select('-passwordHash')
+    const users = await HospitalBasic.find()
       .limit(limit)
       .skip((page - 1) * limit)
       .lean();
-
-    const hospitalIds = users.map(u => u.created_by_id);
-
-    // 2️⃣ Fetch addresses
-    const hospitalBasics = await HospitalBasic.find({
-      _id: { $in: hospitalIds }
-    })
-    const hospitalAddresses = await HospitalAddress.find({
-      userId: { $in: hospitalIds }
-    })
-      .populate('countryId stateId cityId', 'name')
-      .lean();
-
+    const hospitalIds = users.map(item => item._id)
+    const address = await HospitalAddress.find({ hospitalId: { $in: hospitalIds } })
     const addressMap = {};
-    hospitalAddresses.forEach(addr => {
-      addressMap[addr._id.toString()] = addr;
+    address.forEach(addr => {
+      addressMap[addr.hospitalId.toString()] = addr;
     });
-    const basicMap = {};
-    hospitalBasics.forEach(addr => {
-      basicMap[addr._id.toString()] = addr;
-    });
-
     // 3️⃣ Fetch rating stats (AVG + COUNT)
     const ratingStats = await Rating.aggregate([
       {
@@ -268,11 +253,11 @@ export const getHospitals = async (req, res) => {
     // 4️⃣ Merge everything
     const finalData = users.map(user => ({
       ...user,
-      hospitalAddress: addressMap[user._id.toString()] || null,
-      basic: basicMap[user._id?.toString()] || null,
+      address: addressMap[user._id.toString()] || null,
       avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
       totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
     }));
+
 
     const total = await User.countDocuments({ role: 'hospital' });
 
@@ -297,14 +282,140 @@ export const getHospitals = async (req, res) => {
 export const getHospitalList = async (req, res) => {
 
   try {
-    // 1️⃣ Fetch lab users
-    const users = await User.find({ role: 'hospital',created_by:'hospital' })
-      .lean();   
+    const users = await HospitalBasic.find()
+      .lean();
 
     return res.status(200).json({
       success: true,
       data: users,
-      
+
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+export const getHospitalProfile = async (req, res) => {
+  try {
+    const hospitalId = req.params.id;
+
+    if (!hospitalId) {
+      return res.status(400).json({ message: "Hospital ID missing" });
+    }
+    const basic = await HospitalBasic.findById(hospitalId);
+    const address = await HospitalAddress.findOne({ hospitalId });
+    const rawContact = await HospitalContact.findOne({ hospitalId });
+    let contact = null;
+
+    if (rawContact) {
+      contact = {
+        ...rawContact._doc,
+        profilePhotoUrl: rawContact.profilePhotoId
+          ? `${process.env.BACKEND_URL}://${req.get("host")}/api/file/${rawContact.profilePhotoId}`
+          : null
+      };
+    }
+    const certificates = await HospitalCertificate.find({ hospitalId });
+    // Images
+    const allImages = await HospitalImages.find({ hospitalId });
+    const baseUrl = `${process.env.BACKEND_URL}://${req.get("host")}/api/file/`;
+    const thumbnail = allImages
+      .filter(img => img.type === "thumbnail")
+      .map(img => ({
+        ...img._doc,
+        url: baseUrl + img.fileId
+      }));
+    return res.json({
+      message: "Hospital profile fetched",
+      success: true,
+      profile: {
+        basic,
+        images: {
+          thumbnail,
+        },
+        address,
+        contact,
+        certificates: certificates.map(c => ({
+          ...c._doc,
+          url: baseUrl + c.fileId
+        })),
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+export const getHospitalDoctors = async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+  const hospitalId = req.params.id
+  try {
+    // 1️⃣ Fetch lab users
+    const doctors = await DoctorAbout.find({ hospitalName: hospitalId })
+      .populate('countryId stateId cityId', 'name')
+      .populate({ path: 'hospitalName' })
+      .limit(limit)
+      .skip((page - 1) * limit)
+      .lean();
+    const doctorIds = doctors.map(u => u.userId);
+    // 2️⃣ Fetch addresses
+    const users = await Doctor.find({
+      userId: { $in: doctorIds }
+    }).lean();
+    const usersMap = {};
+    users.forEach(user => {
+      usersMap[user.userId.toString()] = user;
+    });
+    console.log("map", usersMap)
+
+    // 3️⃣ Fetch rating stats (AVG + COUNT)
+    const ratingStats = await Rating.aggregate([
+      {
+        $match: {
+          doctorId: { $in: doctorIds }
+        }
+      },
+      {
+        $group: {
+          _id: "$doctorId",
+          avgRating: { $avg: "$star" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const ratingMap = {};
+    ratingStats.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // 4️⃣ Merge everything
+    const finalData = doctors.map(address => ({
+      ...address,
+      user: usersMap[address.userId.toString()] || null,
+      avgRating: ratingMap[address.userId.toString()]?.avgRating || 0,
+      totalReviews: ratingMap[address.userId.toString()]?.totalReviews || 0
+    }));
+
+    const total = await User.countDocuments({ role: 'doctor' });
+
+
+    return res.status(200).json({
+      success: true,
+      data: finalData,
+      pagination: {
+        total,
+        totalPage: Math.ceil(total / limit),
+        currentPage: page
+      }
     });
 
   } catch (err) {

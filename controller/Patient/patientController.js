@@ -118,7 +118,7 @@ async function getPatientFavoriteData(req, res) {
     // 🔹 type based filtering
     if (type === "lab") {
       filter.labId = { $ne: null };
-       myFavorite = await Favorite.aggregate([
+      myFavorite = await Favorite.aggregate([
         {
           $match: {
             userId: new mongoose.Types.ObjectId(userId),
@@ -217,7 +217,7 @@ async function getPatientFavoriteData(req, res) {
               $ifNull: [{ $arrayElemAt: ["$ratingData.avgRating", 0] }, 0]
             },
             labAbout: {
-              
+
               city: "$city.name",
               state: "$state.name",
             }
@@ -236,18 +236,88 @@ async function getPatientFavoriteData(req, res) {
         { $limit: Number(limit) }
       ]);
     } else if (type === "hospital") {
-      console.log("hospital")
       filter.hospitalId = { $ne: null };
-      myFavorite = await Favorite.find(filter)
-        .populate({
-          path: "hospitalId",
-          select: "-passwordHash",
-          populate: { path: "hospitalId" }
-        })
-        .sort({ createdAt: -1 })
-        .limit(Number(limit))
-        .skip((page - 1) * limit)
-        .lean();
+      myFavorite = await Favorite.aggregate([
+        {
+          $match: {
+            userId: new mongoose.Types.ObjectId(userId),
+            hospitalId: { $ne: null }
+          }
+        },
+
+        // ✅ Correct collection name
+        {
+          $lookup: {
+            from: "hospitalbasics",
+            localField: "hospitalId",
+            foreignField: "_id",
+            as: "hospital"
+          }
+        },
+        {
+          $unwind: {
+            path: "$hospital",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+
+        // ✅ Correct collection name
+        {
+          $lookup: {
+            from: "hospitaladdresses",
+            localField: "hospitalId",
+            foreignField: "hospitalId",
+            as: "hospitalAddress"
+          }
+        },
+        {
+          $unwind: {
+            path: "$hospitalAddress",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+
+        // ⭐ Avg Rating
+        {
+          $lookup: {
+            from: "ratings",
+            let: { hospitalId: "$hospitalId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$hospitalId", "$$hospitalId"] }
+                }
+              },
+              {
+                $group: {
+                  _id: "$hospitalId",
+                  avgRating: { $avg: "$star" }
+                }
+              }
+            ],
+            as: "ratingData"
+          }
+        },
+
+        {
+          $addFields: {
+            avgRating: {
+              $ifNull: [{ $arrayElemAt: ["$ratingData.avgRating", 0] }, 0]
+            }
+          }
+        },
+
+        {
+          $project: {
+            ratingData: 0
+          }
+        },
+
+        { $sort: { createdAt: -1 } },
+        { $skip: (page - 1) * Number(limit) },
+        { $limit: Number(limit) }
+      ]);
+
     } else if (type === "doctor") {
       filter.doctorId = { $ne: null };
       myFavorite = await Favorite.aggregate([
@@ -352,9 +422,9 @@ async function getPatientFavoriteData(req, res) {
               about: "$doctorAbout.aboutYou",
               city: "$city.name",
               state: "$state.name",
-              fees : "$doctorAbout.fees",
-              specialty:"$doctorAbout.specialty",
-              hospitalName:"$doctorAbout.hospitalName"
+              fees: "$doctorAbout.fees",
+              specialty: "$doctorAbout.specialty",
+              hospitalName: "$doctorAbout.hospitalName"
             }
           }
         },
@@ -421,7 +491,7 @@ async function getPatientPrescriptions(req, res) {
         const doctorId = item.doctorId?._id;
         const doctor = await Doctor.findOne({ userId: doctorId })
         console.log(doctorId, item)
-        const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).populate({path:'hospitalName',select:'name'});
+        const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).populate({ path: 'hospitalName', select: 'name' });
         return {
           prescription: item,
           doctor,
@@ -453,15 +523,17 @@ async function getPrescriptionLabDetail(req, res) {
   }
   try {
     const appointments = await DoctorAppointment.findById(appointmentId)
-    if(appointments?.labTest){
-      const labData=await Laboratory.findOne({userId:appointments.labTest.lab}).lean()
-      const labAddress=await LabAddress.findOne({userId:appointments.labTest.lab}).lean()
-      const labTests=await Test.find({_id:{$in:appointments.labTest.labTests}}).lean()
-      const labImage=await LabImage.findOne({userId:appointments.labTest.lab}).lean()
-      const labStatus=await LabAppointment.findOne({doctorAp:appointmentId}).select('status')
-      const labReport=labStatus? await TestReport.find({appointmentId:labStatus?._id}).populate('testId') :[]
-      return res.status(200).json({message:"lab data fetched",labStatus,success:true,labReport,
-        labData:{...labData,labImg:labImage.thumbnail},labAddress,labTests})
+    if (appointments?.labTest) {
+      const labData = await Laboratory.findOne({ userId: appointments.labTest.lab }).lean()
+      const labAddress = await LabAddress.findOne({ userId: appointments.labTest.lab }).lean()
+      const labTests = await Test.find({ _id: { $in: appointments.labTest.labTests } }).lean()
+      const labImage = await LabImage.findOne({ userId: appointments.labTest.lab }).lean()
+      const labStatus = await LabAppointment.findOne({ doctorAp: appointmentId }).select('status')
+      const labReport = labStatus ? await TestReport.find({ appointmentId: labStatus?._id }).populate('testId') : []
+      return res.status(200).json({
+        message: "lab data fetched", labStatus, success: true, labReport,
+        labData: { ...labData, labImg: labImage.thumbnail }, labAddress, labTests
+      })
 
     }
 
@@ -478,19 +550,51 @@ async function getPrescriptionLabDetail(req, res) {
     });
   }
 }
-async function profileAction(req,res) {
-  const {doctorId,patientId,status,note}=req.body
+async function profileAction(req, res) {
+  const { doctorId, patientId, status, note } = req.body
   try {
-    const isExist=await User.findById(patientId)
-    if(!isExist) return res.status(200).json({success:false,message:"patient not found"})
-    await Patient.findByIdAndUpdate(isExist.patientId,{status},{new:true})
-    await ProfileStatus.create({patientId,doctorId,status,note})
-    return res.status(200).json({message:"Profile updated",success:true})
+    const isExist = await User.findById(patientId)
+    if (!isExist) return res.status(200).json({ success: false, message: "patient not found" })
+    await Patient.findByIdAndUpdate(isExist.patientId, { status }, { new: true })
+    await ProfileStatus.create({ patientId, doctorId, status, note })
+    return res.status(200).json({ message: "Profile updated", success: true })
 
   } catch (error) {
     console.log(error)
-    return res.status(200).json({message:"Server error",success:false})
+    return res.status(200).json({ message: "Server error", success: false })
   }
 }
+async function getPatients(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const name = req.query.name || null;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions,getPrescriptionLabDetail ,profileAction}
+    const users = await User.find({role:'patient',created_by:'self'})
+      .select('-passwordHash')
+      .lean();
+
+    const total = await User.countDocuments();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Pending profiles fetched',
+      data: users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending profiles'
+    });
+  }
+}
+export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction ,getPatients}

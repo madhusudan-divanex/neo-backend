@@ -21,18 +21,15 @@ const bookDoctorAppointment = async (req, res) => {
 
         const isPatient = await User.findOne({ role: 'patient', _id: patientId });
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
-        const isLast = await DoctorAppointment.findOne().sort({ createdAt: -1 });
-        const nextId = isLast
-            ? String(Number(isLast.customId.slice(3)) + 1).padStart(4, "0")
-            : "0001";
-
-        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees, customId: 'DAP' + nextId })
+     
+        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees,  })
         if (book) {
             return res.status(200).json({ message: "Appointment book successfully", success: true })
         } else {
             return res.status(200).json({ message: "Appointment not booked", success: false })
         }
     } catch (err) {
+        console.log(err)
         return res.status(200).json({ message: 'Server Error' });
     }
 }
@@ -356,7 +353,7 @@ const getPatientAppointment = async (req, res) => {
 
         const doctorAddresses = await DoctorAbout.find({
             userId: { $in: doctorIds }
-        }).populate('countryId stateId cityId', 'name').populate({path:'hospitalName',select:'name'})
+        }).populate('countryId stateId cityId', 'name').populate({path:'hospitalName',select:'hospitalName'})
             .lean();
 
         const addressMap = {};
@@ -735,7 +732,7 @@ const getDoctorAppointmentData = async (req, res) => {
                 })
                 .populate('prescriptionId').lean();
         }
-        const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).populate({path:'hospitalName',select:'name'}).populate('countryId stateId cityId', 'name')
+        const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).populate({path:'hospitalName',select:'hospitalName'}).populate('countryId stateId cityId', 'name')
         // const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
         return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress, success: true })

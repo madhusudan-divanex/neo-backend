@@ -10,7 +10,7 @@ const requestSchema = new Schema({
         ref: 'User', required: true
     },
     date: { type: Date, required: true },
-    customId: { type: String, required: true },
+    customId: { type: String,},
     fees: { type: String, required: true },
     note: { type: Date },
     labTest: {
@@ -32,5 +32,23 @@ const requestSchema = new Schema({
     cancelMessage: String
 
 }, { timestamps: true })
+requestSchema.pre("save", async function (next) {
+  if (this.customId) return next();
+
+  try {
+    while (true) {
+      const id = Math.floor(100000 + Math.random() * 900000).toString();
+      const exists = await this.constructor.findOne({ customId: id });
+      if (!exists) {
+        this.customId = id;
+        break;
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 const DoctorAppointment = mongoose.model('doctor-appointment', requestSchema);
 export default DoctorAppointment

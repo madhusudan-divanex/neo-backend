@@ -75,7 +75,8 @@ const getPatientHistory = async (req, res) => {
       paginatedIds.map(async (id) => {
         const patient = await Patient.findOne({ userId: id }).populate({ path: 'userId', select: 'unique_id' }).lean()
         const patientDemographic = await PatientDemographic.findOne({ userId: id }).select('dob').lean()
-        return { ...patient, patientDemographic };
+        const lastApt = await DoctorAppointment.findOne({ patientId: id }).sort({createdAt:-1}).lean()
+        return { ...patient, patientDemographic,lastApt };
       })
     );
 

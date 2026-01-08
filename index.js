@@ -173,6 +173,9 @@ io.on("connection", (socket) => {
                 offer,
                 callType
             });
+            console.log(socket.userId,
+                offer,
+                callType)
         }
     });
     socket.on("set-availability", async (status) => {
