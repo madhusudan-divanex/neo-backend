@@ -370,9 +370,9 @@ const getCustomProfile = async (req, res) => {
     try {
         let user;
         if (userId?.length < 24) {
-            user = await User.findOne({ customId: userId }).select('-password').lean();
+            user = await User.findOne({ unique_id: userId }).select('-passwordHash').lean();
         } else {
-            user = await User.findById(userId).select('-password').lean();
+            user = await User.findById(userId).select('-passwordHash').lean();
         }
         if (!user) {
             return res.status(200).json({ success: false, message: 'Patient not found' });
@@ -411,15 +411,13 @@ const getProfileDetail = async (req, res) => {
             kyc,
             medicalHistory,
             demographic,
-            prescription,
-            labAppointment,isRequest,allowEdit
+            prescription,isRequest,allowEdit
         ] = await Promise.all([
             Patient.findOne({ userId: fullId }).lean(),
             PatientKyc.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
-            LabAppointment.find({ patientId: fullId }).sort({ createdAt: -1 }).lean(),
             EditRequest.findOne({ patientId: fullId }),
             EditRequest.exists({patientId:fullId,status:'approved'}).then(Boolean)
         ]);
@@ -428,7 +426,6 @@ const getProfileDetail = async (req, res) => {
             success: true,
             user: patient,
             kyc,customId:user.unique_id,role:user.role,
-            labAppointment,
             demographic,
             prescription,
             medicalHistory,isRequest,allowEdit

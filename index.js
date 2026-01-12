@@ -79,6 +79,7 @@ io.use((socket, next) => {
 
 // ================= SOCKET LOGIC =================
 const onlineUsers = new Map(); // userId -> socketId
+const activeCalls = new Set(); // userIds
 
 io.on("connection", (socket) => {
     console.log("🔌 Socket connected:", socket.id);
@@ -86,25 +87,10 @@ io.on("connection", (socket) => {
 
     io.emit("online-users", Array.from(onlineUsers.keys()));
 
-    // REGISTER USER
-    //  socket.on("register", (userId) => {
-
-    //   // Remove old socket if exists
-    //   if (onlineUsers.has(userId)) {
-    //     const oldSocketId = onlineUsers.get(userId);
-    //     io.sockets.sockets.get(oldSocketId)?.disconnect(true);
-    //   }
-
-    //   onlineUsers.set(userId, socket.id);
-    //   socket.userId = userId;
-
-    //   io.emit("online-users", Array.from(onlineUsers.keys()));
-    // });
 
     // ================= CHAT =================
     socket.on("send-message", async ({ toUserId, message = "", file = null }) => {
         try {
-            console.log(socket.userId, toUserId)
             if (!socket.userId || socket.userId === toUserId) return;
             const senderId = socket.userId;
 
@@ -139,7 +125,6 @@ io.on("connection", (socket) => {
             // Emit to receiver
             const receiverSocket = onlineUsers.get(toUserId);
             if (receiverSocket) {
-                console.log("receiverSocket if", receiverSocket)
                 io.to(receiverSocket).emit("receive-message", {
                     conversationId: conversation._id,
                     sender: { _id: senderId },
@@ -157,8 +142,23 @@ io.on("connection", (socket) => {
 
     // ================= CALL SIGNALING =================
     socket.on("call-user", async ({ toUserId, callType, offer }) => {
-        socket.callStartTime = new Date();
 
+        if (activeCalls.has(toUserId)) {
+            io.to(socket.id).emit("call-busy", {
+                toUserId,
+                message: "User is busy on another call"
+            });
+            return;
+        }
+
+        // ❌ CALLER BUSY (extra safety)
+        if (activeCalls.has(socket.userId)) {
+            return;
+        }
+        // ✅ mark both as busy
+        activeCalls.add(socket.userId);
+        activeCalls.add(toUserId);
+        socket.callStartTime = new Date();
         socket.callLog = await CallLog.create({
             caller: socket.userId,
             receiver: toUserId,
@@ -168,14 +168,13 @@ io.on("connection", (socket) => {
 
         const receiverSocket = onlineUsers.get(toUserId);
         if (receiverSocket) {
+            const user = await User.findById(socket.userId)
+            console.log("recivre",socket.userId)
             io.to(receiverSocket).emit("incoming-call", {
                 fromUserId: socket.userId,
                 offer,
-                callType
+                callType, name: user.name
             });
-            console.log(socket.userId,
-                offer,
-                callType)
         }
     });
     socket.on("set-availability", async (status) => {
@@ -213,7 +212,6 @@ io.on("connection", (socket) => {
         await socket.chatSession.save();
     });
     socket.on("typing", ({ toUserId }) => {
-        console.log("toUserId TYPING", toUserId)
         const receiverSocket = onlineUsers.get(toUserId);
         if (receiverSocket) {
             io.to(receiverSocket).emit("user-typing", {
@@ -230,7 +228,11 @@ io.on("connection", (socket) => {
         }
     });
     socket.on("end-call", async ({ toUserId }) => {
-        // save call log
+
+        activeCalls.delete(socket.userId);
+        activeCalls.delete(toUserId);
+
+        // 🧾 Call log update
         if (socket.callLog) {
             socket.callLog.endTime = new Date();
             socket.callLog.duration =
@@ -243,27 +245,19 @@ io.on("connection", (socket) => {
             socket.callLog = null;
         }
 
-        // notify other user
         const receiverSocket = onlineUsers.get(toUserId);
+        const callerSocket = onlineUsers.get(socket.userId);
+
+        // 📤 notify OTHER user
         if (receiverSocket) {
             io.to(receiverSocket).emit("call-ended");
         }
+
+        // 📤 ALSO notify CALLER (important for sync)
+        if (callerSocket) {
+            io.to(callerSocket).emit("call-ended");
+        }
     });
-
-
-    // socket.on("end-call", async () => {
-    //   if (!socket.callLog) return;
-
-    //   socket.callLog.endTime = new Date();
-    //   socket.callLog.duration =
-    //     (socket.callLog.endTime - socket.callLog.startTime) / 1000;
-
-    //   socket.callLog.status =
-    //     socket.callLog.duration < 2 ? "missed" : "completed";
-
-    //   await socket.callLog.save();
-    // });
-
 
     socket.on("answer-call", ({ toUserId, answer }) => {
         const receiverSocket = onlineUsers.get(toUserId);
@@ -274,6 +268,8 @@ io.on("connection", (socket) => {
         }
     });
 
+
+
     socket.on("ice-candidate", ({ toUserId, candidate }) => {
         const receiverSocket = onlineUsers.get(toUserId);
         if (receiverSocket) {
@@ -282,24 +278,44 @@ io.on("connection", (socket) => {
     });
 
 
-    socket.on("reject-call", async ({ toUserId }) => {
-        const receiverSocket = onlineUsers.get(toUserId);
+    // socket.on("reject-call", async ({ toUserId }) => {
+    //     const receiverSocket = onlineUsers.get(toUserId);
 
-        // update call log
+    //     if (socket.callLog) {
+    //         socket.callLog.endTime = new Date();
+    //         socket.callLog.status = "rejected";
+    //         await socket.callLog.save();
+    //     }
+
+    //     if (receiverSocket) {
+    //         io.to(receiverSocket).emit("call-rejected");
+    //     }
+    // });
+    socket.on("reject-call", async ({ toUserId }) => {
+        const callerSocketId = onlineUsers.get(toUserId);
+        activeCalls.delete(socket.userId);
+        activeCalls.delete(toUserId);
+
+        // 🧾 update call log
         if (socket.callLog) {
             socket.callLog.endTime = new Date();
             socket.callLog.status = "rejected";
             await socket.callLog.save();
         }
 
-        if (receiverSocket) {
-            io.to(receiverSocket).emit("call-rejected");
+        // 📤 notify CALLER
+        if (callerSocketId) {
+            io.to(callerSocketId).emit("call-rejected", {
+                fromUserId: socket.userId,
+                reason: "rejected"
+            });
         }
     });
 
 
 
     socket.on("disconnect", async () => {
+        activeCalls.delete(socket.userId);
         if (socket.userId) {
             onlineUsers.delete(socket.userId);
 
@@ -317,6 +333,7 @@ io.on("connection", (socket) => {
 
 });
 
+console.log("active Calls", activeCalls)
 app.use('/patient', patient)
 app.use('/doctor', doctor)
 app.use('/appointment', appointment)

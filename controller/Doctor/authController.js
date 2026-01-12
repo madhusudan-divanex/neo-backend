@@ -59,7 +59,7 @@ const signInDoctor = async (req, res) => {
     const { contactNumber, password } = req.body;
     try {
         const isExist = await Doctor.findOne({ contactNumber }).populate('userId');
-        if (!isExist) return res.status(200).json({ message: 'Patient not Found', success: false });
+        if (!isExist) return res.status(200).json({ message: 'Doctor not Found', success: false });
         const hashedPassword = isExist.userId?.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
@@ -321,7 +321,7 @@ const updateDoctor = async (req, res) => {
         }
         const updateDoctor = await Doctor.findByIdAndUpdate(isExist.doctorId, { email, contactNumber, name, gender, dob }, { new: true })
         if (updateDoctor) {
-            console.log(userId,name,email)
+            console.log(userId, name, email)
             await User.findByIdAndUpdate(userId, { name, email }, { new: true })
             return res.status(200).json({ message: "Doctor data change successfully", userId: isExist._id, success: true })
         } else {
@@ -371,7 +371,7 @@ const getProfileDetail = async (req, res) => {
         const doctor = await Doctor.findById(user.doctorId)
         const kyc = await DoctorKyc.findOne({ userId }).sort({ createdAt: -1 })
         const medicalLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 })
-        const aboutDoctor = await DoctorAbout.findOne({ userId }).populate({path:'hospitalName',select:'hospitalName'}).populate('countryId stateId cityId', 'name isoCode').sort({ createdAt: -1 })
+        const aboutDoctor = await DoctorAbout.findOne({ userId }).populate({ path: 'hospitalName', select: 'hospitalName' }).populate('countryId stateId cityId', 'name isoCode').sort({ createdAt: -1 })
         const eduWork = await DoctorEduWork.findOne({ userId }).sort({ createdAt: -1 })
         const rating = await Rating.find({ doctorId: userId }).populate('patientId').sort({ createdAt: -1 })
         const isRequest = await EditRequest.findOne({ doctorId: userId });
@@ -538,7 +538,7 @@ const getDoctorAbout = async (req, res) => {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
-        const data = await DoctorAbout.findOne({ userId }).populate({path:'hospitalName',select:'hospitalName'}).populate('countryId').populate('stateId').populate('cityId');
+        const data = await DoctorAbout.findOne({ userId }).populate({ path: 'hospitalName', select: 'hospitalName' }).populate('countryId').populate('stateId').populate('cityId');
         if (data) {
             return res.status(200).json({
                 success: true,
@@ -820,46 +820,74 @@ const getCustomProfile = async (req, res) => {
     const userId = req.params.id
     try {
         let user;
-        if (userId < 24) {
-            user = await User.findOne({ unique_id: userId, role: 'doctor' }).select('-password').lean();
+        if (userId.length < 24) {
+            user = await User.findOne({ unique_id: userId, role: 'doctor' }).select('-passwordHash').lean();
         } else {
-            user = await User.findOne({ _id: userId, role: 'doctor' }).select('-password').lean();
+            user = await User.findOne({ _id: userId, role: 'doctor' }).select('-passwordHash').lean();
         }
         if (!user) {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
         // const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
+        console.log(user)
+        const doctorData = await Doctor.findById(user.doctorId).lean()
         res.status(200).json({
             success: true,
-            data: user
+            data: {...user,...doctorData}
         });
     } catch (err) {
+        console.log(err)
         res.status(500).json({ success: false, message: err.message });
     }
 };
 const getDoctors = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-
+    const specialty = req.query.specialty // Doctor About
+    const language = req.query.language // Doctor About
+    const fees = req.query.fees //  Doctor About
+    const status = req.query.status // Doctor
+    const rating = req.query.rating // Rating
     try {
+        const specialties = specialty ? specialty.split(',') : [];
+        const languages = language ? language.split(',') : [];
+        const minRating = rating ? Number(rating) : 0;
+        const maxFees = fees ? Number(fees) : null;
+
+        let filter = { role: 'doctor', created_by: 'self' }
         // 1️⃣ Fetch lab users
-        const users = await User.find({ role: 'doctor', created_by: 'self' })
-            .select('-passwordHash')
-            .populate('doctorId')
-            .sort({createdAt:-1})
+        // let userQuery = User.find({ role: 'doctor', created_by: 'self' })
+        //     .select('-passwordHash')
+        //     .populate('doctorId')
+        //     .sort({ createdAt: -1 });
+
+        // if (!isFilterApplied) {
+        //     userQuery = userQuery.limit(limit).skip((page - 1) * limit);
+        // }
+        // const users = await userQuery.lean();
+        const users = await User.find({ role: 'doctor', created_by: 'self' }).select('-passwordHash')
+            .populate('doctorId').sort({ createdAt: -1 })
             .limit(limit)
             .skip((page - 1) * limit)
             .lean();
 
         const doctorIds = users.map(u => u._id);
-
         // 2️⃣ Fetch addresses
         const doctorAddresses = await DoctorAbout.find({
-            userId: { $in: doctorIds }
+            userId: { $in: doctorIds },
+            ...(specialties.length && { specialty: { $in: specialties } }),
+            ...(languages.length && { language: { $in: languages } }),
+            ...(maxFees && {
+                $expr: {
+                    $lte: [{ $toDouble: "$fees" }, maxFees]
+                }
+            })
         })
             .populate('countryId stateId cityId', 'name')
-            .populate({path:'hospitalName',select:'hospitalName'})
+            .populate({ path: 'hospitalName', select: 'hospitalName' })
             .lean();
+
+
 
         const addressMap = {};
         doctorAddresses.forEach(addr => {
@@ -891,14 +919,22 @@ const getDoctors = async (req, res) => {
         });
 
         // 4️⃣ Merge everything
-        const finalData = users.map(user => ({
-            ...user,
-            doctorAddress: addressMap[user._id.toString()] || null,
-            avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-            totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
-        }));
+        const validDoctorIds = new Set(
+            doctorAddresses.map(d => d.userId.toString())
+        );
 
-        const total = await User.countDocuments({ role: 'doctor' });
+        let finalData = users
+            .filter(user => validDoctorIds.has(user._id.toString()))
+            .map(user => ({
+                ...user,
+                doctorAddress: addressMap[user._id.toString()] || null,
+                avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
+                totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+            }))
+            .filter(doc => doc.avgRating >= minRating);
+
+
+        const total =Object.keys(finalData).length;
 
         return res.status(200).json({
             success: true,
@@ -920,7 +956,6 @@ const getDoctors = async (req, res) => {
 };
 const getDoctorData = async (req, res) => {
     const userId = req.params.id;
-
     try {
         // 1️⃣ Find user
         const user = await User.findById(userId)
@@ -932,7 +967,7 @@ const getDoctorData = async (req, res) => {
         }
         const doctorData = await Doctor.findById(user.doctorId).select("-password");
         const doctorAbout = await DoctorAbout.findOne({ userId }).populate('countryId').populate('stateId')
-            .populate('cityId').populate({path:'hospitalName',select:'hospitalName'}).sort({ createdAt: -1 });
+            .populate('cityId').populate({ path: 'hospitalName', select: 'hospitalName' }).sort({ createdAt: -1 });
         const doctorLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 });
         const uniquePatientIds = await DoctorAppointment.distinct(
             "patientId",

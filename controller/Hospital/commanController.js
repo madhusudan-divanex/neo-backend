@@ -4,13 +4,14 @@ import HospitalDoctor from "../../models/Hospital/HospitalDoctor.js";
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.id || req.user._id;
     const { fcmToken } = req.body;
 
     await User.findByIdAndUpdate(userId, { fcmToken });
 
     res.json({ success: true });
   } catch (err) {
+    console.log("errr",err)
     res.status(500).json({ success: false });
   }
 };

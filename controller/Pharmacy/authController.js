@@ -386,6 +386,7 @@ const getProfileDetail = async (req, res) => {
         const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
         const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
+        const allowEdit = Boolean(await EditRequest.exists({ pharId: userId,status:"approved" }))
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ pharId: userId })
@@ -432,7 +433,7 @@ const getProfileDetail = async (req, res) => {
             pharLicense,
             rating,
             avgRating,
-            ratingCounts,
+            ratingCounts,allowEdit,
             isRequest
         });
 

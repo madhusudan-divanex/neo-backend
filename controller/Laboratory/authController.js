@@ -382,11 +382,11 @@ const getProfileDetail = async (req, res) => {
 
         // 2️⃣ Fetch latest related documents
         const labPerson = await LabPerson.findOne({ userId }).sort({ createdAt: -1 });
-        const labAddress = await LabAddress.findOne({ userId }).populate('countryId').populate('stateId')
-            .populate('cityId').sort({ createdAt: -1 });
+        const labAddress = await LabAddress.findOne({ userId }).populate('countryId stateId cityId').sort({ createdAt: -1 });
         const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ labId: user?._id }))
+        const allowEdit = Boolean(await EditRequest.exists({ labId: user?._id,status:"approved" }))
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?.labId })
@@ -431,7 +431,7 @@ const getProfileDetail = async (req, res) => {
             labAddress,
             labImg,
             labLicense, customId: user.unique_id,
-            rating,
+            rating,allowEdit,
             avgRating,
             ratingCounts,
             isRequest

@@ -1,6 +1,7 @@
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import Doctor from "../models/Doctor/doctor.model.js";
 import DoctorAppointment from "../models/DoctorAppointment.js";
+import HospitalBasic from "../models/Hospital/HospitalBasic.js";
 import User from "../models/Hospital/User.js";
 import LabAppointment from "../models/LabAppointment.js";
 import LabAddress from "../models/Laboratory/labAddress.model.js";
@@ -225,11 +226,13 @@ const getDoctorPrescriptiondata = async (req, res) => {
     try {
         let isExist;
         if (prescriptionId.length < 24) {
-            isExist = await Prescriptions.findOne({ customId: prescriptionId }).populate({ path: 'doctorId', select: 'name customId profileImage' })
-                .populate({ path: 'patientId', select: 'name customId ' });
+            isExist = await Prescriptions.findOne({ customId: prescriptionId }).populate({ path: 'doctorId', select: 'name unique_id',populate:{path:'doctorId',
+                select:'profileImage'
+            } }).populate({ path: 'patientId', select: 'name unique_id ' });
         } else {
-            isExist = await Prescriptions.findById(prescriptionId).populate({ path: 'doctorId', select: 'name customId profileImage' })
-                .populate({ path: 'patientId', select: 'name customId ' });
+            isExist = await Prescriptions.findById(prescriptionId).populate({ path: 'doctorId', select: 'name unique_id',populate:{path:'doctorId',
+                select:'profileImage'
+            } }).populate({ path: 'patientId', select: 'name unique_id ' });
         }
         if (!isExist) return res.status(200).json({ message: 'Prescription not exist' });
 
@@ -655,7 +658,7 @@ const getLabReport = async (req, res) => {
         const appointment = await TestReport.find({ patientId: isExist?._id }).populate('appointmentId').populate({ path: 'labId', select: 'name customId ' })
             .populate({ path: 'testId' }).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
-            .limit(limit)
+            .limit(limit).lean()
         const totalData = await TestReport.countDocuments({ patientId: isExist?._id })
 
         if (appointment) {
@@ -816,10 +819,99 @@ const getDoctorPastAppointment = async (req, res) => {
         return res.status(200).json({ message: 'Server Error' });
     }
 }
+const getHospitalAppointment = async (req, res) => {
+    try {
+        const hospitalId = req.params.id;
+
+        // Parse pagination params with defaults
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const status = req.query.status || '';
+        const statuses = req.query.statuses || ''
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+
+        const skip = (page - 1) * limit;
+
+        let filter = {  };
+        if (status) {
+            filter.status = status;
+        }
+        if (statuses) {
+            filter.status = { $in: statuses.split(',') };
+        }
+        const start = startDate && startDate !== 'null' ? new Date(startDate) : null;
+        const end = endDate && endDate !== 'null' ? new Date(endDate) : null;
+
+        if (start || end) {
+            filter.date = {};
+            if (start && !isNaN(start)) {
+                filter.date.$gte = start;
+            }
+            if (end && !isNaN(end)) {
+                end.setHours(23, 59, 59, 999); // include full day
+                filter.date.$lte = end;
+            }
+        }
+
+
+
+        // Check doctor exists
+        const isExist = await HospitalBasic.findById(hospitalId);
+        if (!isExist) {
+            return res.status(200).json({ message: 'Hospital not exist', success: false });
+        }
+        const doctorAdd=await DoctorAbout.find({hospitalName:hospitalId})
+        const doctorIds=doctorAdd.map(item=>item.userId)
+        filter.doctorId = { $in: doctorIds };
+
+        // Count total appointments
+        const totalRecords = await DoctorAppointment.countDocuments(filter);
+
+        // Fetch appointments with pagination
+        const appointments = await DoctorAppointment.find(filter)
+            .populate('prescriptionId')
+            .populate({
+                path: 'patientId',
+                select: '-passwordHash',
+                populate: {
+                    path: 'patientId',
+                    select: 'profileImage'
+                }
+            })
+            .populate({
+                path: 'doctorId',
+                select: '-passwordHash',
+                populate: {
+                    path: 'doctorId',
+                    select: 'profileImage'
+                }
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Appointments fetched successfully',
+            data: appointments,
+            pagination: {
+                totalRecords,
+                totalPages: Math.ceil(totalRecords / limit),
+                currentPage: page,
+                limit
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Server Error', success: false });
+    }
+};
 export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
     getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData,
-    getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment
+    getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment,getHospitalAppointment
 }

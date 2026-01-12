@@ -259,7 +259,7 @@ export const getHospitals = async (req, res) => {
     }));
 
 
-    const total = await User.countDocuments({ role: 'hospital' });
+    const total = await HospitalBasic.countDocuments();
 
     return res.status(200).json({
       success: true,

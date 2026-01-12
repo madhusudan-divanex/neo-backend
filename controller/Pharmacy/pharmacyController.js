@@ -943,8 +943,8 @@ const createReturn = async (req, res) => {
 const listReturns = async (req, res) => {
     try {
         const ownerId = req.params.id;
-        const { page = 1, limit = 10, status, search ,type='pharmacy'} = req.query;
-        const matchStage = {  };
+        const { page = 1, limit = 10, status, search, type = 'pharmacy' } = req.query;
+        const matchStage = {};
         if (type === 'hospital') {
             matchStage.hospitalId = new mongoose.Types.ObjectId(ownerId);
             matchStage.type = 'hospital';
@@ -1086,19 +1086,19 @@ const getReturnById = async (req, res) => {
 // UPDATE RETURN (only while Pending)
 const updateReturn = async (req, res) => {
     try {
-        const { supplierId, deliveryDate, status, products, reason, pharId, returnId ,hospitalId} = req.body;
+        const { supplierId, deliveryDate, status, products, reason, pharId, returnId, hospitalId } = req.body;
 
         const ret = await Return.findOne({ _id: returnId });
         if (!ret) return res.status(200).json({ success: false, message: "Return not found" });
 
         // If products changed, validate availability
         if (products) {
-            if(pharId){
+            if (pharId) {
                 const validation = await validateProductsAvailability(pharId, products);
                 if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
                 ret.products = products;
             }
-            if(hospitalId){
+            if (hospitalId) {
                 const validation = await validateHospitalProductsAvailability(hospitalId, products);
                 if (!validation.ok) return res.status(400).json({ success: false, message: validation.message });
                 ret.products = products;
@@ -1818,7 +1818,7 @@ const sellMedicine = async (req, res) => {
     const prescriptionFile = req.files?.['prescriptionFile']?.[0]?.path;
     const products = JSON.parse(req.body.products || "[]");
     try {
-        const pharmacy = await Pharmacy.findById(pharId);
+        const pharmacy = await User.findById(pharId);
         if (!pharmacy) {
             return res.status(404).json({ success: false, message: "Pharmacy not found" });
         }
@@ -1941,6 +1941,50 @@ const getSellMedicine = async (req, res) => {
                 }
             },
             { $unwind: "$doctor" },
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "products.inventoryId",
+                    foreignField: "_id",
+                    as: "inventoryDetails"
+                }
+            },
+            {
+                $addFields: {
+                    products: {
+                        $map: {
+                            input: "$products",
+                            as: "prod",
+                            in: {
+                                $mergeObjects: [
+                                    "$$prod",
+                                    {
+                                        inventory: {
+                                            $arrayElemAt: [
+                                                {
+                                                    $filter: {
+                                                        input: "$inventoryDetails",
+                                                        as: "inv",
+                                                        cond: { $eq: ["$$inv._id", "$$prod.inventoryId"] }
+                                                    }
+                                                },
+                                                0
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+
+            // 🔹 Extra field remove
+            {
+                $project: {
+                    inventoryDetails: 0
+                }
+            },
 
             {
                 $match: {
@@ -2015,26 +2059,27 @@ const getPatientPrescriptionData = async (req, res) => {
     try {
         let user;
         if (userId?.length < 24) {
-            user = await Patient.findOne({ customId: userId }).select('-password');
+            user = await User.findOne({ unique_id: userId, role: 'patient' }).select('-passwordHash').lean();
         } else {
             console.log("hehe")
-            user = await Patient.findById(userId).select('-password');
+            user = await User.findById(userId).select('-passwordHash').lean();
         }
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
         const fullId = await userId.length < 24 ? user._id : userId
+        const patient = await Patient.findById(user.patientId).lean()
         const medicalHistory = await MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 })
         const demographic = await PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 })
         const prescription = await Prescriptions.find({ patientId: fullId }).sort({ createdAt: -1 })
-            .populate({ path: 'doctorId', select: 'name customId profileImage' })
+            .populate({ path: 'doctorId', select: 'name unique_id ', populate: { path: 'doctorId', select: 'profileImage' } })
             .populate({ path: 'appointmentId', select: 'customId' })
         const patientPrescription = await PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 })
 
 
         return res.status(200).json({
-            success: true,
-            user, patientPrescription,
+            success: true, user:
+                { ...user, ...patient }, patientPrescription,
             demographic, prescription, medicalHistory
         });
     } catch (err) {

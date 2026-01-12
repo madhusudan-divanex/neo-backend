@@ -1,6 +1,6 @@
 import express from 'express'
 import authMiddleware from '../middleware/authMiddleare.js'
-import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, cancelLabAppointment, deleteDoctorPrescription, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getDoctorPastAppointment, getDoctorPrescriptiondata, getLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating, prescriptionAction, updateDoctorAppointment } from '../controller/appointmentController.js'
+import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, cancelLabAppointment, deleteDoctorPrescription, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getDoctorPastAppointment, getDoctorPrescriptiondata, getHospitalAppointment, getLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating, prescriptionAction, updateDoctorAppointment } from '../controller/appointmentController.js'
 
 const appointment=express.Router()
 appointment.post('/doctor',authMiddleware,bookDoctorAppointment)
@@ -26,6 +26,6 @@ appointment.post('/lab-cancel',authMiddleware,cancelLabAppointment)
 
 appointment.get('/doctor/past-appointments/:doctorId/:patientId',authMiddleware,getDoctorPastAppointment)
 
-
+appointment.get('/hospital/:id',authMiddleware,getHospitalAppointment)
 
 export default appointment
