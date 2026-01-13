@@ -72,13 +72,17 @@ Pharmacy->
     Manual Sell 
     Generate Bill 
 
-Pharmacy->
-    Notification 
-    Chat
-    Sell (scan)
-Laboratory->
-    Notification
-    Chat
+Neo Health->     
+    Call (pending)
+Hospital->
+    Add Appointment 
+    Appointment Action
+    Appointment Details
+    Assign Lab test to appointment
+    CRUD Prescription 
+    Patient Details (appointments,prescrptions,lab,reports,history)
+
+
     CRUD Return 
     CRUD Purchase Order
     Signup,Upload Image,contact person 

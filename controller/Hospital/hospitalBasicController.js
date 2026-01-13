@@ -1,5 +1,9 @@
+import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
+import DoctorAppointment from "../../models/DoctorAppointment.js";
 import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import User from "../../models/Hospital/User.js";
+import LabAppointment from "../../models/LabAppointment.js";
+import TestReport from "../../models/testReport.js";
 import { saveToGrid } from "../../services/gridfsService.js";
 
 // ================= SAVE BASIC DETAILS =================
@@ -67,3 +71,34 @@ export const StaffList = async (req, res) => {
     res.status(500).json({ message: "Failed to load staff" });
   }
 };
+
+export const getHospitalPatientReport = async (req, res) => {
+  const hospitalId = req.params.hospitalId;
+  const patientId = req.params.patientId
+  try {
+    const isExist = await HospitalBasic.findById(hospitalId);
+    if (!isExist) {
+      return res.status(200).json({ message: 'Hospital not exist', success: false });
+    }
+    const doctorAdd = await DoctorAbout.find({ hospitalName: hospitalId })
+    const doctorIds = doctorAdd.map(item => item.userId)
+    const appointments = await DoctorAppointment.find({
+      doctorId:{$in:doctorIds}, patientId,
+      "labTest.lab": { $exists: true, $ne: null },
+      "labTest.labTests.0": { $exists: true }
+    })
+    const aptIds = appointments.map(item => item._id)
+    const labAppointments = await LabAppointment.find({ doctorAp: { $in: aptIds }, status: 'deliver-report' })
+    const labAptIds = labAppointments.map(item => item?._id)
+    const labReports = await TestReport.find({ appointmentId: { $in: labAptIds } }).populate('labId').populate('testId')
+      .populate('appointmentId')
+    return res.status(200).json({ message: "labReports", data: labReports, success: true })
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+    });
+  }
+}

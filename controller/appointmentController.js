@@ -908,10 +908,96 @@ const getHospitalAppointment = async (req, res) => {
         return res.status(500).json({ message: 'Server Error', success: false });
     }
 };
+const getHospitalPastAppointment = async (req, res) => {
+    const patientId = req.params.patientId;
+    const hospitalId = req.params.hospitalId;
+    const { page = 1, limit = 10 } = req.query
+    try {
+        let isExist;
+        if (patientId?.length < 24) {
+            isExist = await User.findOne({ unique_id: patientId });
+        } else {
+            isExist = await User.findById(patientId);
+        }
+        if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
+        const isHospital = await HospitalBasic.findById(hospitalId);
+        if (!isHospital) {
+            return res.status(200).json({ message: 'Hospital not exist', success: false });
+        }
+        const doctorAdd=await DoctorAbout.find({hospitalName:hospitalId})
+        const doctorIds=doctorAdd.map(item=>item.userId)
+        const appointments = await DoctorAppointment.find({ patientId,doctorId:{$in:doctorIds} }).populate('prescriptionId')
+            .populate({
+                path: 'doctorId',
+                select: 'name unique_id',
+                populate: { path: 'doctorId', select: 'profileImage' }
+            }).populate({
+                path: 'labTest.lab',
+                model: 'User',
+                populate: { path: 'labId', select: 'logo' }
+            })
+            .populate({
+                path: 'labTest.labTests',
+                model: 'Test'
+            }).lean();
+
+        const appointmentIds = appointments.map(a => a._id);
+
+        const labAppointments = await LabAppointment.find({
+            doctorAp: { $in: appointmentIds }
+        }).lean();
+
+        const labApptIds = labAppointments.map(l => l._id);
+
+        const reports = await TestReport.find({
+            appointmentId: { $in: labApptIds }
+        }).lean();
+        const reportMap = {};
+
+        for (const report of reports) {
+            const labApptId = report.appointmentId.toString();
+            if (!reportMap[labApptId]) {
+                reportMap[labApptId] = [];
+            }
+            reportMap[labApptId].push(report);
+        }
+        const labAppointmentMap = {};
+
+        for (const labAppt of labAppointments) {
+            const doctorApptId = labAppt.doctorAp.toString();
+
+            labAppt.reports = reportMap[labAppt._id.toString()] || [];
+
+            if (!labAppointmentMap[doctorApptId]) {
+                labAppointmentMap[doctorApptId] = [];
+            }
+            labAppointmentMap[doctorApptId].push(labAppt);
+        }
+        const finalAppointments = appointments.map(appt => {
+            const labAppts = labAppointmentMap[appt._id.toString()] || [];
+            return {
+                ...appt,
+                labAppointment: labAppts.length > 0 ? labAppts[0] : null
+            };
+        });
+        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
+        if (appointments?.length > 0) {
+            return res.status(200).json({
+                message: "Appointment fetch successfully", totalDoctorApt,
+                data: finalAppointments, totalPage: Math.ceil(totalDoctorApt / limit), success: true
+            })
+        } else {
+            return res.status(200).json({ message: "Appointment not found", success: false })
+        }
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
 export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData,
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
     getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData,
-    getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment,getHospitalAppointment
+    getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment,getHospitalAppointment,getHospitalPastAppointment
 }

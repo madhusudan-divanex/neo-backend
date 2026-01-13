@@ -333,7 +333,6 @@ io.on("connection", (socket) => {
 
 });
 
-console.log("active Calls", activeCalls)
 app.use('/patient', patient)
 app.use('/doctor', doctor)
 app.use('/appointment', appointment)

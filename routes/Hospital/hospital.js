@@ -69,5 +69,5 @@ router.post("/change-password", auth, profile.changePassword);
 router.get("/patient-list", auth, basic.PatientList);
 router.get("/doctor-list", auth, basic.DoctorList);
 router.get("/staff-list", auth, basic.StaffList);
-
+router.get("/patient-lab-report/:hospitalId/:patientId", auth, basic.getHospitalPatientReport);
 export default router;

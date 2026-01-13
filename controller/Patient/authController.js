@@ -543,7 +543,7 @@ const patientKyc = async (req, res) => {
     }
 };
 const patientDemographic = async (req, res) => {
-    const { userId, bloodGroup, height, weight, dob } = req.body;
+    const { userId, bloodGroup, height, weight, dob,contact,address } = req.body;
 
     try {
         const user = await User.findById(userId)
@@ -551,14 +551,14 @@ const patientDemographic = async (req, res) => {
 
         const data = await PatientDemographic.findOne({ userId });
         if (data) {
-            await PatientDemographic.findByIdAndUpdate(data._id, { bloodGroup, height, weight, dob }, { new: true })
+            await PatientDemographic.findByIdAndUpdate(data._id, { bloodGroup, height, weight, dob,contact,address }, { new: true })
 
             return res.status(200).json({
                 success: true,
                 message: "Demographic update successfully",
             });
         } else {
-            await PatientDemographic.create({ bloodGroup, height, weight, dob, userId })
+            await PatientDemographic.create({ bloodGroup, height, weight, dob, userId,contact,address })
 
             return res.status(200).json({
                 success: true,

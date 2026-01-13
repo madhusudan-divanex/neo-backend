@@ -954,7 +954,7 @@ const listReturns = async (req, res) => {
             matchStage.pharId = new mongoose.Types.ObjectId(ownerId);
             // matchStage.type = 'pharmacy';
         }
-        if (status !== 'all') matchStage.status = status;
+        if (status) matchStage.status = status;
         if (search) {
             matchStage["supplier.name"] = { $regex: search, $options: "i" };
         }
