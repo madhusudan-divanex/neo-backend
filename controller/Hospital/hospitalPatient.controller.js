@@ -3,6 +3,9 @@ import HospitalPatient from "../../models/Hospital/HospitalPatient.js";
 import Counter from "../../models/Hospital/Counter.js";
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
+import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
+import Patient from "../../models/Patient/patient.model.js";
+import PatientDemographic from "../../models/Patient/demographic.model.js";
 
 const generatePatientId = async (hospitalId) => {
   const counter = await Counter.findOneAndUpdate(
@@ -14,16 +17,12 @@ const generatePatientId = async (hospitalId) => {
 };
 
 export const addPatient = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact } = req.body
 
   try {
-    const hospitalId = req.user.id;
+    const hospitalId = req.user._id;
     const data = req.body;
-
-    if (!data.name || !data.dob || !data.gender || !data.mobile) {
-      await session.abortTransaction();
-      session.endSession();
+    if (!name || !dob || !gender || !contactNumber) {
       return res.status(400).json({
         success: false,
         message: "Required fields missing"
@@ -32,57 +31,24 @@ export const addPatient = async (req, res) => {
 
     // ✅ AUTO PATIENT ID
     const patientId = await generatePatientId(hospitalId);
-
     // ✅ CREATE PATIENT
-    const patient = await HospitalPatient.create(
-      [
-        {
-          ...data,
-          patientId,
-          hospitalId
-        }
-      ],
-      { session }
-    );
-
-    // USER ENTRY
-    const rawPassword = data.mobile.slice(-4) + "@123";
-    const passwordHash = await bcrypt.hash(rawPassword, 10);
-
-    const user = await User.create(
-      [
-        {
-          created_by_id: hospitalId,
-          created_by: "hospital",
-          name: data.name,
-          mobile: data.mobile,
-          email: data.email || null,
-          role: "patient",
-          refId: patient[0]._id,
-          passwordHash,
-          status: "Active"
-        }
-      ],
-      { session }
-    );
-
-    // ✅ UPDATE PATIENT WITH USER ID
-    patient[0].user_id = user[0]._id;
-    await patient[0].save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(201).json({
+    const patient = await Patient.create({ name, gender, contactNumber,  email });
+    if (patient) {
+      const rawPassword = contactNumber.slice(-4) + "@123";
+      const passwordHash = await bcrypt.hash(rawPassword, 10);
+      const pt = await User.create({ name, patientId: patient._id, email, role: 'patient', created_by: "hospital", created_by_id: hospitalId, passwordHash })
+      await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
+      await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
+      await PatientDepartment.create({ patientId: pt._id,  departmentId: department,hospitalId,status})
+    }
+    res.status(200).json({
       success: true,
       message: "Patient added successfully",
-      data: patient[0]
+      data: patient
     });
 
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
+    console.log(err)
     res.status(500).json({
       success: false,
       message: err.message
@@ -92,27 +58,103 @@ export const addPatient = async (req, res) => {
 
 export const listPatients = async (req, res) => {
   try {
-    const hospitalId = req.user.id;
+    const hospitalId = req.user._id;
     let { page = 1, limit = 10, search = "" } = req.query;
 
-    page = Number(page);
+    page = Math.max(Number(page), 1);
     limit = Number(limit);
+    search = search.trim();
 
-    const query = {
-      hospitalId,
-      $or: [
-        { name: { $regex: search, $options: "i" } },
-        { patientId: { $regex: search, $options: "i" } },
-        { mobile: { $regex: search, $options: "i" } }
-      ]
+    const matchStage = {
+      role: "patient"
     };
 
-    const total = await HospitalPatient.countDocuments(query);
+    if (search.length > 0) {
+      matchStage.$or = [
+        { name: { $regex: search, $options: "i" } },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$patientId" },
+              regex: search,
+              options: "i"
+            }
+          }
+        },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$email" },
+              regex: search,
+              options: "i"
+            }
+          }
+        }
+      ];
+    }
 
-    const patients = await HospitalPatient.find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const pipeline = [
+      { $match: matchStage },
+
+      // 🔗 Join PatientDepartment
+      {
+        $lookup: {
+          from: "patientdepartments",
+          localField: "_id",
+          foreignField: "patientId",
+          as: "departmentInfo"
+        }
+      },
+
+      // 🏥 Filter by hospital
+      {
+        $match: {
+          "departmentInfo.hospitalId": hospitalId
+        }
+      },
+
+      // 🔗 Populate patientId from User table
+      {
+        $lookup: {
+          from: "patients",
+          localField: "patientId",
+          foreignField: "_id",
+          as: "patientUser"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$patientUser",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      // ❌ Remove passwordHash
+      {
+        $project: {
+          passwordHash: 0,
+          "patientUser.passwordHash": 0
+        }
+      },
+
+      { $sort: { createdAt: -1 } },
+
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit }
+          ],
+          totalCount: [{ $count: "count" }]
+        }
+      }
+    ];
+
+    const result = await User.aggregate(pipeline);
+
+    const patients = result[0].data;
+    const total = result[0].totalCount[0]?.count || 0;
 
     res.json({
       success: true,
@@ -133,26 +175,28 @@ export const listPatients = async (req, res) => {
   }
 };
 
+
 export const getPatientById = async (req, res) => {
   try {
-    const hospitalId = req.user.id;
+    const hospitalId = req.user._id;
     const { id } = req.params;
 
-    const patient = await HospitalPatient.findOne({
-      _id: id,
-      hospitalId
-    });
+    const patient = await Patient.findOne({
+      userId: id
+    }).lean();
 
+    const demographic = await PatientDemographic.findOne({ userId: id }).lean()
     if (!patient) {
       return res.status(404).json({
         success: false,
         message: "Patient not found"
       });
     }
+    const department = await PatientDepartment.findOne({ patientId: id, hospitalId })
 
     res.json({
       success: true,
-      data: patient
+      data: { ...patient, ...demographic }, department
     });
 
   } catch (err) {
@@ -164,21 +208,24 @@ export const getPatientById = async (req, res) => {
 };
 
 export const updatePatient = async (req, res) => {
+  const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact, patientId } = req.body
   try {
-    const hospitalId = req.user.id;
-    const { id } = req.params;
-
-    const patient = await HospitalPatient.findOneAndUpdate(
-      { _id: id, hospitalId },
-      req.body,
-      { new: true }
-    );
-
+    const hospitalId = req.user._id;
+    const patient = await User.findByIdAndUpdate(patientId, { name, email }, { new: true })
+    console.log(patientId,patient,name,email)
     if (!patient) {
       return res.status(404).json({
         success: false,
         message: "Patient not found"
       });
+    }
+    await Patient.findByIdAndUpdate(patient.patientId, { name, gender, contactNumber, email }, { new: true })
+    await PatientDemographic.findOneAndUpdate({ userId: patient.patientId }, { dob, contact, address, pinCode, countryId, stateId, cityId }, { new: true })
+    const isExist = await PatientDepartment.findOne({ patientId: patient.patientId, hospitalId })
+    if (isExist) {
+      await PatientDepartment.findOneAndUpdate({ patientId: patient._id, hospitalId }, { departmentId: department,status }, { new: true })
+    } else {
+      await PatientDepartment.create({ patientId: patient._id, hospitalId, departmentId: department,status })
     }
 
     res.json({
@@ -196,13 +243,17 @@ export const updatePatient = async (req, res) => {
 };
 
 export const getPatientByPatientId = async (req, res) => {
+  const hospitalId = req.user._id
   try {
-    const hospitalId = req.user.id;
-    const { patientId } = req.params;
-
-    const patient = await User.findOne({
-      unique_id: patientId
-    });
+    const patientId = req.params.patientId;
+    let patient;
+    if (patientId?.length < 23) {
+      patient = await User.findOne({
+        unique_id: patientId
+      });
+    } else {
+      patient = await User.findById(patientId);
+    }
 
     if (!patient) {
       return res.status(404).json({
@@ -210,26 +261,17 @@ export const getPatientByPatientId = async (req, res) => {
         message: "Patient not found"
       });
     }
-
-    const patientfind = await User.findOne({
-      unique_id: patientId,
-      created_by_id: hospitalId
+    const patientDetail = await Patient.findById(patient.patientId).lean();
+    const patientAddress = await PatientDemographic.findOne({
+      userId: patient._id
+    }).populate('countryId stateId cityId').lean();
+    const department = await PatientDepartment.findOne({
+      patientId: patient._id,
+      hospitalId: new mongoose.Types.ObjectId(hospitalId),
     });
-
-    if (patientfind) {
-      return res.json({
-        success: false,
-        message: "Patient Already Added"
-      });
-    }
-
-    const patientDetail = await HospitalPatient.findOne({
-      user_id: patient._id
-    });
-
     return res.json({
       success: true,
-      data: patientDetail
+      user: patientDetail, demographic: patientAddress, department
     });
 
   } catch (err) {
@@ -242,20 +284,21 @@ export const getPatientByPatientId = async (req, res) => {
 
 export const deletePatient = async (req, res) => {
   try {
-    const hospitalId = req.user.id;
+    const hospitalId = req.user._id;
     const { id } = req.params;
 
-    const patient = await HospitalPatient.findOneAndDelete({
+    const patient = await User.findOneAndDelete({
       _id: id,
-      hospitalId
+      created_by_id: hospitalId
     });
-
+    await PatientDemographic.findOneAndDelete({ userId: id })
     if (!patient) {
       return res.status(404).json({
         success: false,
         message: "Patient not found"
       });
     }
+    await PatientDepartment.findOneAndDelete({ patientId: id })
 
     res.json({
       success: true,

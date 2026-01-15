@@ -26,7 +26,7 @@ import User from '../../models/Hospital/User.js';
 import { error } from 'console';
 
 const signUpLab = async (req, res) => {
-    const { name, gender, email, contactNumber, password, gstNumber, about, labId } = req.body;
+    const { name, gender, email, contactNumber, password, gstNumber, about, labId,created_by_id } = req.body;
     const logo = req.files?.['logo']?.[0]?.path
     try {
         if (labId) {
@@ -51,7 +51,7 @@ const signUpLab = async (req, res) => {
             }, { new: true });
 
             if (newLab) {
-                await User.findOneAndUpdate(labId, { email, name }, { new: true })
+                await User.findOneAndUpdate(labId, { email, name ,created_by_id,created_by:"self"}, { new: true })
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Lab not updated" });

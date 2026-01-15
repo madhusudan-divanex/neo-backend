@@ -72,17 +72,18 @@ Pharmacy->
     Manual Sell 
     Generate Bill 
 
-Neo Health->     
-    Call (pending)
+Wizbizla->     
+    FeedBack (Notification)
 Hospital->
-    Add Appointment 
-    Appointment Action
-    Appointment Details
-    Assign Lab test to appointment
-    CRUD Prescription 
-    Patient Details (appointments,prescrptions,lab,reports,history)
+    CRUD Patient 
 
+https://neohospital.divanex.in/
+madhu13@gmail.com
+123456
 
+https://noepatient.divanex.in/
+4532656243
+1234
     CRUD Return 
     CRUD Purchase Order
     Signup,Upload Image,contact person 
