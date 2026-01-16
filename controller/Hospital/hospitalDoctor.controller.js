@@ -1,120 +1,120 @@
+import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
+import Doctor from "../../models/Doctor/doctor.model.js";
 import HospitalDoctor from "../../models/Hospital/HospitalDoctor.js";
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
-
+import safeUnlink from "../../utils/globalFunction.js";
+import fs from 'fs';
 export const createHospitalDoctor = async (req, res) => {
   try {
-    const data = JSON.parse(req.body.data);
-    data.hospitalId = req.user.id;
+    const hospitalId = req.user._id;
 
-    // ===============================
-    // CHECK EMAIL
-    // ===============================
-    const existingUser = await User.findOne({
-      email: data.accessInfo.accessEmail
+    // Because of FormData, req.body fields are strings. Parse personal and address if sent as JSON strings
+    let personal = {};
+    let address = {};
+
+    if (req.body.personal) {
+      personal = JSON.parse(req.body.personal);
+    } else {
+      // or map fields manually from req.body
+      personal = {
+        name: req.body.name,
+        email: req.body.email,
+        contactNumber: req.body.contactNumber,
+        gender: req.body.gender,
+        dob: req.body.dob,
+      };
+    }
+
+    if (req.body.address) {
+      address = JSON.parse(req.body.address);
+    } else {
+      // map manually or leave empty
+      address = {
+        countryId: req.body.countryId,
+        stateId: req.body.stateId,
+        cityId: req.body.cityId,
+        pinCode: req.body.pinCode,
+        fullAddress: req.body.fullAddress,
+        specialty: req.body.specialty,
+        treatmentAreas: req.body.treatmentAreas ? JSON.parse(req.body.treatmentAreas) : [],
+        fees: req.body.fees,
+        language: req.body.language ? JSON.parse(req.body.language) : [],
+        aboutYou: req.body.aboutYou,
+        contact: {
+          emergencyContactName: req.body.emergencyContactName,
+          emergencyContactNumber: req.body.emergencyContactNumber,
+        },
+      };
+    }
+
+    // Check if doctor exists
+    const isExist = await User.findOne({ email: personal.email }) || await Doctor.findOne({ contactNumber: personal.contactNumber });
+    if (isExist) {
+      const path = req.files?.['profileImage']?.[0]?.path;
+      if (path && fs.existsSync(path)) {
+        safeUnlink(path);
+      }
+      return res.status(200).json({ message: "Doctor already exists", success: false });
+    }
+
+    // Create Doctor
+    const personalData = await Doctor.create({
+      profileImage: req.files?.['profileImage']?.[0]?.path,
+      name: personal.name,
+      email: personal.email,
+      contactNumber: personal.contactNumber,
+      gender: personal.gender,
+      dob: personal.dob,
     });
 
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered"
+    if (personalData) {
+      // Create User with hashed password
+      const rawPassword = personal.contactNumber.slice(-4) + "@123";
+      const passwordHash = await bcrypt.hash(rawPassword, 10);
+
+      const pt = await User.create({
+        name: personal.name,
+        doctorId: personalData._id,
+        email: personal.email,
+        role: 'doctor',
+        created_by: "hospital",
+        created_by_id: hospitalId,
+        passwordHash,
+      });
+
+      // Link userId to Doctor
+      await Doctor.findByIdAndUpdate(personalData._id, { userId: pt._id }, { new: true });
+
+      // Create DoctorAbout / Address
+      const addressData = await DoctorAbout.create({
+        userId: pt._id,
+        ...address,
+      });
+      res.status(201).json({
+        success: true, doctorId: pt._id,
+        message: "User created successfully",
       });
     }
-
-    // ===============================
-    // PASSWORD
-    // ===============================
-    if (!data.accessInfo?.password) {
-      return res.status(400).json({
-        success: false,
-        message: "Password is required"
-      });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(
-      data.accessInfo.password,
-      salt
-    );
-
-    const user = await User.create({
-      name: data.personalInfo.name,
-      email: data.accessInfo.accessEmail,
-      passwordHash,
-      role: "doctor",
-      created_by_id: data.hospitalId,
-      created_by: "hospital"
-    });
-
-    // ===============================
-    // PROFILE IMAGE ✅ FIX
-    // ===============================
-    if (req.files?.profileImage?.length) {
-      data.personalInfo.profileImage =
-        req.files.profileImage[0].filename;
-    }
-
-    // ===============================
-    // EDUCATION NORMALIZE
-    // ===============================
-    data.professionalInfo.education = Array.isArray(
-      data.professionalInfo?.educations
-    )
-      ? data.professionalInfo.educations.map(e => ({
-          university: e.university,
-          degree: e.degree,
-          yearFrom: e.fromYear,
-          yearTo: e.toYear
-        }))
-      : [];
-
-    // ===============================
-    // CERTIFICATES ✅ FIX (IMPORTANT)
-    // ===============================
-    const uploadedCertificates = req.files?.certificates || [];
-
-    data.professionalInfo.certificates = Array.isArray(
-      data.professionalInfo?.certificates
-    )
-      ? data.professionalInfo.certificates.map((c, index) => ({
-          certificateName: c.certificateName || "",
-          certificateFile: uploadedCertificates[index]
-            ? uploadedCertificates[index].filename
-            : ""
-        }))
-      : [];
-
-    // ===============================
-    // ACCESS INFO CLEAN
-    // ===============================
-    data.accessInfo = {
-      userId: user._id,
-      username: data.accessInfo.username,
-      accessEmail: data.accessInfo.accessEmail,
-      permissionType: data.accessInfo.permissionType || "limited"
-    };
-
-    data.userId = user._id;
-
-    // ===============================
-    // CREATE DOCTOR
-    // ===============================
-    const staff = await HospitalDoctor.create(data);
-
-    return res.json({
-      success: true,
-      message: "Doctor created successfully",
-      data: staff
-    });
-
-  } catch (err) {
-    console.error("createHospitalDoctor error:", err);
-    return res.status(500).json({
+    res.status(200).json({
       success: false,
-      message: err.message
+      message: "Doctor not created",
+    });
+
+
+  } catch (error) {
+    const path = req.files?.['profileImage']?.[0]?.path;
+    if (path && fs.existsSync(path)) {
+      safeUnlink(path);
+    }
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
+
 
 export const getMyAllStaffList = async (req, res) => {
   try {
@@ -139,8 +139,7 @@ export const getMyAllStaffList = async (req, res) => {
 
 export const getHospitalDoctorList = async (req, res) => {
   try {
-    const hospitalId = req.user.id;
-
+    const hospitalId = req.user._id;
     const {
       page = 1,
       limit = 10,
@@ -151,18 +150,13 @@ export const getHospitalDoctorList = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const query = { hospitalId };
+    const query = { created_by_id: hospitalId, role: 'doctor' };
 
     if (search) {
       query.$or = [
-        { "personalInfo.name": { $regex: search, $options: "i" } },
-        { "personalInfo.email": { $regex: search, $options: "i" } },
-        { "personalInfo.mobile": { $regex: search, $options: "i" } }
+        { "name": { $regex: search, $options: "i" } },
+        { "email": { $regex: search, $options: "i" } },
       ];
-    }
-
-    if (department) {
-      query["employmentInfo.department"] = department;
     }
 
     if (status) {
@@ -170,20 +164,29 @@ export const getHospitalDoctorList = async (req, res) => {
     }
 
     const [staff, total] = await Promise.all([
-      HospitalDoctor.find(query)
-        .select("-accessInfo.passwordHash")
+      User.find(query)
+        .populate('doctorId')
+        .select("-passwordHash")
         .sort({ createdAt: -1 })
         .skip(Number(skip))
         .limit(Number(limit)),
-      HospitalDoctor.countDocuments(query)
+      User.countDocuments(query)
     ]);
 
-    const base_url = process.env.BASE_URL;
+    const userIds = staff.map(user => user._id);
 
+    const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } });
+
+    const staffWithAbout = staff.map(user => {
+      const about = doctorAbouts.find(da => da.userId.toString() === user._id.toString());
+      return {
+        ...user.toObject(),
+        doctorAbout: about || null
+      };
+    });
     res.json({
       success: true,
-      data: staff,
-      base_url,
+      data: staffWithAbout,
       pagination: {
         total,
         page: Number(page),
@@ -205,35 +208,22 @@ export const getHospitalDoctorByIdNew = async (req, res) => {
     const hospitalId = req.user.id;
     const { id } = req.params;
 
-    const staff = await HospitalDoctor.findOne({
-      _id: id,
-      hospitalId
+    const doctor = await Doctor.findOne({
+      userId: id,
     });
 
-    if (!staff) {
+    if (!doctor) {
       return res.status(404).json({
         success: false,
         message: "Doctor not found"
       });
     }
 
-    const BASE_URL = process.env.BASE_URL;
-
-    if (staff.personalInfo?.profileImage) {
-      staff.personalInfo.profileImage =
-        `${BASE_URL}/uploads/staff/${staff.personalInfo.profileImage}`;
-    }
-
-    staff.professionalInfo?.certificates?.forEach(cert => {
-      if (cert.certificateFile) {
-        cert.certificateFile =
-          `${BASE_URL}/uploads/certificates/${cert.certificateFile}`;
-      }
-    });
+   const aboutDoctor=await DoctorAbout.findOne({userId:id}).populate('cityId stateId countryId')
 
     return res.json({
       success: true,
-      data: staff
+      data: {doctor,aboutDoctor}
     });
 
   } catch (err) {
@@ -346,11 +336,11 @@ export const updateHospitalDoctor = async (req, res) => {
       data.professionalInfo?.educations
     )
       ? data.professionalInfo.educations.map(e => ({
-          university: e.university,
-          degree: e.degree,
-          yearFrom: e.fromYear,
-          yearTo: e.toYear
-        }))
+        university: e.university,
+        degree: e.degree,
+        yearFrom: e.fromYear,
+        yearTo: e.toYear
+      }))
       : staff.professionalInfo.education || [];
 
     const uploadedCertificates = req.files?.certificates || [];
@@ -359,12 +349,12 @@ export const updateHospitalDoctor = async (req, res) => {
       data.professionalInfo?.certificates
     )
       ? data.professionalInfo.certificates.map((c, index) => ({
-          certificateName: c.name || "",
-          certificateFile:
-            uploadedCertificates[index]?.filename ||
-            c.certificateFile ||
-            ""
-        }))
+        certificateName: c.name || "",
+        certificateFile:
+          uploadedCertificates[index]?.filename ||
+          c.certificateFile ||
+          ""
+      }))
       : [];
 
     data.accessInfo = {

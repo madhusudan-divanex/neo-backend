@@ -11,6 +11,7 @@ import {
   getMyAllStaffList,
   deleteDoctor
 } from "../../controller/Hospital/hospitalDoctor.controller.js";
+import getUploader from "../../config/multerConfig.js";
 
 const router = express.Router();
 
@@ -20,15 +21,12 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + "-" + file.originalname);
   }
 });
-const upload = multer({ storage });
+const uploader = getUploader('doctor');
 
 router.post(
   "/create",
-  upload.fields([
-    { name: "profileImage", maxCount: 1 },
-    { name: "certificates", maxCount: 10 }
-  ]),
   auth,
+ uploader.single('profileImage'),
   createHospitalDoctor
 );
 
@@ -41,10 +39,10 @@ router.get("/:id", auth, getHospitalDoctorById);
 router.put(
   "/:id",
   auth,
-  upload.fields([
-    { name: "profileImage", maxCount: 1 },
-    { name: "certificates", maxCount: 10 }
-  ]),
+  // upload.fields([
+  //   { name: "profileImage", maxCount: 1 },
+  //   { name: "certificates", maxCount: 10 }
+  // ]),
   updateHospitalDoctor
 );
 

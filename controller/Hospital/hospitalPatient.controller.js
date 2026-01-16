@@ -221,7 +221,7 @@ export const updatePatient = async (req, res) => {
     }
     await Patient.findByIdAndUpdate(patient.patientId, { name, gender, contactNumber, email }, { new: true })
     await PatientDemographic.findOneAndUpdate({ userId: patient.patientId }, { dob, contact, address, pinCode, countryId, stateId, cityId }, { new: true })
-    const isExist = await PatientDepartment.findOne({ patientId: patient.patientId, hospitalId })
+    const isExist = await PatientDepartment.findOne({ patientId: patient._id, hospitalId })
     if (isExist) {
       await PatientDepartment.findOneAndUpdate({ patientId: patient._id, hospitalId }, { departmentId: department,status }, { new: true })
     } else {
@@ -287,18 +287,18 @@ export const deletePatient = async (req, res) => {
     const hospitalId = req.user._id;
     const { id } = req.params;
 
-    const patient = await User.findOneAndDelete({
-      _id: id,
-      created_by_id: hospitalId
-    });
-    await PatientDemographic.findOneAndDelete({ userId: id })
-    if (!patient) {
-      return res.status(404).json({
-        success: false,
-        message: "Patient not found"
-      });
-    }
-    await PatientDepartment.findOneAndDelete({ patientId: id })
+    // const patient = await User.findOneAndDelete({
+    //   _id: id,
+    //   created_by_id: hospitalId
+    // });
+    // await PatientDemographic.findOneAndDelete({ userId: id })
+    // if (!patient) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Patient not found"
+    //   });
+    // }
+    await PatientDepartment.findOneAndDelete({ patientId: id ,hospitalId})
 
     res.json({
       success: true,

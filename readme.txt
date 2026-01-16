@@ -92,6 +92,8 @@ https://noepatient.divanex.in/
     change password 
     profile
 
+    public->components->auth->login.jsx
+
 Admin->
     Advertisment (select provider) only on home page accerdian 
     Home page description (text editor)
