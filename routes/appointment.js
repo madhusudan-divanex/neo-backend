@@ -1,6 +1,7 @@
 import express from 'express'
 import authMiddleware from '../middleware/authMiddleare.js'
-import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, cancelLabAppointment, deleteDoctorPrescription, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getDoctorPastAppointment, getDoctorPrescriptiondata, getHospitalAppointment, getHospitalPastAppointment, getLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating, prescriptionAction, updateDoctorAppointment } from '../controller/appointmentController.js'
+import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, cancelLabAppointment, deleteDoctorPrescription, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getDoctorPastAppointment, getDoctorPrescriptiondata, getHospitalAppointment, getHospitalPastAppointment, getLabAppointment, getPastPatientLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating, prescriptionAction, updateDoctorAppointment } from '../controller/appointmentController.js'
+import { get } from 'mongoose'
 
 const appointment=express.Router()
 appointment.post('/doctor',authMiddleware,bookDoctorAppointment)
@@ -27,5 +28,5 @@ appointment.post('/lab-cancel',authMiddleware,cancelLabAppointment)
 appointment.get('/doctor/past-appointments/:doctorId/:patientId',authMiddleware,getDoctorPastAppointment)
 appointment.get('/hospital/past-appointments/:hospitalId/:patientId',authMiddleware,getHospitalPastAppointment)
 appointment.get('/hospital/:id',authMiddleware,getHospitalAppointment)
-
+appointment.get('/lab/past-appointments/:labId/:patientId',authMiddleware,getPastPatientLabAppointment)
 export default appointment

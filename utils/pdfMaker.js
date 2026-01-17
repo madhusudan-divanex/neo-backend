@@ -16,7 +16,7 @@ export const generateReportPDF = (appointment, tests, testReports,ptData,labData
     doc.moveDown();
 
     doc.fontSize(12).text(`Patient: ${ptData.name}`);
-    doc.text(`Appointment ID: ${appointment._id?.slice(-10)}`);
+    doc.text(`Appointment ID: ${appointment?.customId}`);
     doc.text(`Date: ${new Date().toLocaleDateString()}`);
     doc.moveDown();
 
@@ -34,7 +34,7 @@ export const generateReportPDF = (appointment, tests, testReports,ptData,labData
             doc.fontSize(12).text(`${compName}: ${c.result} (${c.status?.toUpperCase()})`);
             
         });
-        doc.fontSize(12).text(`Comment :${report.comment})`);
+        doc.fontSize(12).text(`Comment :${report.upload.comment})`);
     }
 
     doc.moveDown();

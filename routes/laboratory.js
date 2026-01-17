@@ -2,7 +2,7 @@ import {  changePassword, deleteLab,  forgotEmail, getProfile, getProfileDetail,
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import {  getLabAppointment, getLabAppointmentData, labDashboardData } from "../controller/appointmentController.js";
+import {  getLabAppointment, getLabAppointmentData, getPatientLabReport, labDashboardData } from "../controller/appointmentController.js";
 import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, getTestReport, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
@@ -71,7 +71,7 @@ lab.get('/dashboard/:id',authMiddleware,labDashboardData)
 lab.post('/test',authMiddleware,addTest)
 lab.put('/test',authMiddleware,updateTest)
 lab.get('/test-data/:id',authMiddleware,getTestData)
-lab.post('/test-report',authMiddleware,saveReport)
+lab.post('/test-report',authMiddleware,uploader.single('report'),saveReport)
 lab.post('/test-report-data',authMiddleware,getTestReport)
 
 
@@ -83,6 +83,6 @@ lab.post('/delete-image',authMiddleware,deleteLabImage)
 lab.post('/send-report',authMiddleware,sendReport)
 
 
-
+lab.get('/patient-lab-report/:labId/patientId',authMiddleware,getPatientLabReport)
 
 export default lab

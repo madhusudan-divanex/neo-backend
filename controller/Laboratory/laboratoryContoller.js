@@ -524,11 +524,8 @@ const addTest = async (req, res) => {
         }
 
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
-        const isLast = await Test.findOne()?.sort({ createdAt: -1 })
-        const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
-        const isStaff = await Test.create({ customId: nextId, labId, hospitalId, precautions, shortName, testCategory, sampleType, price, component, type });
+        
+        const isStaff = await Test.create({ labId, hospitalId, precautions, shortName, testCategory, sampleType, price, component, type });
 
         if (isStaff) {
             return res.status(200).json({
@@ -668,24 +665,30 @@ const deleteTest = async (req, res) => {
     }
 };
 const saveReport = async (req, res) => {
+    const report=req.file?.path
+    console.log(req?.files)
     try {
         const {
             labId,
             patientId,
             testId,
             appointmentId,
-            comment,
-            component
+            manualComment,
+            component,manualName
         } = req.body;
+        console.log(req.body)
         const isExist = await TestReport.findOne({ testId, appointmentId })
         if (isExist) {
+            if(report){
+                safeUnlink(isExist.upload.report)
+            }
             await TestReport.findByIdAndUpdate(isExist._id, {
                 labId,
                 patientId,
                 testId,
                 appointmentId,
-                comment,
-                component
+                component,
+                // upload:{report,name:manual.name,comment:manual.comment}
             }, { new: true })
             return res.status(201).json({
                 success: true,
@@ -693,12 +696,13 @@ const saveReport = async (req, res) => {
             });
         }
         else {
+            console.log(report)
             const newReport = new TestReport({
                 labId,
                 patientId,
                 testId,
                 appointmentId,
-                comment,
+                upload:{report,name:manualName,comment:manualComment},
                 component
             });
 
@@ -711,7 +715,10 @@ const saveReport = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error(error);
+        console.error("Report Errr",error);
+        if(fs.existsSync(report)){
+            safeUnlink(report)
+        }
         res.status(500).json({ success: false, message: "Error saving report" });
     }
 };

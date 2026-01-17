@@ -22,11 +22,28 @@ const requestSchema=new Schema({
     testCategory:{type:String,required:true},
     sampleType:{type:String,required:true},
     price:{type:String,required:true},
-    customId: { type: String, required: true },
+    customId: { type: String },
     status:{type:String,enum:['active','inactive'],default:'inactive'},
     hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic',index:true },
     type:{type:String,enum:['lab','hospital'],default:'lab'}
 
 },{timestamps:true})
+requestSchema.pre("save", async function (next) {
+  if (this.customId) return next();
+
+  try {
+    while (true) {
+      const id = Math.floor(100000 + Math.random() * 900000).toString();
+      const exists = await this.constructor.findOne({ customId: id });
+      if (!exists) {
+        this.customId = id;
+        break;
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 const Test= mongoose.model('Test', requestSchema);
 export default Test

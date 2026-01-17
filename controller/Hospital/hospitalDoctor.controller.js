@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import safeUnlink from "../../utils/globalFunction.js";
 import fs from 'fs';
 export const createHospitalDoctor = async (req, res) => {
+  const image= req.files?.['profileImage']?.[0]?.path
   try {
     const hospitalId = req.user._id;
 
@@ -23,6 +24,7 @@ export const createHospitalDoctor = async (req, res) => {
         contactNumber: req.body.contactNumber,
         gender: req.body.gender,
         dob: req.body.dob,
+        profileImage:image
       };
     }
 
@@ -91,12 +93,12 @@ export const createHospitalDoctor = async (req, res) => {
         userId: pt._id,
         ...address,
       });
-      res.status(201).json({
+      return res.status(201).json({
         success: true, doctorId: pt._id,
         message: "User created successfully",
       });
     }
-    res.status(200).json({
+    return res.status(200).json({
       success: false,
       message: "Doctor not created",
     });
@@ -108,7 +110,7 @@ export const createHospitalDoctor = async (req, res) => {
       safeUnlink(path);
     }
     console.error(error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

@@ -24,9 +24,10 @@ import LabStaff from '../../models/Laboratory/LabEmpPerson.model.js';
 import EmpAccess from '../../models/Laboratory/empAccess.model.js';
 import User from '../../models/Hospital/User.js';
 import { error } from 'console';
+import path from 'path'
 
 const signUpLab = async (req, res) => {
-    const { name, gender, email, contactNumber, password, gstNumber, about, labId,created_by_id } = req.body;
+    const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
     const logo = req.files?.['logo']?.[0]?.path
     try {
         if (labId) {
@@ -51,7 +52,7 @@ const signUpLab = async (req, res) => {
             }, { new: true });
 
             if (newLab) {
-                await User.findOneAndUpdate(labId, { email, name ,created_by_id,created_by:"self"}, { new: true })
+                await User.findOneAndUpdate(labId, { email, name, created_by_id, created_by: "self" }, { new: true })
                 return res.status(200).json({ success: true, });
             } else {
                 return res.status(200).json({ success: false, message: "Lab not updated" });
@@ -386,7 +387,7 @@ const getProfileDetail = async (req, res) => {
         const labImg = await LabImage.findOne({ userId }).sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ labId: user?._id }))
-        const allowEdit = Boolean(await EditRequest.exists({ labId: user?._id,status:"approved" }))
+        const allowEdit = Boolean(await EditRequest.exists({ labId: user?._id, status: "approved" }))
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?.labId })
@@ -431,7 +432,7 @@ const getProfileDetail = async (req, res) => {
             labAddress,
             labImg,
             labLicense, customId: user.unique_id,
-            rating,allowEdit,
+            rating, allowEdit,
             avgRating,
             ratingCounts,
             isRequest
@@ -767,29 +768,43 @@ const deleteLabImage = async (req, res) => {
 
 const sendReport = async (req, res) => {
     const { type, appointmentId, email } = req.body;
+    console.log(req.body)
     try {
         const appointment = await LabAppointment.findById(appointmentId)
         if (!appointment) return res.status(200).json({ message: "Appointment not found", success: false })
         const tests = await Test.find({
             _id: { $in: appointment.testId }
         });
-        const ptData = await Patient.findById(appointment?.patientId)
+        const ptData = await User.findById(appointment?.patientId)
         const labData = await Laboratory.findById(appointment?.labId)
 
         const testReports = await TestReport.find({ appointmentId })
         const pdfBuffer = await generateReportPDF(appointment, tests, testReports, ptData, labData);
+        const attachments = [
+            {
+                filename: "lab-report.pdf",
+                content: pdfBuffer,
+                contentType: "application/pdf",
+            }
+        ];
+
+        // uploaded reports attach karo
+        testReports.forEach(report => {
+            // if (Array.isArray(report.upload?.report)) {
+                // report.upload.report.forEach(filePath => {
+                    attachments.push({
+                        filename: path.basename(report.upload?.report), // extract file name from path
+                        path: path.join(process.cwd(), report.upload?.report), // local file path
+                    });
+                // });
+            // }
+        });
 
         await sendEmail({
             to: email,
             subject: "Your Lab Report",
             html: "<p>Your lab report is attached.</p>",
-            attachments: [
-                {
-                    filename: "lab-report.pdf",
-                    content: pdfBuffer,
-                    contentType: "application/pdf",
-                }
-            ]
+            attachments
         });
 
 
@@ -806,83 +821,83 @@ const sendReport = async (req, res) => {
     }
 };
 const getLabs = async (req, res) => {
-  const limit = parseInt(req.query.limit) || 10;
-  const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
 
-  try {
-    // 1️⃣ Fetch lab users
-    const users = await User.find({ role: 'lab' })
-      .select('-passwordHash')
-      .populate('labId')
-      .limit(limit)
-      .skip((page - 1) * limit)
-      .lean();
+    try {
+        // 1️⃣ Fetch lab users
+        const users = await User.find({ role: 'lab' })
+            .select('-passwordHash')
+            .populate('labId')
+            .limit(limit)
+            .skip((page - 1) * limit)
+            .lean();
 
-    const labIds = users.map(u => u._id);
+        const labIds = users.map(u => u._id);
 
-    // 2️⃣ Fetch addresses
-    const labAddresses = await LabAddress.find({
-      userId: { $in: labIds }
-    })
-      .populate('countryId stateId cityId', 'name')
-      .lean();
+        // 2️⃣ Fetch addresses
+        const labAddresses = await LabAddress.find({
+            userId: { $in: labIds }
+        })
+            .populate('countryId stateId cityId', 'name')
+            .lean();
 
-    const addressMap = {};
-    labAddresses.forEach(addr => {
-      addressMap[addr.userId.toString()] = addr;
-    });
+        const addressMap = {};
+        labAddresses.forEach(addr => {
+            addressMap[addr.userId.toString()] = addr;
+        });
 
-    // 3️⃣ Fetch rating stats (AVG + COUNT)
-    const ratingStats = await Rating.aggregate([
-      {
-        $match: {
-          labId: { $in: labIds }
-        }
-      },
-      {
-        $group: {
-          _id: "$labId",
-          avgRating: { $avg: "$star" },
-          totalReviews: { $sum: 1 }
-        }
-      }
-    ]);
+        // 3️⃣ Fetch rating stats (AVG + COUNT)
+        const ratingStats = await Rating.aggregate([
+            {
+                $match: {
+                    labId: { $in: labIds }
+                }
+            },
+            {
+                $group: {
+                    _id: "$labId",
+                    avgRating: { $avg: "$star" },
+                    totalReviews: { $sum: 1 }
+                }
+            }
+        ]);
 
-    const ratingMap = {};
-    ratingStats.forEach(r => {
-      ratingMap[r._id.toString()] = {
-        avgRating: Number(r.avgRating.toFixed(1)),
-        totalReviews: r.totalReviews
-      };
-    });
+        const ratingMap = {};
+        ratingStats.forEach(r => {
+            ratingMap[r._id.toString()] = {
+                avgRating: Number(r.avgRating.toFixed(1)),
+                totalReviews: r.totalReviews
+            };
+        });
 
-    // 4️⃣ Merge everything
-    const finalData = users.map(user => ({
-      ...user,
-      labAddress: addressMap[user._id.toString()] || null,
-      avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-      totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
-    }));
+        // 4️⃣ Merge everything
+        const finalData = users.map(user => ({
+            ...user,
+            labAddress: addressMap[user._id.toString()] || null,
+            avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
+            totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+        }));
 
-    const total = await User.countDocuments({ role: 'lab' });
+        const total = await User.countDocuments({ role: 'lab' });
 
-    return res.status(200).json({
-      success: true,
-      data: finalData,
-      pagination: {
-        total,
-        totalPage: Math.ceil(total / limit),
-        currentPage: page
-      }
-    });
+        return res.status(200).json({
+            success: true,
+            data: finalData,
+            pagination: {
+                total,
+                totalPage: Math.ceil(total / limit),
+                currentPage: page
+            }
+        });
 
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
 };
 
 const getLabDetail = async (req, res) => {
@@ -898,15 +913,15 @@ const getLabDetail = async (req, res) => {
             });
         }
         const labData = await Laboratory.findById(user.labId).select("-password");
-        const labImage = await LabImage.findOne({userId:user._id})
+        const labImage = await LabImage.findOne({ userId: user._id })
         const labAddress = await LabAddress.findOne({ userId }).populate('countryId').populate('stateId')
             .populate('cityId').sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const labTest = await Test.find({labId:user._id}).select('shortName price')
+        const labTest = await Test.find({ labId: user._id }).select('shortName price status')
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?._id })
-            .populate({path:"patientId",select:'-passwordHash',populate:({path:'patientId',select:'name profileImage'})})
+            .populate({ path: "patientId", select: '-passwordHash', populate: ({ path: 'patientId', select: 'name profileImage' }) })
             .sort({ createdAt: -1 });
 
         // 4️⃣ Calculate average rating
@@ -948,7 +963,7 @@ const getLabDetail = async (req, res) => {
             rating,
             avgRating,
             ratingCounts,
-            labImage,labTest
+            labImage, labTest
         });
 
     } catch (err) {
@@ -962,5 +977,5 @@ const getLabDetail = async (req, res) => {
 export {
     signInLab, updateImage, labLicense, deleteLicense, getProfileDetail, signUpLab, resetPassword, editRequest,
     labPerson, labAddress, forgotEmail, verifyOtp, resendOtp, getProfile, updateLab, changePassword, deleteLab,
-    labImage, deleteLabImage, sendReport,getLabs,getLabDetail
+    labImage, deleteLabImage, sendReport, getLabs, getLabDetail
 }

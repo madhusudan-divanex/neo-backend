@@ -379,10 +379,12 @@ const getCustomProfile = async (req, res) => {
         }
         const patientData = await Patient.findById(user.patientId).lean()
         const ptDemographic = await PatientDemographic.findOne({ userId: user.patientId }).sort({ createdAt: -1 })
-        res.status(200).json({
-            success: true,
+        
+        return res.status(200).json({
+            success: true,customId:user.unique_id,
             data: { ...patientData, dob: ptDemographic?.dob }
         });
+
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
