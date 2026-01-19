@@ -5,8 +5,13 @@ import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
 import safeUnlink from "../../utils/globalFunction.js";
 import fs from 'fs';
+import MedicalLicense from "../../models/Doctor/medicalLicense.model.js";
+import DoctorEduWork from "../../models/Doctor/eduWork.js";
+import EmpEmployement from "../../models/Hospital/DoctorEmployement.js";
+import DoctorAccess from "../../models/Hospital/DoctorAccess.js";
+import HospitalPermission from "../../models/Hospital/HospitalPermission.model.js";
 export const createHospitalDoctor = async (req, res) => {
-  const image= req.files?.['profileImage']?.[0]?.path
+  const image = req.file?.path;
   try {
     const hospitalId = req.user._id;
 
@@ -15,8 +20,10 @@ export const createHospitalDoctor = async (req, res) => {
     let address = {};
 
     if (req.body.personal) {
+      console.log("json field")
       personal = JSON.parse(req.body.personal);
     } else {
+      console.log("else fireld")
       // or map fields manually from req.body
       personal = {
         name: req.body.name,
@@ -24,7 +31,7 @@ export const createHospitalDoctor = async (req, res) => {
         contactNumber: req.body.contactNumber,
         gender: req.body.gender,
         dob: req.body.dob,
-        profileImage:image
+        profileImage: image
       };
     }
 
@@ -53,7 +60,7 @@ export const createHospitalDoctor = async (req, res) => {
     // Check if doctor exists
     const isExist = await User.findOne({ email: personal.email }) || await Doctor.findOne({ contactNumber: personal.contactNumber });
     if (isExist) {
-      const path = req.files?.['profileImage']?.[0]?.path;
+      const path = req.file?.path;
       if (path && fs.existsSync(path)) {
         safeUnlink(path);
       }
@@ -62,7 +69,7 @@ export const createHospitalDoctor = async (req, res) => {
 
     // Create Doctor
     const personalData = await Doctor.create({
-      profileImage: req.files?.['profileImage']?.[0]?.path,
+      profileImage: req.file?.path,
       name: personal.name,
       email: personal.email,
       contactNumber: personal.contactNumber,
@@ -105,7 +112,7 @@ export const createHospitalDoctor = async (req, res) => {
 
 
   } catch (error) {
-    const path = req.files?.['profileImage']?.[0]?.path;
+    const path = req.file?.path;
     if (path && fs.existsSync(path)) {
       safeUnlink(path);
     }
@@ -221,11 +228,14 @@ export const getHospitalDoctorByIdNew = async (req, res) => {
       });
     }
 
-   const aboutDoctor=await DoctorAbout.findOne({userId:id}).populate('cityId stateId countryId')
+    const aboutDoctor = await DoctorAbout.findOne({ userId: id }).populate('cityId stateId countryId')
+    const aboutDoctorEduWork = await DoctorEduWork.findOne({ userId: id })
+    const employmentDetails = await EmpEmployement.findOne({ userId: id, hospitalId: hospitalId })
+    const accessInfo = await DoctorAccess.findOne({ userId: id }).populate('permissionId')
 
     return res.json({
       success: true,
-      data: {doctor,aboutDoctor}
+      data: { doctor, aboutDoctor }, aboutDoctorEduWork, employmentDetails,accessInfo
     });
 
   } catch (err) {
@@ -389,12 +399,13 @@ export const updateHospitalDoctor = async (req, res) => {
 
 export const deleteDoctor = async (req, res) => {
   try {
-    const hospitalId = req.user.id;
+    const hospitalId = req.user._id;
+    console.log(req.user)
     const { id } = req.params;
 
-    const doctor = await HospitalDoctor.findOne({
+    const doctor = await User.findOne({
       _id: id,
-      hospitalId
+      created_by_id: hospitalId
     });
 
     if (!doctor) {
@@ -403,6 +414,8 @@ export const deleteDoctor = async (req, res) => {
         message: "Doctor not found"
       });
     }
+    await Doctor.findOneAndDelete({ userId: doctor._id });
+    await DoctorAbout.findOneAndDelete({ userId: doctor._id });
 
     await doctor.deleteOne();
 
@@ -415,5 +428,173 @@ export const deleteDoctor = async (req, res) => {
       success: false,
       message: err.message
     });
+  }
+};
+export const saveDoctorProfessionalDetails = async (req, res) => {
+  try {
+    const { doctorId, education, work, medicalLicenseMeta, specialty, treatmentAreas, aboutYou } = req.body;
+console.log(medicalLicenseMeta)
+    if (!doctorId) {
+      return res.status(400).json({
+        success: false,
+        message: "Doctor ID is required",
+      });
+    }
+
+    /** -------- Parse JSON fields -------- */
+    const parsedEducation = education ? JSON.parse(education) : [];
+    const parsedWork = work ? JSON.parse(work) : [];
+    const parsedLicenseMeta = medicalLicenseMeta
+      ? JSON.parse(medicalLicenseMeta)
+      : [];
+
+    /** -------- Save / Update Education & Work -------- */
+    const eduWorkPayload = {
+      userId: doctorId,
+      education: parsedEducation.map((e) => ({
+        university: e.university,
+        degree: e.degree,
+        startYear: e.startYear,
+        endYear: e.endYear,
+      })),
+      work: parsedWork,
+    };
+
+    await DoctorEduWork.findOneAndUpdate(
+      { userId: doctorId },
+      eduWorkPayload,
+      { upsert: true, new: true }
+    );
+    /** -------- Update Doctor About Info -------- */
+    const aboutPayload = {
+      specialty,
+      treatmentAreas: treatmentAreas ? JSON.parse(treatmentAreas) : [],
+      aboutYou,
+    };
+    await DoctorAbout.findOneAndUpdate(
+      { userId: doctorId },
+      aboutPayload,
+      { new: true }
+    );
+
+    /** -------- Handle License Files -------- */
+    let licenseData = [];
+
+    if (req.files && req.files.length) {
+      licenseData = parsedLicenseMeta.map((meta, index) => ({
+        certName: meta.certName,
+        certFile: req.files[index]?.path,
+      }));
+    }
+    console.log("license",licenseData)
+    if (licenseData.length) {
+      await MedicalLicense.findOneAndUpdate(
+        { userId: doctorId },
+        {
+          userId: doctorId,
+          medicalLicense: licenseData,
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Professional details saved successfully",
+    });
+  } catch (error) {
+    console.error("Professional details error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+export const doctorEmploymentDetails = async (req, res) => {
+  try {
+    const { doctorId, joinDate, position, onLeaveDate, contractStart, contractEnd, salary, note, fees, reportingTo, employmentType, department } = req.body;
+    if (!doctorId) {
+      return res.status(400).json({
+        success: false,
+        message: "Doctor ID is required",
+      });
+    }
+    /** -------- Save / Update Education & Work -------- */
+    if (fees) {
+      await DoctorAbout.findOneAndUpdate(
+        { userId: doctorId },
+        { fees },
+        { new: true }
+      );
+    }
+    const empPayload = {
+      userId: doctorId,
+      position: position,
+      joinDate,
+      onLeaveDate,
+      contractStart,
+      contractEnd,
+      salary,
+      note,
+      fees,
+      reportingTo,
+      employmentType,
+      department, hospitalId: req.user._id
+    };
+    await EmpEmployement.findOneAndUpdate(
+      { userId: doctorId },
+      empPayload,
+      { upsert: true, new: true }
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Employment details saved successfully",
+    });
+  } catch (error) {
+    console.error("Employment details error:", error);
+    return res.status(500).json({ success: false, message: "Server error", });
+  }
+}
+export const saveDoctorAccess = async (req, res) => {
+  const { userId, userName, email, password, permissionId } = req.body;
+  try {
+    const employee = await User.findById(userId);
+    if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
+
+    const permission = await HospitalPermission.findById(permissionId);
+    if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
+    const emailExists = await DoctorAccess.findOne({
+      email: email.toLowerCase(),
+      userId: { $ne: userId },
+    });
+
+    if (emailExists) {
+      return res.status(200).json({
+        success: false,
+        message: "Email already assigned to another user",
+      });
+    }
+    const isExist = await DoctorAccess.findOne({ userId: userId });
+    let data;
+    if (isExist) {
+      data = await DoctorAccess.findOneAndUpdate({ userId: userId }, { userName, email, password, permissionId }, { new: true });
+      if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
+      return res.status(200).json({
+        success: true,
+        message: "Employee access updated",
+        data
+      });
+    } else {
+      data = await DoctorAccess.create(req.body);
+      return res.status(200).json({
+        success: true,
+        message: "Employee access created",
+        data
+      });
+    }
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

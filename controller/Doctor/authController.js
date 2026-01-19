@@ -194,6 +194,42 @@ const verifyOtp = async (req, res) => {
         return res.status(400).json({ success: false, error: err.message });
     }
 };
+const sendOtp = async (req, res) => {
+    const { contactNumber } = req.body;
+    try {
+        // const isExist = await Patient.findOne({contactNumber: phone });
+        // if (!isExist) {
+        //     return res.status(404).json({ success: false, message: 'Patient not found' });
+        // }
+        // const code = generateOTP()
+        const code = "1234"
+        const isOtpExist = await Otp.findOne({ phone: contactNumber })
+        if (isOtpExist) {
+            await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+            const otp = await Otp.create({ phone: contactNumber, code })
+        } else {
+            const otp = await Otp.create({ phone: contactNumber, code })
+        }
+        // const emailHtml = `
+        //     Hello ${isExist?.name}, 
+        //     Your One-Time Password (OTP) for Neo Health is: ${code} 
+        //     This OTP is valid for 10 minutes. Please do not share it with anyone.
+        //     If you did not request this, please ignore this email.
+        //     Thank you,
+        //     The Neo Health Team`
+        // await sendEmail({
+        //     to: isExist.email,
+        //     subject: "Your Neo Health OTP Code!",
+        //     html: emailHtml
+        // });
+        res.status(200).json({
+            success: true,
+            message: "OTP sent!"
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
 const resendOtp = async (req, res) => {
     const id = req.params.id
     try {
@@ -1032,5 +1068,5 @@ const getDoctorData = async (req, res) => {
 };
 export {
     signInDoctor, updateImage, doctorEduWork, getCustomProfile, deleteEdu, doctorLicense, deleteLicense, deleteWork, doctorAbout, getProfileDetail, signUpDoctor, resetPassword, doctorKyc, editRequest, forgotEmail, verifyOtp, resendOtp, getProfile, updateDoctor, changePassword, deleteDoctor, getDoctorKyc,
-    getDoctorEduWork, getDoctorLicense, getDoctorAbout, getDoctors, getDoctorData
+    getDoctorEduWork, getDoctorLicense, getDoctorAbout, getDoctors, getDoctorData,sendOtp
 }

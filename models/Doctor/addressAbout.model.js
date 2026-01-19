@@ -23,7 +23,7 @@ const addressSchema = new Schema({
   pinCode: { type: String, required: true },
   specialty: { type: String },
   treatmentAreas: [{ type: String }],
-  fees: { type: String },
+  fees: { type: String ,default:'20'},
   language: [{ type: String }],
   aboutYou: { type: String },
 

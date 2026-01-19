@@ -605,7 +605,7 @@ const bookLabAppointment = async (req, res) => {
             : '0001';
         const book = await LabAppointment.create({ patientId, labId, testId, date, fees, customId: nextId, status, doctorAp, doctorId })
         if (book) {
-            return res.status(200).json({ message: "Appointment book successfully", success: true })
+            return res.status(200).json({ message: "Appointment book successfully", success: true,data:book })
         } else {
             return res.status(200).json({ message: "Appointment not booked", success: false })
         }

@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import Rating from "../../models/Rating.js";
 import Doctor from "../../models/Doctor/doctor.model.js";
 import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
+import HospitalPermission from "../../models/Hospital/HospitalPermission.model.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -215,7 +216,7 @@ export const getHospitals = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
 
   try {
-    // 1️⃣ Fetch lab users
+    // 1️⃣ Fetch hospital users
     const users = await HospitalBasic.find()
       .limit(limit)
       .skip((page - 1) * limit)
@@ -355,7 +356,7 @@ export const getHospitalDoctors = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const hospitalId = req.params.id
   try {
-    // 1️⃣ Fetch lab users
+    // 1️⃣ Fetch hospital users
     const doctors = await DoctorAbout.find({ hospitalName: hospitalId })
       .populate('countryId stateId cityId', 'name')
       .populate({ path: 'hospitalName' })
@@ -426,3 +427,166 @@ export const getHospitalDoctors = async (req, res) => {
     });
   }
 };
+export const getAllPermission = async (req, res) => {
+    const id = req.params.id;
+    let { page = 1, limit = 10, name } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    try {
+        const filter = { hospitalId: id };
+        if (name && name !== 'null') {
+            filter.name = { $regex: name, $options: "i" };
+        }
+
+        const hospitaloratory = await User.findById(id);
+
+        if (!hospitaloratory) {
+            return res.status(200).json({
+                message: "Hospitaloratory not found",
+                success: false
+            });
+        }
+
+        const total = await HospitalPermission.countDocuments(filter);
+
+        const permissions = await HospitalPermission.find(filter)
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        return res.status(200).json({
+            message: "Hospitaloratory permissions fetched successfully",
+            data: permissions,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            },
+            success: true
+        });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: 'Server Error',
+            success: false
+        });
+    }
+};
+
+export const addHospitalPermission = async (req, res) => {
+    try {
+        const { name, hospitalId, ...permissions } = req.body;
+        const isExist = await User.findById(hospitalId);
+        if (!isExist) return res.status(200).json({ message: "Hospitaloratory not found", success: false })
+
+
+        if (!name || !hospitalId) {
+            return res.status(400).json({
+                success: false,
+                message: "name and hospitalId are required"
+            });
+        }
+
+        const existing = await HospitalPermission.findOne({ name, hospitalId });
+
+        if (existing) {
+            const updated = await HospitalPermission.findByIdAndUpdate(
+                existing._id,
+                { ...permissions },
+                { new: true }
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: "Permission updated successfully",
+                data: updated
+            });
+        }
+
+        const created = await HospitalPermission.create({
+            name,
+            hospitalId,
+            ...permissions
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Permission created successfully",
+            data: created
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+export const updateHospitalPermission = async (req, res) => {
+    try {
+        const { name, permissionId, hospitalId, ...permissions } = req.body;
+        const isExist = await User.findById(hospitalId);
+        if (!isExist) return res.status(200).json({ message: "Hospital not found", success: false })
+        const isPermExist = await HospitalPermission.findById(permissionId);
+        if (!isPermExist) return res.status(200).json({ message: "Permission not found", success: false })
+
+        if (!name || !hospitalId) {
+            return res.status(400).json({
+                success: false,
+                message: "name and hospitalId are required"
+            });
+        }
+        const updated = await HospitalPermission.findByIdAndUpdate(
+            isPermExist._id,
+            { ...permissions, name },
+            { new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Permission updated successfully",
+            data: updated
+        });
+
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+export const deleteHospitalPermission = async (req, res) => {
+    const { permissionId, hospitalId } = req.body;
+    try {
+        const isHospitalExist = await User.findById(hospitalId);
+        if (!isHospitalExist) return res.status(200).json({ message: "Hospitaloratory not found", success: false })
+        const isExist = await HospitalPermission.findById(permissionId);
+        if (!isExist) return res.status(200).json({ message: "Hospitaloratory permission not found", success: false })
+
+        const delPerm = await HospitalPermission.findByIdAndDelete(permissionId);
+
+        if (delPerm) {
+            return res.status(200).json({
+                success: true,
+                message: "Permission deleted successfully",
+            });
+        }
+        return res.status(200).json({
+            success: false,
+            message: "Permission not deleted"
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}

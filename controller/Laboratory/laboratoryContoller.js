@@ -11,6 +11,9 @@ import safeUnlink from "../../utils/globalFunction.js";
 import TestReport from "../../models/testReport.js";
 import User from "../../models/Hospital/User.js";
 import mongoose from "mongoose";
+import PatientDemographic from "../../models/Patient/demographic.model.js";
+import Patient from "../../models/Patient/patient.model.js";
+import bcrypt from "bcryptjs";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
@@ -747,6 +750,46 @@ const getTestReport = async (req, res) => {
         console.error(error);
         res.status(500).json({ success: false, message: "Error saving report" });
     }
+};
+export const addPatient = async (req, res) => {
+  const { name, dob, gender, contactNumber, email,  address, countryId, stateId, cityId, pinCode,  contact } = req.body
+
+  try {
+    const labId = req.user._id;
+    const data = req.body;
+    if (!name || !dob || !gender || !contactNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Required fields missing"
+      });
+    }
+
+    // ✅ CREATE PATIENT
+    const patient = await Patient.create({ name, gender, contactNumber,  email });
+    if (patient) {
+      const rawPassword = contactNumber.slice(-4) + "@123";
+      const passwordHash = await bcrypt.hash(rawPassword, 10);
+      const pt = await User.create({ name, patientId: patient._id, email, role: 'patient', created_by: "lab", created_by_id: labId, passwordHash })
+      await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
+      await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
+      return res.status(200).json({
+        success: true,
+        message: "Patient added successfully",
+        data: pt
+      });
+    }
+     return res.status(200).json({
+        success: false,
+        message: "Patient not added ",
+      });
+
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,

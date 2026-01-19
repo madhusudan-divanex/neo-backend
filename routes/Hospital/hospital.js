@@ -70,4 +70,11 @@ router.get("/patient-list", auth, basic.PatientList);
 router.get("/doctor-list", auth, basic.DoctorList);
 router.get("/staff-list", auth, basic.StaffList);
 router.get("/patient-lab-report/:hospitalId/:patientId", auth, basic.getHospitalPatientReport);
+
+
+// ================= PERMISSIon =================
+router.post('/permission',auth,profile.addHospitalPermission)
+router.put('/permission',auth,profile.updateHospitalPermission)
+router.get('/permission/:id',auth,profile.getAllPermission)
+router.delete('/permission',auth,profile.deleteHospitalPermission)
 export default router;

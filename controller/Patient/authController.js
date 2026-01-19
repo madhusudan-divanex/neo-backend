@@ -87,10 +87,10 @@ const signInPatient = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist.userId._id, isNew: false, success: true })
+            return res.status(200).json({ message: "Code Sent", userId: isExist.userId._id, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Email Sent", isNew: true, userId: isExist.userId._id, success: true })
+            return res.status(200).json({ message: "Code Sent", isNew: true, userId: isExist.userId._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -211,32 +211,69 @@ const verifyOtp = async (req, res) => {
     }
 };
 const resendOtp = async (req, res) => {
-    const { phone } = req.params.id
+    const { contactNumber } = req.body;
     try {
-        const isExist = await Patient.findOne({ phone });
+        const isExist = await Patient.findOne({contactNumber: phone });
         if (!isExist) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-        const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ phone: isExist.contactNumber })
+        // const code = generateOTP()
+        const code = "1234"
+        const isOtpExist = await Otp.findOne({ phone: contactNumber })
         if (isOtpExist) {
             await Otp.findByIdAndDelete(isOtpExist.contactNumber)
-            const otp = await Otp.create({ phone: isExist.contactNumber, code })
+            const otp = await Otp.create({ phone: contactNumber, code })
         } else {
-            const otp = await Otp.create({ phone: isExist.contactNumber, code })
+            const otp = await Otp.create({ phone: contactNumber, code })
         }
-        const emailHtml = `
-            Hello ${isExist?.name}, 
-            Your One-Time Password (OTP) for Neo Health is: ${code} 
-            This OTP is valid for 10 minutes. Please do not share it with anyone.
-            If you did not request this, please ignore this email.
-            Thank you,
-            The Neo Health Team`
-        await sendEmail({
-            to: isExist.email,
-            subject: "Your Neo Health OTP Code!",
-            html: emailHtml
+        // const emailHtml = `
+        //     Hello ${isExist?.name}, 
+        //     Your One-Time Password (OTP) for Neo Health is: ${code} 
+        //     This OTP is valid for 10 minutes. Please do not share it with anyone.
+        //     If you did not request this, please ignore this email.
+        //     Thank you,
+        //     The Neo Health Team`
+        // await sendEmail({
+        //     to: isExist.email,
+        //     subject: "Your Neo Health OTP Code!",
+        //     html: emailHtml
+        // });
+        res.status(200).json({
+            success: true,
+            message: "OTP sent!"
         });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+const sendOtp = async (req, res) => {
+    const { contactNumber } = req.body;
+    try {
+        // const isExist = await Patient.findOne({contactNumber: phone });
+        // if (!isExist) {
+        //     return res.status(404).json({ success: false, message: 'Patient not found' });
+        // }
+        // const code = generateOTP()
+        const code = "1234"
+        const isOtpExist = await Otp.findOne({ phone: contactNumber })
+        if (isOtpExist) {
+            await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+            const otp = await Otp.create({ phone: contactNumber, code })
+        } else {
+            const otp = await Otp.create({ phone: contactNumber, code })
+        }
+        // const emailHtml = `
+        //     Hello ${isExist?.name}, 
+        //     Your One-Time Password (OTP) for Neo Health is: ${code} 
+        //     This OTP is valid for 10 minutes. Please do not share it with anyone.
+        //     If you did not request this, please ignore this email.
+        //     Thank you,
+        //     The Neo Health Team`
+        // await sendEmail({
+        //     to: isExist.email,
+        //     subject: "Your Neo Health OTP Code!",
+        //     html: emailHtml
+        // });
         res.status(200).json({
             success: true,
             message: "OTP sent!"
@@ -886,5 +923,6 @@ const getNameProfile = async (req, res) => {
 
 export {
     signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
-    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory,getPatientProfile
+    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory,getPatientProfile,
+    sendOtp
 }

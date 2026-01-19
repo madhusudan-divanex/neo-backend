@@ -9,7 +9,10 @@ import {
   getHospitalDoctorByIdNew,
   updateHospitalDoctor,
   getMyAllStaffList,
-  deleteDoctor
+  deleteDoctor,
+  saveDoctorProfessionalDetails,
+  doctorEmploymentDetails,
+  saveDoctorAccess
 } from "../../controller/Hospital/hospitalDoctor.controller.js";
 import getUploader from "../../config/multerConfig.js";
 
@@ -30,6 +33,19 @@ router.post(
   createHospitalDoctor
 );
 
+router.post(
+  "/professional-details",
+  uploader.array("medicalLicense"),
+  saveDoctorProfessionalDetails
+);
+router.post(
+  "/employment-details",auth,
+  doctorEmploymentDetails
+);
+router.post(
+  "/access-details",auth,
+  saveDoctorAccess
+);
 router.get("/list", auth, getHospitalDoctorList);
 router.get("/my-all-staff", auth, getMyAllStaffList);
 router.get("/get-by-id/:id", auth, getHospitalDoctorByIdNew);

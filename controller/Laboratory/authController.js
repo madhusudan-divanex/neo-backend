@@ -58,7 +58,6 @@ const signUpLab = async (req, res) => {
                 return res.status(200).json({ success: false, message: "Lab not updated" });
             }
         } else {
-
             const isExist = await Laboratory.findOne({ email })
             if (isExist) {
                 return res.status(200).json({ message: "Lab already exist", success: false })

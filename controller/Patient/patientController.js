@@ -571,7 +571,7 @@ async function getPatients(req, res) {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const users = await User.find({role:'patient',created_by:'self'})
+    const users = await User.find({role:'patient'})
       .select('-passwordHash')
       .lean();
 

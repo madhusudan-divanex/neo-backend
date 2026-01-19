@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import {  getLabAppointment, getLabAppointmentData, getPatientLabReport, labDashboardData } from "../controller/appointmentController.js";
-import { addLabPermission, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, getTestReport, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
+import { addLabPermission, addPatient, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, getTestReport, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
@@ -81,7 +81,7 @@ lab.post('/test-action',authMiddleware,labTestAction)
 lab.post('/delete-image',authMiddleware,deleteLabImage)
 
 lab.post('/send-report',authMiddleware,sendReport)
-
+lab.post('/add-patient',authMiddleware,addPatient)
 
 lab.get('/patient-lab-report/:labId/patientId',authMiddleware,getPatientLabReport)
 
