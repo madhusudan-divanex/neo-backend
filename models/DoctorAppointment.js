@@ -9,6 +9,10 @@ const requestSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', required: true
     },
+    hospitalId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     date: { type: Date, required: true },
     customId: { type: String,},
     fees: { type: String, required: true },

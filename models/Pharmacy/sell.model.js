@@ -11,7 +11,10 @@ const ReturnSchema = new mongoose.Schema({
         {
             inventoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory" },
             quantity: Number,
-            price:Number
+            amount:Number,
+            discountType:{ type: String, enum: ["Percentage", "Fixed"], default: "Fixed" },
+            discountValue:{ type: Number, default: 0 },
+            totalAmount:{ type: Number, default: 0 },
         }
     ],
     total:{ type: Number, default: 0 },

@@ -16,7 +16,7 @@ import Patient from "../../models/Patient/patient.model.js";
 import User from "../../models/Hospital/User.js";
 
 async function favoriteController(req, res) {
-  const { userId, labId, hospitalId, doctorId } = req.body;
+  const { userId, labId, hospitalId, doctorId, pharId } = req.body;
 
   if (!userId) {
     return res.status(400).json({ message: "userId is required", success: false });
@@ -26,6 +26,7 @@ async function favoriteController(req, res) {
     // Find existing favorite matching userId + any of labId, hospitalId, doctorId
     const isAlready = await Favorite.findOne({
       userId,
+      pharId: pharId || null,
       labId: labId || null,
       hospitalId: hospitalId || null,
       doctorId: doctorId || null,
@@ -36,7 +37,7 @@ async function favoriteController(req, res) {
       return res.status(200).json({ message: "Removed from favorite", success: true });
     }
 
-    await Favorite.create({ userId, labId, hospitalId, doctorId });
+    await Favorite.create({ userId, labId, hospitalId, doctorId, pharId });
     return res.status(200).json({ message: "Favorite saved", success: true });
 
   } catch (error) {
@@ -440,11 +441,132 @@ async function getPatientFavoriteData(req, res) {
         { $skip: (page - 1) * Number(limit) },
         { $limit: Number(limit) }
       ]);
+    } else if (type === "pharmacy") {
+      filter.pharId = { $ne: null };
+      myFavorite = await Favorite.aggregate([
+        {
+          $match: {
+            userId: new mongoose.Types.ObjectId(userId),
+            pharId: { $ne: null }
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "pharId",
+            foreignField: "_id",
+            as: "phar"
+          }
+        },
+        { $unwind: "$phar" },
+        {
+          $lookup: {
+            from: "pharmacies",
+            localField: "pharId",   // User._id
+            foreignField: "userId",
+            as: "pharProfile"
+          }
+        },
+        {
+          $unwind: {
+            path: "$pharProfile",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $lookup: {
+            from: "phar-addresses",
+            localField: "pharId",   // User._id
+            foreignField: "userId",
+            as: "pharAbout"
+          }
+        },
+        {
+          $unwind: {
+            path: "$pharAbout",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $lookup: {
+            from: "cities",
+            localField: "pharAbout.cityId",
+            foreignField: "_id",
+            as: "city"
+          }
+        },
+        {
+          $unwind: {
+            path: "$city",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $lookup: {
+            from: "states",
+            localField: "pharAbout.stateId",
+            foreignField: "_id",
+            as: "state"
+          }
+        },
+        {
+          $unwind: {
+            path: "$state",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+
+
+
+        // ⭐ Avg Rating
+        {
+          $lookup: {
+            from: "ratings",
+            let: { pharId: "$pharId" },
+            pipeline: [
+              { $match: { $expr: { $eq: ["$pharId", "$$pharId"] } } },
+              {
+                $group: {
+                  _id: "$pharId",
+                  avgRating: { $avg: "$star" }
+                }
+              }
+            ],
+            as: "ratingData"
+          }
+        },
+
+        {
+          $addFields: {
+            avgRating: {
+              $ifNull: [{ $arrayElemAt: ["$ratingData.avgRating", 0] }, 0]
+            },
+            pharAbout: {
+
+              city: "$city.name",
+              state: "$state.name",
+            }
+          }
+        },
+
+        {
+          $project: {
+            ratingData: 0,
+            "phar.passwordHash": 0
+          }
+        },
+
+        { $sort: { createdAt: -1 } },
+        { $skip: (page - 1) * Number(limit) },
+        { $limit: Number(limit) }
+      ]);
+
     }
-    const [labCount, hospitalCount, doctorCount] = await Promise.all([
+    const [labCount, hospitalCount, doctorCount,pharCount] = await Promise.all([
       Favorite.countDocuments({ userId, labId: { $ne: null } }),
       Favorite.countDocuments({ userId, hospitalId: { $ne: null } }),
-      Favorite.countDocuments({ userId, doctorId: { $ne: null } })
+      Favorite.countDocuments({ userId, doctorId: { $ne: null } }),
+      Favorite.countDocuments({ userId, pharId: { $ne: null } })
     ]);
 
 
@@ -455,7 +577,8 @@ async function getPatientFavoriteData(req, res) {
       counts: {
         lab: labCount,
         hospital: hospitalCount,
-        doctor: doctorCount
+        doctor: doctorCount,
+        pharmacy:pharCount
       },
       pagination: {
         currentPage: Number(page),
@@ -523,7 +646,7 @@ async function getPrescriptionLabDetail(req, res) {
   }
   try {
     const appointments = await DoctorAppointment.findById(appointmentId)
-    if (appointments?.labTest) {
+    if (appointments?.labTest?.lab) {
       const labData = await Laboratory.findOne({ userId: appointments.labTest.lab }).lean()
       const labAddress = await LabAddress.findOne({ userId: appointments.labTest.lab }).lean()
       const labTests = await Test.find({ _id: { $in: appointments.labTest.labTests } }).lean()
@@ -532,7 +655,7 @@ async function getPrescriptionLabDetail(req, res) {
       const labReport = labStatus ? await TestReport.find({ appointmentId: labStatus?._id }).populate('testId') : []
       return res.status(200).json({
         message: "lab data fetched", labStatus, success: true, labReport,
-        labData: { ...labData, labImg: labImage.thumbnail }, labAddress, labTests
+        labData: { ...labData, labImg: labImage?.thumbnail }, labAddress, labTests
       })
 
     }
@@ -571,7 +694,7 @@ async function getPatients(req, res) {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const users = await User.find({role:'patient'})
+    const users = await User.find({ role: 'patient' })
       .select('-passwordHash')
       .lean();
 
@@ -597,4 +720,4 @@ async function getPatients(req, res) {
     });
   }
 }
-export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction ,getPatients}
+export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients }

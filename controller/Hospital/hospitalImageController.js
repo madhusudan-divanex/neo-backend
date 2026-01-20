@@ -3,7 +3,6 @@ import { saveToGrid } from "../../services/gridfsService.js";
 
 export const uploadImages = async (req, res) => {
   try {
-    console.log("REQ.FILES:", req.files);
 
     const thumbnail = req.files?.thumbnail
       ? req.files.thumbnail[0]
@@ -19,7 +18,6 @@ export const uploadImages = async (req, res) => {
 
     // 1️⃣ Upload Thumbnail (if exists)
     if (thumbnail) {
-      console.log("UPLOAD THUMBNAIL:", thumbnail.originalname);
 
       const fileDoc = await saveToGrid(
         thumbnail.buffer,
@@ -39,7 +37,6 @@ export const uploadImages = async (req, res) => {
 
     // 2️⃣ Upload Gallery Images
     for (const f of gallery) {
-      console.log("UPLOAD GALLERY FILE:", f.originalname);
 
       const fileDoc = await saveToGrid(
         f.buffer,

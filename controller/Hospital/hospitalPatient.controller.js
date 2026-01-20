@@ -212,7 +212,6 @@ export const updatePatient = async (req, res) => {
   try {
     const hospitalId = req.user._id;
     const patient = await User.findByIdAndUpdate(patientId, { name, email }, { new: true })
-    console.log(patientId,patient,name,email)
     if (!patient) {
       return res.status(404).json({
         success: false,

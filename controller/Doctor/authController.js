@@ -62,7 +62,7 @@ const signInDoctor = async (req, res) => {
         if (!isExist) return res.status(200).json({ message: 'Doctor not Found', success: false });
         const hashedPassword = isExist.userId?.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
-        if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
+        if (!isMatch) return res.status(200).json({ message: 'Invalid phone or password', success: false });
         const code = generateOTP()
         const isOtpExist = await Otp.findOne({ phone: isExist.contactNumber })
         if (isOtpExist) {
@@ -75,10 +75,10 @@ const signInDoctor = async (req, res) => {
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Email Sent", userId: isExist.userId._id, isNew: false, success: true })
+            return res.status(200).json({ message: "Otp Sent", userId: isExist.userId._id, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Email Sent", isNew: true, userId: isExist.userId._id, success: true })
+            return res.status(200).json({ message: "Otp Sent", isNew: true, userId: isExist.userId._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -357,7 +357,6 @@ const updateDoctor = async (req, res) => {
         }
         const updateDoctor = await Doctor.findByIdAndUpdate(isExist.doctorId, { email, contactNumber, name, gender, dob }, { new: true })
         if (updateDoctor) {
-            console.log(userId, name, email)
             await User.findByIdAndUpdate(userId, { name, email }, { new: true })
             return res.status(200).json({ message: "Doctor data change successfully", userId: isExist._id, success: true })
         } else {
@@ -407,7 +406,7 @@ const getProfileDetail = async (req, res) => {
         const doctor = await Doctor.findById(user.doctorId)
         const kyc = await DoctorKyc.findOne({ userId }).sort({ createdAt: -1 })
         const medicalLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 })
-        const aboutDoctor = await DoctorAbout.findOne({ userId }).populate({ path: 'hospitalName', select: 'hospitalName' }).populate('countryId stateId cityId', 'name isoCode').sort({ createdAt: -1 })
+        const aboutDoctor = await DoctorAbout.findOne({ userId }).populate('countryId stateId cityId', 'name isoCode').sort({ createdAt: -1 })
         const eduWork = await DoctorEduWork.findOne({ userId }).sort({ createdAt: -1 })
         const rating = await Rating.find({ doctorId: userId }).populate('patientId').sort({ createdAt: -1 })
         const isRequest = await EditRequest.findOne({ doctorId: userId });
@@ -574,7 +573,7 @@ const getDoctorAbout = async (req, res) => {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
-        const data = await DoctorAbout.findOne({ userId }).populate({ path: 'hospitalName', select: 'hospitalName' }).populate('countryId').populate('stateId').populate('cityId');
+        const data = await DoctorAbout.findOne({ userId }).populate('countryId').populate('stateId').populate('cityId');
         if (data) {
             return res.status(200).json({
                 success: true,
@@ -729,7 +728,6 @@ const doctorLicense = async (req, res) => {
         }
 
         // If doc exists, update or add medicalLicense
-        console.log("medical license", medicalLicenseData)
         medicalLicenseData.forEach((newLice, index) => {
             if (!newLice) return; // skip if undefined
 
@@ -754,7 +752,6 @@ const doctorLicense = async (req, res) => {
                 userPrescriptionsDoc.medicalLicense.push(newLice);
             }
         });
-        console.log(medicalLicenseData)
 
         await userPrescriptionsDoc.save();
 
@@ -890,7 +887,7 @@ const getDoctors = async (req, res) => {
         const minRating = rating ? Number(rating) : 0;
         const maxFees = fees ? Number(fees) : null;
 
-        let filter = { role: 'doctor', created_by: 'self' }
+        let filter = { role: 'doctor',  }
         // 1️⃣ Fetch lab users
         // let userQuery = User.find({ role: 'doctor', created_by: 'self' })
         //     .select('-passwordHash')
@@ -901,7 +898,7 @@ const getDoctors = async (req, res) => {
         //     userQuery = userQuery.limit(limit).skip((page - 1) * limit);
         // }
         // const users = await userQuery.lean();
-        const users = await User.find({ role: 'doctor', created_by: 'self' }).select('-passwordHash')
+        const users = await User.find({ role: 'doctor',fcmToken:{$ne:null} }).select('-passwordHash')
             .populate('doctorId').sort({ createdAt: -1 })
             .limit(limit)
             .skip((page - 1) * limit)
@@ -920,7 +917,6 @@ const getDoctors = async (req, res) => {
             })
         })
             .populate('countryId stateId cityId', 'name')
-            .populate({ path: 'hospitalName', select: 'hospitalName' })
             .lean();
 
 
@@ -1003,7 +999,7 @@ const getDoctorData = async (req, res) => {
         }
         const doctorData = await Doctor.findById(user.doctorId).select("-password");
         const doctorAbout = await DoctorAbout.findOne({ userId }).populate('countryId').populate('stateId')
-            .populate('cityId').populate({ path: 'hospitalName', select: 'hospitalName' }).sort({ createdAt: -1 });
+            .populate('cityId').sort({ createdAt: -1 });
         const doctorLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 });
         const uniquePatientIds = await DoctorAppointment.distinct(
             "patientId",

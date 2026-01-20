@@ -773,7 +773,6 @@ const addPrescriptions = async (req, res) => {
                     prescription.fileUrl = files[i].path;
                 }
             });
-            console.log(prescriptionsData)
             const created = await PatientPrescriptions.create({
                 userId,
                 prescriptions: prescriptionsData,

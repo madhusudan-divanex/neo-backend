@@ -15,7 +15,7 @@ const addressSchema = new Schema({
     required: true
   },
   contact: contactSchema,
-  hospitalName: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic',},
+  hospitalName: { type: String},
   fullAddress: { type: String, required: true },
   countryId: { type: mongoose.Schema.Types.ObjectId, ref: "Country", required: true },
   stateId: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },

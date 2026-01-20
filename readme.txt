@@ -84,6 +84,13 @@ madhu13@gmail.com
 https://noepatient.divanex.in/
 4532656243
 1234
+
+Hospital->
+    CRUD Permission 
+    Doctor employment & access
+Laboratory->
+    Add Patient 
+    Add Appointment
     CRUD Return 
     CRUD Purchase Order
     Signup,Upload Image,contact person 
@@ -98,6 +105,10 @@ Admin->
     Advertisment (select provider) only on home page accerdian 
     Home page description (text editor)
 
+    Staff 
+    Lab 
+    Pharmacy 
+    Doctor 
     
 Api->
     Test Report

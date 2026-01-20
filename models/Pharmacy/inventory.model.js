@@ -11,11 +11,9 @@ const InventorySchema = new mongoose.Schema({
     sellCount: { type: Number, default: 0 },
     purchasePrice: Number,
     totalStockPrice: Number,
-    avgMargin: Number,
-    highMargin: Number,
-    lowMargin: Number,
+    salePrice: Number,
     customId: { type: String, required: true },
-    marginType: { type: String, enum: ['Percentage', 'Fixed'], default: 'Percentage' },
+    margin: { type: String },
     hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic', index: true },
     type: { type: String, enum: ['pharmacy', 'hospital'], default: 'pharmacy' },
     status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' }

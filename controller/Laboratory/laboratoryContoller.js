@@ -669,7 +669,6 @@ const deleteTest = async (req, res) => {
 };
 const saveReport = async (req, res) => {
     const report=req.file?.path
-    console.log(req?.files)
     try {
         const {
             labId,
@@ -679,7 +678,6 @@ const saveReport = async (req, res) => {
             manualComment,
             component,manualName
         } = req.body;
-        console.log(req.body)
         const isExist = await TestReport.findOne({ testId, appointmentId })
         if (isExist) {
             if(report){

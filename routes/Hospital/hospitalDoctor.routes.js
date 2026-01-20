@@ -12,7 +12,8 @@ import {
   deleteDoctor,
   saveDoctorProfessionalDetails,
   doctorEmploymentDetails,
-  saveDoctorAccess
+  saveDoctorAccess,
+  getHospitalDoctorEmployement
 } from "../../controller/Hospital/hospitalDoctor.controller.js";
 import getUploader from "../../config/multerConfig.js";
 
@@ -35,7 +36,7 @@ router.post(
 
 router.post(
   "/professional-details",
-  uploader.array("medicalLicense"),
+  uploader.array("medicalLicenseFiles"),
   saveDoctorProfessionalDetails
 );
 router.post(
@@ -49,7 +50,7 @@ router.post(
 router.get("/list", auth, getHospitalDoctorList);
 router.get("/my-all-staff", auth, getMyAllStaffList);
 router.get("/get-by-id/:id", auth, getHospitalDoctorByIdNew);
-
+router.get("/employment/:hospitalId/:doctorId",  getHospitalDoctorEmployement);
 router.get("/:id", auth, getHospitalDoctorById);
 
 router.put(

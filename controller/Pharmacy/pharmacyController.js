@@ -1751,7 +1751,7 @@ const pharDashboardData = async (req, res) => {
             },
         ])
         const totalH1Quantity = h1ComplianceData[0]?.totalQuantity || 0;
-        const marginAnalysis = await Inventory.find({ margintType: "Percentage", pharId }).sort({ avgMargin: -1 }).limit(5)
+        const marginAnalysis = await Inventory.find({  pharId }).sort({ margin: -1 }).limit(5)
         const inventory = await Inventory.find({ pharId }).sort({ sellCount: -1 }).limit(5)
         const suppliers = await Supplier.find({ pharId }).sort({ createdAt: -1 }).limit(5)
         const supplierData = await Promise.all(
@@ -1912,7 +1912,6 @@ const getSellMedicine = async (req, res) => {
 
         // 🔍 Search Filter (Patient / Doctor)
         if (search) {
-            console.log(search)
             filter.$or = [
                 { "patientId.name": { $regex: search, $options: "i" } },
                 { "doctorId.name": { $regex: search, $options: "i" } }
@@ -2055,13 +2054,11 @@ const deleteSellData = async (req, res) => {
 }
 const getPatientPrescriptionData = async (req, res) => {
     const userId = req.params.id
-    console.log(userId.length) //  8
     try {
         let user;
         if (userId?.length < 24) {
             user = await User.findOne({ unique_id: userId, role: 'patient' }).select('-passwordHash').lean();
         } else {
-            console.log("hehe")
             user = await User.findById(userId).select('-passwordHash').lean();
         }
         if (!user) {

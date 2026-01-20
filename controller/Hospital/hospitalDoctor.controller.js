@@ -10,6 +10,7 @@ import DoctorEduWork from "../../models/Doctor/eduWork.js";
 import EmpEmployement from "../../models/Hospital/DoctorEmployement.js";
 import DoctorAccess from "../../models/Hospital/DoctorAccess.js";
 import HospitalPermission from "../../models/Hospital/HospitalPermission.model.js";
+import DoctorAppointment from "../../models/DoctorAppointment.js";
 export const createHospitalDoctor = async (req, res) => {
   const image = req.file?.path;
   try {
@@ -20,10 +21,8 @@ export const createHospitalDoctor = async (req, res) => {
     let address = {};
 
     if (req.body.personal) {
-      console.log("json field")
       personal = JSON.parse(req.body.personal);
     } else {
-      console.log("else fireld")
       // or map fields manually from req.body
       personal = {
         name: req.body.name,
@@ -148,7 +147,7 @@ export const getMyAllStaffList = async (req, res) => {
 
 export const getHospitalDoctorList = async (req, res) => {
   try {
-    const hospitalId = req.user._id;
+    const hospitalId = req.user._id || req.query.hospital;
     const {
       page = 1,
       limit = 10,
@@ -185,12 +184,40 @@ export const getHospitalDoctorList = async (req, res) => {
     const userIds = staff.map(user => user._id);
 
     const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } });
+    const doctorPatientCounts = await DoctorAppointment.aggregate([
+      {
+        $match: {
+          doctorId: { $in: userIds }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            doctorId: "$doctorId",
+            patientId: "$patientId"
+          }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.doctorId",
+          uniquePatientCount: { $sum: 1 }
+        }
+      }
+    ]);
+
 
     const staffWithAbout = staff.map(user => {
       const about = doctorAbouts.find(da => da.userId.toString() === user._id.toString());
+      const patientCountObj = doctorPatientCounts.find(
+        dp => dp._id.toString() === user._id.toString()
+      );
       return {
         ...user.toObject(),
-        doctorAbout: about || null
+        doctorAbout: about || null,
+        uniquePatientCount: patientCountObj
+          ? patientCountObj.uniquePatientCount
+          : 0
       };
     });
     res.json({
@@ -220,6 +247,7 @@ export const getHospitalDoctorByIdNew = async (req, res) => {
     const doctor = await Doctor.findOne({
       userId: id,
     });
+    const user = await User.findById(id);
 
     if (!doctor) {
       return res.status(404).json({
@@ -230,12 +258,42 @@ export const getHospitalDoctorByIdNew = async (req, res) => {
 
     const aboutDoctor = await DoctorAbout.findOne({ userId: id }).populate('cityId stateId countryId')
     const aboutDoctorEduWork = await DoctorEduWork.findOne({ userId: id })
-    const employmentDetails = await EmpEmployement.findOne({ userId: id, hospitalId: hospitalId })
+    const employmentDetails = await EmpEmployement.findOne({ userId: id, hospitalId: hospitalId })?.populate('department')
     const accessInfo = await DoctorAccess.findOne({ userId: id }).populate('permissionId')
 
+    const licenses = await MedicalLicense.findOne({ userId: id }) || [];
+
     return res.json({
-      success: true,
-      data: { doctor, aboutDoctor }, aboutDoctorEduWork, employmentDetails,accessInfo
+      success: true, customId: user.unique_id,
+      data: { doctor, aboutDoctor }, aboutDoctorEduWork, employmentDetails, accessInfo, licenses
+    });
+
+  } catch (err) {
+    console.error("getHospitalDoctorById error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+export const getHospitalDoctorEmployement = async (req, res) => {
+  try {
+    const hospitalId = req.params.hospitalId;
+    const userId = req.params.doctorId;
+   
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found"
+      });
+    }
+    const employmentDetails = await EmpEmployement.findOne({ userId,  hospitalId })?.populate('department').populate('hospitalId','name')
+    
+    return res.json({
+      success: true, 
+     employmentDetails,
     });
 
   } catch (err) {
@@ -400,7 +458,6 @@ export const updateHospitalDoctor = async (req, res) => {
 export const deleteDoctor = async (req, res) => {
   try {
     const hospitalId = req.user._id;
-    console.log(req.user)
     const { id } = req.params;
 
     const doctor = await User.findOne({
@@ -433,7 +490,6 @@ export const deleteDoctor = async (req, res) => {
 export const saveDoctorProfessionalDetails = async (req, res) => {
   try {
     const { doctorId, education, work, medicalLicenseMeta, specialty, treatmentAreas, aboutYou } = req.body;
-console.log(medicalLicenseMeta)
     if (!doctorId) {
       return res.status(400).json({
         success: false,
@@ -486,7 +542,6 @@ console.log(medicalLicenseMeta)
         certFile: req.files[index]?.path,
       }));
     }
-    console.log("license",licenseData)
     if (licenseData.length) {
       await MedicalLicense.findOneAndUpdate(
         { userId: doctorId },

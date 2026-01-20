@@ -40,7 +40,7 @@ export const GetDoctor = async (req, res) => {
   try {
     const { unique_id } = req.params;
 
-    const user = await User.findOne({ unique_id });
+    const user = await User.findOne({ unique_id,role:'doctor' });
 
     if (!user) {
       return res.status(404).json({

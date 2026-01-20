@@ -116,7 +116,6 @@ const signInLab = async (req, res) => {
                 process.env.JWT_SECRET,
                 // { expiresIn: isRemember ? "30d" : "1d" }
             );
-            console.log(labPerson)
             return res.status(200).json({ message: "Login success", user: labPerson, staffId: labPerson.empId, userId: empData.labId, isOwner: false, token, success: true })
         }
         const isExist = await User.findOne({ email });
@@ -767,7 +766,6 @@ const deleteLabImage = async (req, res) => {
 
 const sendReport = async (req, res) => {
     const { type, appointmentId, email } = req.body;
-    console.log(req.body)
     try {
         const appointment = await LabAppointment.findById(appointmentId)
         if (!appointment) return res.status(200).json({ message: "Appointment not found", success: false })
@@ -825,7 +823,7 @@ const getLabs = async (req, res) => {
 
     try {
         // 1️⃣ Fetch lab users
-        const users = await User.find({ role: 'lab' })
+        const users = await User.find({ role: {$in:['lab']} })
             .select('-passwordHash')
             .populate('labId')
             .limit(limit)

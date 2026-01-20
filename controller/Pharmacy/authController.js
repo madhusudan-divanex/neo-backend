@@ -669,7 +669,6 @@ const pharImage = async (req, res) => {
 
     const thumbnailFile = req.files?.['thumbnail']?.[0]?.path;
     const pharImgFiles = req.files?.['pharImg'] || [];
-    console.log(pharImgFiles, thumbnailFile)
     try {
         const phar = await User.findById(userId);
         if (!phar) return res.status(200).json({ success: false, message: "Pharmacy not found" });
@@ -769,9 +768,88 @@ const deletePharImage = async (req, res) => {
         });
     }
 };
+const getPharmacy = async (req, res) => {
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+
+    try {
+        // 1️⃣ Fetch pharmacy users
+        const users = await User.find({ role: {$in:['pharmacy']} })
+            .select('-passwordHash')
+            .populate('pharId')
+            .limit(limit)
+            .skip((page - 1) * limit)
+            .lean();
+
+        const pharIds = users.map(u => u._id);
+
+        // 2️⃣ Fetch addresses
+        const pharAddresses = await PharAddress.find({
+            userId: { $in: pharIds }
+        })
+            .populate('countryId stateId cityId', 'name')
+            .lean();
+
+        const addressMap = {};
+        pharAddresses.forEach(addr => {
+            addressMap[addr.userId.toString()] = addr;
+        });
+
+        // 3️⃣ Fetch rating stats (AVG + COUNT)
+        const ratingStats = await Rating.aggregate([
+            {
+                $match: {
+                    pharId: { $in: pharIds }
+                }
+            },
+            {
+                $group: {
+                    _id: "$labId",
+                    avgRating: { $avg: "$star" },
+                    totalReviews: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const ratingMap = {};
+        ratingStats.forEach(r => {
+            ratingMap[r._id.toString()] = {
+                avgRating: Number(r.avgRating.toFixed(1)),
+                totalReviews: r.totalReviews
+            };
+        });
+
+        // 4️⃣ Merge everything
+        const finalData = users.map(user => ({
+            ...user,
+            pharAddress: addressMap[user._id.toString()] || null,
+            avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
+            totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+        }));
+
+        const total = await User.countDocuments({ role: 'pharmacy' });
+
+        return res.status(200).json({
+            success: true,
+            data: finalData,
+            pagination: {
+                total,
+                totalPage: Math.ceil(total / limit),
+                currentPage: page
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
 
 export {
     signInPhar, updateImage, pharLicense, deleteLicense, getProfileDetail, signUpPhar, resetPassword, editRequest,
     pharPerson, pharAddress, forgotEmail, verifyOtp, resendOtp, getProfile, updatePhar, changePassword, deletePhar,
-    pharImage, deletePharImage
+    pharImage, deletePharImage,getPharmacy
 }

@@ -16,8 +16,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.get("",  profile.getHospitals);
 router.get("/list",  profile.getHospitalList);
+router.get("/dashboard", auth, profile.hospitalDashboard);
 router.get("/profile-data/:id",  profile.getHospitalProfile);
-router.get("/doctor/:id",  profile.getHospitalDoctors);
+router.get("/doctor/:id",  profile.getHospitalDoctorList);
 // ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
 router.put("/update-hospital-profile", auth, profile.updateProfile);
