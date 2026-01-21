@@ -1,4 +1,4 @@
-import {  changePassword, deletePhar,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInPhar, signUpPhar, updatePhar, verifyOtp, pharLicense,  pharAddress,  updateImage, editRequest, pharImage, pharPerson, resetPassword, deletePharImage, getPharmacy,   } from "../controller/Pharmacy/authController.js"
+import {  changePassword, deletePhar,  forgotEmail, getProfile, getProfileDetail, resendOtp, signInPhar, signUpPhar, updatePhar, verifyOtp, pharLicense,  pharAddress,  updateImage, editRequest, pharImage, pharPerson, resetPassword, deletePharImage, getPharmacy, getPharData,   } from "../controller/Pharmacy/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
@@ -12,6 +12,7 @@ pharmacy.post('',uploader.fields([{ name: 'logo' }]),signUpPhar)
 pharmacy.get('',getPharmacy)
 pharmacy.get('/:id',authMiddleware,getProfile)
 pharmacy.get('/detail/:id',authMiddleware,getProfileDetail)
+pharmacy.get('/data/:id',getPharData)
 pharmacy.post('/signin',signInPhar)
 pharmacy.post('/forgot-email',forgotEmail)
 pharmacy.post('/resend-otp',resendOtp)

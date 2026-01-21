@@ -21,9 +21,11 @@ const requestSchema = new Schema({
         {
             cmpId: String,
             result: String,
+            textResult:String,
             status: String,
         },
     ],
+    remark:String,
     upload:
     {
         name: String,

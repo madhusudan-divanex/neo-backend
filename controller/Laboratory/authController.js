@@ -25,6 +25,7 @@ import EmpAccess from '../../models/Laboratory/empAccess.model.js';
 import User from '../../models/Hospital/User.js';
 import { error } from 'console';
 import path from 'path'
+import Notification from '../../models/Notifications.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
@@ -386,6 +387,8 @@ const getProfileDetail = async (req, res) => {
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ labId: user?._id }))
         const allowEdit = Boolean(await EditRequest.exists({ labId: user?._id, status: "approved" }))
+        const notifications = await Notification.countDocuments({ userId }) || 0;
+             
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?.labId })
@@ -433,7 +436,7 @@ const getProfileDetail = async (req, res) => {
             rating, allowEdit,
             avgRating,
             ratingCounts,
-            isRequest
+            isRequest,notifications
         });
 
     } catch (err) {
@@ -820,10 +823,15 @@ const sendReport = async (req, res) => {
 const getLabs = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
+    const name = req.query.name
 
     try {
+        const filter={ role: {$in:['lab']} }
+        if(name){
+            filter.name={$regex: name, $options: "i" };
+        }
         // 1️⃣ Fetch lab users
-        const users = await User.find({ role: {$in:['lab']} })
+        const users = await User.find(filter)
             .select('-passwordHash')
             .populate('labId')
             .limit(limit)
@@ -876,7 +884,7 @@ const getLabs = async (req, res) => {
             totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
         }));
 
-        const total = await User.countDocuments({ role: 'lab' });
+        const total = await User.countDocuments(filter);
 
         return res.status(200).json({
             success: true,

@@ -24,11 +24,30 @@ const requestSchema = new Schema({
         required: true
     },
     medications: [medicanSchema],
+    reVisit:{type:Number},
     notes: { type: String, required: true },
     diagnosis: { type: String, required: true },
     status: { type: String },
-    customId: { type: String, required: true },
+    customId: { type: String },
+    notif:{type:Boolean,default:false}
 
 }, { timestamps: true })
+requestSchema.pre("save", async function (next) {
+  if (this.customId) return next();
+
+  try {
+    while (true) {
+      const id = Math.floor(100000 + Math.random() * 900000).toString();
+      const exists = await this.constructor.findOne({ customId: id });
+      if (!exists) {
+        this.customId = id;
+        break;
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 const Prescriptions = mongoose.model('Prescriptions', requestSchema);
 export default Prescriptions

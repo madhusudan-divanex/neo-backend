@@ -675,9 +675,10 @@ const saveReport = async (req, res) => {
             patientId,
             testId,
             appointmentId,
-            manualComment,
-            component,manualName
+            manualComment,remark,
+            manualName
         } = req.body;
+        const component=JSON.parse(req.body.component)
         const isExist = await TestReport.findOne({ testId, appointmentId })
         if (isExist) {
             if(report){
@@ -688,7 +689,7 @@ const saveReport = async (req, res) => {
                 patientId,
                 testId,
                 appointmentId,
-                component,
+                component,remark
                 // upload:{report,name:manual.name,comment:manual.comment}
             }, { new: true })
             return res.status(201).json({
@@ -702,7 +703,7 @@ const saveReport = async (req, res) => {
                 labId,
                 patientId,
                 testId,
-                appointmentId,
+                appointmentId,remark,
                 upload:{report,name:manualName,comment:manualComment},
                 component
             });

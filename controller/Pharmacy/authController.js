@@ -18,6 +18,7 @@ import safeUnlink from '../../utils/globalFunction.js';
 import EmpAccess from '../../models/Pharmacy/empAccess.model.js';
 import PharStaff from '../../models/Pharmacy/PharEmpPerson.model.js';
 import User from '../../models/Hospital/User.js';
+import Notification from '../../models/Notifications.js';
 
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
@@ -146,15 +147,15 @@ const signInPhar = async (req, res) => {
             nextStep = "/create-account-person";
         } else if (!license) {
             nextStep = "/create-account-upload";
-        } 
+        }
         const userData = await Pharmacy.findById(isExist?.pharId)
         const isLogin = await Login.findOne({ userId: isExist._id })
         if (isLogin) {
             await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Login success",nextStep, user: userData, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
+            return res.status(200).json({ message: "Login success", nextStep, user: userData, isOwner: true, userId: isExist._id, token, isNew: false, success: true })
         } else {
             await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Login success",nextStep, user: userData, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
+            return res.status(200).json({ message: "Login success", nextStep, user: userData, isNew: true, isOwner: true, token, userId: isExist._id, success: true })
         }
     } catch (err) {
         console.error(err);
@@ -386,8 +387,8 @@ const getProfileDetail = async (req, res) => {
         const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
         const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
         const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
-        const allowEdit = Boolean(await EditRequest.exists({ pharId: userId,status:"approved" }))
-
+        const allowEdit = Boolean(await EditRequest.exists({ pharId: userId, status: "approved" }))
+        const notifications = await Notification.countDocuments({ userId }) || 0;
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ pharId: userId })
             .populate("patientId")
@@ -429,12 +430,12 @@ const getProfileDetail = async (req, res) => {
             user: data,
             pharPerson,
             pharAddress,
-            pharImg,customId:user.unique_id,
+            pharImg, customId: user.unique_id,
             pharLicense,
             rating,
             avgRating,
-            ratingCounts,allowEdit,
-            isRequest
+            ratingCounts, allowEdit,
+            isRequest,notifications
         });
 
     } catch (err) {
@@ -444,7 +445,84 @@ const getProfileDetail = async (req, res) => {
         });
     }
 };
+const getPharData = async (req, res) => {
+    const userId = req.params.id;
 
+    try {
+        // 1️⃣ Find user
+        const user = await User.findById(userId).select("-password");
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Pharmacy not found"
+            });
+        }
+        const data = await Pharmacy.findById(user.pharId)
+
+        // 2️⃣ Fetch latest related documents
+        // const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
+        const pharAddress = await PharAddress.findOne({ userId }).populate('stateId')
+            .populate('countryId')
+            .populate('cityId').sort({ createdAt: -1 });
+        const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
+        const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
+        // const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
+        // const allowEdit = Boolean(await EditRequest.exists({ pharId: userId,status:"approved" }))
+
+        // 3️⃣ Fetch ratings
+        const rating = await Rating.find({ pharId: userId })
+            .populate("patientId")
+            .sort({ createdAt: -1 });
+
+        // 4️⃣ Calculate average rating
+        const avgStats = await Rating.aggregate([
+            { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: null,
+                    avgRating: { $avg: "$star" },
+                    total: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
+
+        // 5️⃣ Count star ratings
+        const ratingStats = await Rating.aggregate([
+            { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: "$star",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        ratingStats.forEach(r => {
+            ratingCounts[r._id] = r.count;
+        });
+
+        // 6️⃣ Return final response
+        return res.status(200).json({
+            success: true,
+            user: data,
+            pharAddress,
+            pharImg, customId: user.unique_id,
+            pharLicense,
+            rating,
+            avgRating,
+            ratingCounts,
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
 const deletePhar = async (req, res) => {
     const userId = req.user.user
     try {
@@ -771,10 +849,15 @@ const deletePharImage = async (req, res) => {
 const getPharmacy = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
+    const name = req.query.name
 
     try {
+        const filter = { role: { $in: ['pharmacy'] } }
+        if (name) {
+            filter.name ={$regex: name, $options: "i" };
+        }
         // 1️⃣ Fetch pharmacy users
-        const users = await User.find({ role: {$in:['pharmacy']} })
+        const users = await User.find(filter)
             .select('-passwordHash')
             .populate('pharId')
             .limit(limit)
@@ -827,7 +910,7 @@ const getPharmacy = async (req, res) => {
             totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
         }));
 
-        const total = await User.countDocuments({ role: 'pharmacy' });
+        const total = await User.countDocuments(filter);
 
         return res.status(200).json({
             success: true,
@@ -851,5 +934,5 @@ const getPharmacy = async (req, res) => {
 export {
     signInPhar, updateImage, pharLicense, deleteLicense, getProfileDetail, signUpPhar, resetPassword, editRequest,
     pharPerson, pharAddress, forgotEmail, verifyOtp, resendOtp, getProfile, updatePhar, changePassword, deletePhar,
-    pharImage, deletePharImage,getPharmacy
+    pharImage, deletePharImage, getPharmacy, getPharData
 }

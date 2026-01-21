@@ -6,6 +6,8 @@ import Patient from "../../models/Patient/patient.model.js"
 import PatientDemographic from "../../models/Patient/demographic.model.js"
 import LabAppointment from "../../models/LabAppointment.js"
 import TestReport from "../../models/testReport.js"
+import Prescriptions from "../../models/Prescriptions.js"
+import Notification from "../../models/Notifications.js"
 
 const doctorDashboard = async (req, res) => {
   const id = req.params.id
@@ -65,7 +67,7 @@ const getPatientHistory = async (req, res) => {
     }
 
     // Get unique patient IDs
-    const patientIds = await DoctorAppointment.distinct('patientId', { doctorId });
+    const patientIds = await DoctorAppointment.distinct('patientId', { doctorId ,status:'completed'});
 
     // Pagination on patient IDs
     const paginatedIds = patientIds.slice(skip, skip + limit);
@@ -75,8 +77,8 @@ const getPatientHistory = async (req, res) => {
       paginatedIds.map(async (id) => {
         const patient = await Patient.findOne({ userId: id }).populate({ path: 'userId', select: 'unique_id' }).lean()
         const patientDemographic = await PatientDemographic.findOne({ userId: id }).select('dob').lean()
-        const lastApt = await DoctorAppointment.findOne({ patientId: id }).sort({createdAt:-1}).lean()
-        return { ...patient, patientDemographic,lastApt };
+        const lastApt = await DoctorAppointment.findOne({ patientId: id,doctorId }).sort({ createdAt: -1 }).lean()
+        return { ...patient, patientDemographic, lastApt };
       })
     );
 
@@ -143,12 +145,12 @@ async function getDoctorPatientReport(req, res) {
       "labTest.lab": { $exists: true, $ne: null },
       "labTest.labTests.0": { $exists: true }
     })
-    const aptIds=appointments.map(item=>item._id)
-    const labAppointments=await LabAppointment.find({doctorAp:{$in:aptIds},status:'deliver-report'})
-    const labAptIds=labAppointments.map(item=>item?._id)
-    const labReports=await TestReport.find({appointmentId:{$in:labAptIds}}).populate('labId').populate('testId')
-    .populate('appointmentId')
-    return res.status(200).json({message:"labReports",data:labReports,success:true})
+    const aptIds = appointments.map(item => item._id)
+    const labAppointments = await LabAppointment.find({ doctorAp: { $in: aptIds }, status: 'deliver-report' })
+    const labAptIds = labAppointments.map(item => item?._id)
+    const labReports = await TestReport.find({ appointmentId: { $in: labAptIds } }).populate('labId').populate('testId')
+      .populate('appointmentId')
+    return res.status(200).json({ message: "labReports", data: labReports, success: true })
 
   } catch (error) {
     console.error(error);
@@ -168,12 +170,12 @@ async function getPatientPending(req, res) {
     const query = {
       status: 'pending',
     };
-    if(name && name!=="undefined"){
-      query.name= { $regex: name, $options: 'i' }
+    if (name && name !== "undefined") {
+      query.name = { $regex: name, $options: 'i' }
     }
 
     const users = await Patient.find(query)
-      .populate('userId','-passwordHash')
+      .populate('userId', '-passwordHash')
       .skip(skip)
       .limit(limit)
       .lean();
@@ -200,6 +202,38 @@ async function getPatientPending(req, res) {
     });
   }
 }
+async function sendReminder(req, res) {
+  const { patientId, appointmentId, doctorId } = req.body;
+  try {
+    const isPrescription = await Prescriptions.findOne({ patientId, appointmentId, doctorId }).populate('patientId doctorId', 'name')
+    if (!isPrescription) {
+      return res.status(200).json({ message: "Not found", success: false })
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const revisitDate = new Date(isPrescription.createdAt);
+    revisitDate.setDate(revisitDate.getDate() + isPrescription.reVisit);
+    revisitDate.setHours(0, 0, 0, 0);
+    
+    // // agar aaj ka din hai
+    // console.log(revisitDate,isPrescription.reVisit)
+    // if (revisitDate >= today && revisitDate < tomorrow) {
+      await Notification.create({
+        userId: patientId,
+        title: "Doctor Revisit Reminder",
+        message: `This is a reminder that you have a scheduled revisit today with Dr. ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.`,
+        type: "REVISIT"
+      });
+      return res.status(200).json({ messsage: "Notfication send", success: true })
+    // }
+    // return res.status(200).json({message:"Reminder not required today",success:false})
 
+  } catch (error) {
 
-export { doctorDashboard, getPatientHistory, getOccupiedSlots ,getDoctorPatientReport,getPatientPending}
+  }
+}
+
+export { doctorDashboard, getPatientHistory, getOccupiedSlots, getDoctorPatientReport, getPatientPending, sendReminder }

@@ -1,10 +1,12 @@
+
 import mongoose, { Schema} from "mongoose";
 
 const componentSchema=new Schema({
     name:{type:String,required:true},
     unit:{type:String,required:true},
     optionType:{type:String,required:true,default:'text'},
-    result:[{type:String,required:true}],
+    textResult:{type:String},
+    result:[{ value: String, note: String }],
     referenceRange:{type:String,required:true},
     status:{type:Boolean,default:false}    ,
     title:{type:String},

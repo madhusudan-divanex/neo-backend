@@ -220,10 +220,15 @@ export const approveEditRequest = async (req, res) => {
 export const getHospitals = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
+  const name = req.query.name
 
   try {
     // 1️⃣ Fetch hospital users
-    const users = await HospitalBasic.find()
+    const filter={}
+    if(name){
+      filter.hospitalName={$regex: name, $options: "i" };
+    }
+    const users = await HospitalBasic.find(filter)
       .limit(limit)
       .skip((page - 1) * limit)
       .lean();
@@ -266,7 +271,7 @@ export const getHospitals = async (req, res) => {
     }));
 
 
-    const total = await HospitalBasic.countDocuments();
+    const total = await HospitalBasic.countDocuments(filter);
 
     return res.status(200).json({
       success: true,

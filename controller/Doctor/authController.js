@@ -876,6 +876,7 @@ const getCustomProfile = async (req, res) => {
 const getDoctors = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
+    const name = req.query.name;
     const specialty = req.query.specialty // Doctor About
     const language = req.query.language // Doctor About
     const fees = req.query.fees //  Doctor About
@@ -887,7 +888,10 @@ const getDoctors = async (req, res) => {
         const minRating = rating ? Number(rating) : 0;
         const maxFees = fees ? Number(fees) : null;
 
-        let filter = { role: 'doctor',  }
+        let filter =  { role: 'doctor',fcmToken:{$ne:null} }
+        if(name){
+            filter.name={$regex: name, $options: "i" };
+        }
         // 1️⃣ Fetch lab users
         // let userQuery = User.find({ role: 'doctor', created_by: 'self' })
         //     .select('-passwordHash')
@@ -898,7 +902,7 @@ const getDoctors = async (req, res) => {
         //     userQuery = userQuery.limit(limit).skip((page - 1) * limit);
         // }
         // const users = await userQuery.lean();
-        const users = await User.find({ role: 'doctor',fcmToken:{$ne:null} }).select('-passwordHash')
+        const users = await User.find(filter).select('-passwordHash')
             .populate('doctorId').sort({ createdAt: -1 })
             .limit(limit)
             .skip((page - 1) * limit)

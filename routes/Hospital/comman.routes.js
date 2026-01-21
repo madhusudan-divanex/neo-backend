@@ -5,7 +5,10 @@ import {
   GetDoctor,
   addExistingDoctorToHospital,
   searchUsers,
-  saveFcmToken
+  saveFcmToken,
+  getNotification,
+  deleteNotification,
+  deleteOneNotification
 } from "../../controller/Hospital/commanController.js";
 
 const router = express.Router();
@@ -14,5 +17,7 @@ router.get("/check-doctor-id/:unique_id", GetDoctor);
 router.post("/add-existing-doctor", auth, addExistingDoctorToHospital);
 router.get("/search", auth, searchUsers);
 router.post("/save-fcm-token", auth, saveFcmToken);
-
+router.get("/notification", auth, getNotification);
+router.delete("/delete-all-notification", auth, deleteNotification);
+router.delete("/delete-notification/:id", auth, deleteOneNotification);
 export default router;

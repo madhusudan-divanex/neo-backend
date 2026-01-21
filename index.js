@@ -32,6 +32,7 @@ import { Server } from 'socket.io'
 import Message from './models/Hospital/Message.js'
 import User from './models/Hospital/User.js'
 import CallLog from './models/Hospital/CallLog.js'
+import './utils/cronFunction.js'
 
 import Conversation from './models/Hospital/Conversation.js'
 import jwt from 'jsonwebtoken';

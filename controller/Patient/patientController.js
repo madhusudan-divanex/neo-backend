@@ -613,7 +613,6 @@ async function getPatientPrescriptions(req, res) {
       prescriptions.map(async (item) => {
         const doctorId = item.doctorId?._id;
         const doctor = await Doctor.findOne({ userId: doctorId })
-        console.log(doctorId, item)
         const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).populate({ path: 'hospitalName', select: 'name' });
         return {
           prescription: item,
