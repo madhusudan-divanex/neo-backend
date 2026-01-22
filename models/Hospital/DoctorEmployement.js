@@ -10,6 +10,7 @@ const licSchema = new Schema({
     note:{type:String,required:true},
     fees:{type:String},
     reportingTo:{type:String},
+    status:{type:String,enum:['Active','Inactive','On Leave'],default:'Active'},
     employmentType:{type:String},
     department:{ type: mongoose.Schema.Types.ObjectId,
           ref: "HospitalDepartment",

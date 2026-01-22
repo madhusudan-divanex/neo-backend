@@ -14,6 +14,8 @@ import TestReport from "../../models/testReport.js";
 import ProfileStatus from "../../models/ProfileStatus.js";
 import Patient from "../../models/Patient/patient.model.js";
 import User from "../../models/Hospital/User.js";
+import City from "../../models/Hospital/City.js";
+
 
 async function favoriteController(req, res) {
   const { userId, labId, hospitalId, doctorId, pharId } = req.body;
@@ -719,4 +721,87 @@ async function getPatients(req, res) {
     });
   }
 }
-export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients }
+const getNearByDoctor = async (req, res) => {
+  const { lat, long, page = 1, limit = 10, distance = 10 } = req.query;
+
+  if (!lat || !long) {
+    return res.status(400).json({ message: "lat and long required" });
+  }
+
+  try {
+    const cities = await City.find({
+      latitude: { $ne: null },
+      longitude: { $ne: null }
+    });
+
+    // nearby cities filter
+    const nearbyCityIds = cities
+      .filter(city => {
+        const dist = getDistanceInKm(
+          Number(lat),
+          Number(long),
+          Number(city.latitude),
+          Number(city.longitude)
+        );
+        return dist <= Number(distance);
+      })
+      .map(city => city._id);
+
+    if (!nearbyCityIds.length) {
+      return res.status(200).json({
+        success: true,
+        message: "No nearby doctors found",
+        data: []
+      });
+    }
+
+    const doctors = await DoctorAbout.find({
+      cityId: { $in: nearbyCityIds }
+    })
+      .populate({
+        path: 'userId',
+        select: '-password',
+        populate: 'doctorId'
+      })
+      .populate('cityId')
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const totalData = await DoctorAbout.countDocuments({
+      cityId: { $in: nearbyCityIds }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Nearby doctors fetched successfully",
+      data: doctors,
+      pagination: {
+        totalData,
+        currentPage: Number(page),
+        totalPage: Math.ceil(totalData / limit)
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth radius in KM
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients ,getNearByDoctor}

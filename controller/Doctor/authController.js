@@ -17,24 +17,41 @@ import mongoose from 'mongoose';
 import DoctorAppointment from '../../models/DoctorAppointment.js';
 import User from '../../models/Hospital/User.js';
 import safeUnlink from '../../utils/globalFunction.js';
-
+import DoctorStaff from '../../models/Doctor/DoctorEmpPerson.model.js';
+import EmpAccess from '../../models/Doctor/empAccess.model.js';
 const signUpDoctor = async (req, res) => {
-    const { name, gender, email, contactNumber, password, dob, createdAt_by } = req.body;
     try {
-        const isExist = await Doctor.findOne({ email })
-        if (isExist) {
-            return res.status(200).json({ message: "Doctor already exist", success: false })
+        const { name, gender, email, contactNumber, password, dob } = req.body;
+
+        // Validation
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Required fields missing"
+            });
         }
-        const isUser = await User.findOne({ email })
-        if (isUser) {
-            return res.status(200).json({ message: "User already exist", success: false })
+
+        // Check doctor
+        const isDoctorExist = await Doctor.findOne({ email });
+        if (isDoctorExist) {
+            return res.status(409).json({
+                success: false,
+                message: "Doctor already exists"
+            });
         }
-        const isLast = await User.findOne()?.sort({ createdAt: -1 })
-        const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
+
+        // Check user
+        const isUserExist = await User.findOne({ email });
+        if (isUserExist) {
+            return res.status(409).json({
+                success: false,
+                message: "User already exists"
+            });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        // Create user
+
+        // Create doctor
         const newDoctor = await Doctor.create({
             name,
             gender,
@@ -43,48 +60,83 @@ const signUpDoctor = async (req, res) => {
             password: hashedPassword,
             dob,
         });
-        if (newDoctor) {
-            const userData = await User.create({ name, email, created_by: 'self', role: 'doctor', passwordHash: hashedPassword, doctorId: newDoctor?._id })
-            return res.status(200).json({ success: true, newDoctor, userId: newDoctor._id });
-        } else {
-            return res.status(200).json({ success: false, message: "Doctor not created" });
-        }
+
+        // Create user
+        const userData = await User.create({
+            name,
+            email,
+            role: "doctor",
+            created_by: "self",
+            passwordHash: hashedPassword,
+            doctorId: newDoctor._id,
+        });
+
+        // Link doctor → user
+        newDoctor.userId = userData._id;
+        await newDoctor.save();
+
+        return res.status(201).json({
+            success: true,
+            message: "Doctor registered successfully",
+            doctorId: newDoctor._id,
+            userId: userData._id
+        });
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: 'Server Error' });
+        return res.status(500).json({
+            success: false,
+            message: "Server Error"
+        });
     }
-}
+};
+
 const signInDoctor = async (req, res) => {
     const { contactNumber, password } = req.body;
     try {
-        const isExist = await Doctor.findOne({ contactNumber }).populate('userId');
-        if (!isExist) return res.status(200).json({ message: 'Doctor not Found', success: false });
-        const hashedPassword = isExist.userId?.passwordHash
+
+
+        const isExist = await Doctor.findOne({ contactNumber }).populate('userId')
+        const isEmployee = await DoctorStaff.findOne({
+            "contactInformation.contactNumber": contactNumber
+        });;
+        if (!isExist && !isEmployee) return res.status(200).json({ message: 'Doctor not Found', success: false });
+        const access = isEmployee && await EmpAccess
+            .findOne({ empId: isEmployee._id })
+            .populate("permissionId");
+        const hashedPassword = isExist ? isExist.userId?.passwordHash : access.password;
+        const phone = isExist ? isExist.contactNumber : isEmployee.contactInformation.contactNumber
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid phone or password', success: false });
         const code = generateOTP()
-        const isOtpExist = await Otp.findOne({ phone: isExist.contactNumber })
+        const isOtpExist = await Otp.findOne({ phone })
         if (isOtpExist) {
             await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ phone: isExist.contactNumber, code })
+            const otp = await Otp.create({ phone, code })
         } else {
-            const otp = await Otp.create({ phone: isExist.contactNumber, code })
+            const otp = await Otp.create({ phone, code })
+        }
+        if (isExist) {
+            const isLogin = await Login.findOne({ userId: isExist._id })
+            if (isLogin) {
+                await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
+                return res.status(200).json({ message: "Otp Sent", userId: isExist.userId._id, isNew: false, success: true })
+            } else {
+                await Login.create({ userId: isExist._id })
+                return res.status(200).json({ message: "Otp Sent", isNew: true, userId: isExist.userId._id, success: true })
+            }
+        } else {
+
+            return res.status(200).json({ message: "Otp Sent", userId: isEmployee._id, isNew: false, success: true })
         }
 
-        const isLogin = await Login.findOne({ userId: isExist._id })
-        if (isLogin) {
-            await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Otp Sent", userId: isExist.userId._id, isNew: false, success: true })
-        } else {
-            await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Otp Sent", isNew: true, userId: isExist.userId._id, success: true })
-        }
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ message: 'Server Error' });
     }
 }
+
 const verifyOtp = async (req, res) => {
     const { phone, code, name, gender, email, contactNumber, password, dob } = req.body
     try {
@@ -106,10 +158,15 @@ const verifyOtp = async (req, res) => {
         if (name && gender && email && contactNumber && password) {
             const isValid = code == "1234"
             if (isValid) {
-                const isExist = await Doctor.findOne({ email })
-                if (isExist) {
-                    return res.status(200).json({ message: "Patient already exist", success: false })
+                const [userExists, doctorExists] = await Promise.all([
+                    User.findOne({ email }),
+                    Doctor.findOne({ $or: [{ email }, { contactNumber }] })
+                ]);
+
+                if (userExists || doctorExists) {
+                    return res.status(409).json({ success: false, message: "Doctor already exists" });
                 }
+
                 const hashedPassword = await bcrypt.hash(password, 10);
                 const newDoctor = await Doctor.create({
                     name,
@@ -145,8 +202,36 @@ const verifyOtp = async (req, res) => {
                 return res.status(200).json({ message: "Invalid otp", success: false })
             }
         } else {
-            const doctor = await Doctor.findOne({ contactNumber: phone })
-            const user = await User.findById(doctor.userId)
+            const employee = await DoctorStaff.findOne({
+                "contactInformation.contactNumber": phone
+            });
+            if (employee) {
+                const access = await EmpAccess
+                    .findOne({ empId: employee._id })
+                    .populate("permissionId");
+
+                if (!access) {
+                    return res.status(401).json({ success: false, message: "Invalid credentials" });
+                }
+
+                const user=await User.findById(employee.doctorId)
+                const token = jwt.sign(
+                    { user: user._id },
+                    process.env.JWT_SECRET,
+                    // { expiresIn: isRemember ? "30d" : "1d" }
+                );
+
+                return res.status(200).json({
+                    success: true,
+                    isOwner: false,
+                    permissions: access.permissionId,
+                    staffId: employee._id,token,userId:user._id,doctorId:user.doctorId
+                });
+            }
+            else{
+
+                const doctor = await Doctor.findOne({ contactNumber: phone })
+                const user = await User.findById(doctor.userId)
             const userId = doctor.userId
             const [
                 kyc,
@@ -163,7 +248,7 @@ const verifyOtp = async (req, res) => {
             ]);
 
             let nextStep = null;
-
+            
             if (!kyc) {
                 nextStep = "/doctor/kyc";
             } else if (!education) {
@@ -181,16 +266,18 @@ const verifyOtp = async (req, res) => {
             }
             if (isValid) {
                 const token = jwt.sign(
-                    { user: user._id },
+                    { user: user._id,isOwner:true,type:'doctor' },
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );
-                return res.status(200).json({ message: "Verify Success", nextStep, token, doctorId: user?.doctorId, userId, user: user, success: true })
+                return res.status(200).json({ message: "Verify Success", nextStep, isOwner:true, token, doctorId: user?.doctorId, userId, user: user, success: true })
             } else {
                 return res.status(200).json({ message: "Invalid credentials", success: false })
             }
         }
+        }
     } catch (err) {
+        console.log(err)
         return res.status(400).json({ success: false, error: err.message });
     }
 };
@@ -378,7 +465,7 @@ function generateOTP() {
 
 const getProfile = async (req, res) => {
     try {
-        const user = await Doctor.findById(req.user.user).select('-password');
+        const user = await Doctor.findById(req.user.userId).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
@@ -450,7 +537,7 @@ const getProfileDetail = async (req, res) => {
     }
 };
 const deleteDoctor = async (req, res) => {
-    const userId = req.user.user
+    const userId = req.user.userId
     try {
         const user = await Doctor.findById(userId)
         if (!user) {
@@ -866,7 +953,7 @@ const getCustomProfile = async (req, res) => {
         const doctorData = await Doctor.findById(user.doctorId).lean()
         res.status(200).json({
             success: true,
-            data: {...user,...doctorData}
+            data: { ...user, ...doctorData }
         });
     } catch (err) {
         console.log(err)
@@ -888,9 +975,9 @@ const getDoctors = async (req, res) => {
         const minRating = rating ? Number(rating) : 0;
         const maxFees = fees ? Number(fees) : null;
 
-        let filter =  { role: 'doctor',fcmToken:{$ne:null} }
-        if(name){
-            filter.name={$regex: name, $options: "i" };
+        let filter = { role: 'doctor', fcmToken: { $ne: null } }
+        if (name) {
+            filter.name = { $regex: name, $options: "i" };
         }
         // 1️⃣ Fetch lab users
         // let userQuery = User.find({ role: 'doctor', created_by: 'self' })
@@ -970,7 +1057,7 @@ const getDoctors = async (req, res) => {
             .filter(doc => doc.avgRating >= minRating);
 
 
-        const total =Object.keys(finalData).length;
+        const total = Object.keys(finalData).length;
 
         return res.status(200).json({
             success: true,
@@ -1068,5 +1155,5 @@ const getDoctorData = async (req, res) => {
 };
 export {
     signInDoctor, updateImage, doctorEduWork, getCustomProfile, deleteEdu, doctorLicense, deleteLicense, deleteWork, doctorAbout, getProfileDetail, signUpDoctor, resetPassword, doctorKyc, editRequest, forgotEmail, verifyOtp, resendOtp, getProfile, updateDoctor, changePassword, deleteDoctor, getDoctorKyc,
-    getDoctorEduWork, getDoctorLicense, getDoctorAbout, getDoctors, getDoctorData,sendOtp
+    getDoctorEduWork, getDoctorLicense, getDoctorAbout, getDoctors, getDoctorData, sendOtp
 }

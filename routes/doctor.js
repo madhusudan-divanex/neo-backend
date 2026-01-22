@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
-import { doctorDashboard, getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, sendReminder } from "../controller/Doctor/doctorController.js";
+import {  deleteStaffData, deleteSubEmpProffesional, doctorDashboard, doctorStaff, doctorStaffAction, doctorStaffData,  getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, saveDoctorStaff, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, sendReminder,  } from "../controller/Doctor/doctorController.js";
 const doctor=express.Router()
 const uploader = getUploader('doctor');
 
@@ -52,5 +52,18 @@ doctor.get('/patient-history/:id',authMiddleware,getPatientHistory)
 doctor.get('/occupied-slots/:doctorId/:date',getOccupiedSlots)
 doctor.get('/patient-lab-report/:doctorId/:patientId',getDoctorPatientReport)
 doctor.post('/send-reminder',authMiddleware,sendReminder)
+
+
+
+doctor.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,saveDoctorStaff)
+doctor.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
+doctor.post('/employment',authMiddleware,saveEmpEmployement)
+doctor.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
+
+doctor.post('/access',authMiddleware,saveEmpAccess)
+doctor.get('/staff/:id',authMiddleware,doctorStaff)
+doctor.post('/staff-action',authMiddleware,doctorStaffAction)
+doctor.get('/staff-data/:id',authMiddleware,doctorStaffData)
+doctor.delete('/staff/:id',authMiddleware,deleteStaffData)
 
 export default doctor

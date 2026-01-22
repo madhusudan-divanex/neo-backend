@@ -89,7 +89,14 @@ Hospital->
     CRUD Permission 
     Doctor employment & access
 Laboratory->
-    Add Patient 
+    Notification 
+    Note option
+Patient->
+    Notification
+    Pharmacy 
+Doctor->
+    Reminder
+
     Add Appointment
     CRUD Return 
     CRUD Purchase Order

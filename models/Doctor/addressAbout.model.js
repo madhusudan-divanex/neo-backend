@@ -4,6 +4,8 @@ const prescriptionItemSchema = new Schema({
   name: { type: String, required: true },
   fileUrl: { type: String, required: true },
 }, { timestamps: true });
+
+
 const contactSchema = new Schema({
     emergencyContactName: { type: String, },
     emergencyContactNumber: { type: String, },

@@ -299,7 +299,7 @@ export const deletePatient = async (req, res) => {
     // }
     await PatientDepartment.findOneAndDelete({ patientId: id ,hospitalId})
 
-    res.json({
+    return res.json({
       success: true,
       message: "Patient deleted successfully"
     });

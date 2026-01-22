@@ -448,11 +448,11 @@ export const getHospitalDoctorList = async (req, res) => {
         { "email": { $regex: search, $options: "i" } },
       ];
     }
-
+    const filter={hospitalId}
     if (status) {
-      query.status = status;
+      filter.status = status;
     }
-    const users = await EmpEmployement.find({ hospitalId }).select('userId')
+    const users = await EmpEmployement.find(filter).select('userId')
     const usersIds = users.map(item => item.userId)
     query._id = { $in: usersIds };
 
@@ -497,12 +497,12 @@ export const getHospitalDoctorList = async (req, res) => {
     const staffWithAbout = staff.map(user => {
       const about = doctorAbouts.find(da => da.userId.toString() === user._id.toString());
       const employement = doctorEmp.find(da => da.userId.toString() === user._id.toString());
-
+      
       return {
         ...user.toObject(),
         doctorAbout: about || null,
         avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-        fees: employement?.fees || null
+        fees: employement?.fees || null,
       };
     });
     res.json({

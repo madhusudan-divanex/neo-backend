@@ -113,7 +113,7 @@ const signInLab = async (req, res) => {
         if (labPerson && labPerson.password == password) {
             const empData = await LabStaff.findById(labPerson.empId)
             const token = jwt.sign(
-                { user: empData.labId },
+                { user: empData.labId, },
                 process.env.JWT_SECRET,
                 // { expiresIn: isRemember ? "30d" : "1d" }
             );
@@ -125,7 +125,7 @@ const signInLab = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
-            { user: isExist._id },
+            { user: isExist._id,isOwner:true ,type:'lab'},
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
@@ -448,7 +448,7 @@ const getProfileDetail = async (req, res) => {
 };
 
 const deleteLab = async (req, res) => {
-    const userId = req.user.user
+    const userId = req.user.userId
     try {
         const user = await User.findById(userId)
         if (!user) {

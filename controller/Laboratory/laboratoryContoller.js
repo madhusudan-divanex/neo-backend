@@ -14,6 +14,7 @@ import mongoose from "mongoose";
 import PatientDemographic from "../../models/Patient/demographic.model.js";
 import Patient from "../../models/Patient/patient.model.js";
 import bcrypt from "bcryptjs";
+import Permission from "../../models/Permission.js";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
@@ -371,7 +372,7 @@ const saveEmpAccess = async (req, res) => {
         const employee = await LabStaff.findById(empId);
         if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
-        const permission = await LabPermission.findById(permissionId);
+        const permission = await Permission.findById(permissionId);
         if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
 
         const isExist = await EmpAccess.findOne({ empId: empId });

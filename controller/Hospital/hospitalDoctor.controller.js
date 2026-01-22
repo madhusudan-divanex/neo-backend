@@ -166,7 +166,7 @@ export const getHospitalDoctorList = async (req, res) => {
         { "email": { $regex: search, $options: "i" } },
       ];
     }
-
+    const filter = { hospitalId }
     if (status) {
       query.status = status;
     }
@@ -205,6 +205,7 @@ export const getHospitalDoctorList = async (req, res) => {
         }
       }
     ]);
+    const doctorEmployement = await EmpEmployement.find({ userId: { $in: userIds } });
 
 
     const staffWithAbout = staff.map(user => {
@@ -212,9 +213,11 @@ export const getHospitalDoctorList = async (req, res) => {
       const patientCountObj = doctorPatientCounts.find(
         dp => dp._id.toString() === user._id.toString()
       );
+      const employement = doctorEmployement.find(de => de.userId.toString() == user._id)
       return {
         ...user.toObject(),
         doctorAbout: about || null,
+        employement,
         uniquePatientCount: patientCountObj
           ? patientCountObj.uniquePatientCount
           : 0
@@ -280,7 +283,7 @@ export const getHospitalDoctorEmployement = async (req, res) => {
   try {
     const hospitalId = req.params.hospitalId;
     const userId = req.params.doctorId;
-   
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -289,11 +292,11 @@ export const getHospitalDoctorEmployement = async (req, res) => {
         message: "Doctor not found"
       });
     }
-    const employmentDetails = await EmpEmployement.findOne({ userId,  hospitalId })?.populate('department').populate('hospitalId','name')
-    
+    const employmentDetails = await EmpEmployement.findOne({ userId, hospitalId })?.populate('department').populate('hospitalId', 'name')
+
     return res.json({
-      success: true, 
-     employmentDetails,
+      success: true,
+      employmentDetails,
     });
 
   } catch (err) {
@@ -471,8 +474,11 @@ export const deleteDoctor = async (req, res) => {
         message: "Doctor not found"
       });
     }
-    await Doctor.findOneAndDelete({ userId: doctor._id });
-    await DoctorAbout.findOneAndDelete({ userId: doctor._id });
+    await EmpEmployement.findOneAndDelete({ userId: doctor._id });
+    await User.findByIdAndUpdate(
+      doctor._id,
+      { $unset: { created_by_id: "" } }
+    );
 
     await doctor.deleteOne();
 
@@ -568,7 +574,7 @@ export const saveDoctorProfessionalDetails = async (req, res) => {
 
 export const doctorEmploymentDetails = async (req, res) => {
   try {
-    const { doctorId, joinDate, position, onLeaveDate, contractStart, contractEnd, salary, note, fees, reportingTo, employmentType, department } = req.body;
+    const { doctorId, joinDate, position, onLeaveDate, contractStart, contractEnd, salary, note, fees, reportingTo, employmentType, department, status } = req.body;
     if (!doctorId) {
       return res.status(400).json({
         success: false,
@@ -594,7 +600,7 @@ export const doctorEmploymentDetails = async (req, res) => {
       note,
       fees,
       reportingTo,
-      employmentType,
+      employmentType, status,
       department, hospitalId: req.user._id
     };
     await EmpEmployement.findOneAndUpdate(

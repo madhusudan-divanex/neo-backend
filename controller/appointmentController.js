@@ -69,6 +69,7 @@ const getDoctorAppointment = async (req, res) => {
         const statuses = req.query.statuses || ''
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
+        const todayApt = req.query.todayApt;
 
         const skip = (page - 1) * limit;
 
@@ -78,6 +79,18 @@ const getDoctorAppointment = async (req, res) => {
         }
         if (statuses) {
             filter.status = { $in: statuses.split(',') };
+        }
+        if (todayApt) {
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59, 999);
+
+            filter.date = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
         }
         const start = startDate && startDate !== 'null' ? new Date(startDate) : null;
         const end = endDate && endDate !== 'null' ? new Date(endDate) : null;
@@ -219,12 +232,13 @@ const doctorPrescription = async (req, res) => {
 
         const isAppointment = await DoctorAppointment.findById(appointmentId);
         if (!isAppointment) return res.status(200).json({ message: 'Appointment not exist' });
-        
+
         const add = await Prescriptions.create({ patientId, doctorId, medications, diagnosis, status, notes, appointmentId, reVisit, })
         if (add) {
-            await Notification.create({userId:patientId,
-                title:"New Prescription Added",
-                message:`Dr. ${isExist.name} has added a new prescription (id ${add?.customId}) for you.`
+            await Notification.create({
+                userId: patientId,
+                title: "New Prescription Added",
+                message: `Dr. ${isExist.name} has added a new prescription (id ${add?.customId}) for you.`
             })
             await DoctorAppointment.findByIdAndUpdate(isAppointment._id, { prescriptionId: add._id }, { new: true })
             return res.status(200).json({ message: "Presctiption add successfully", success: true })
@@ -317,9 +331,10 @@ const editDoctorPrescription = async (req, res) => {
 
         const add = await Prescriptions.findByIdAndUpdate(prescriptionId, { labTest, patientId, doctorId, reVisit, medications, diagnosis, status, notes, appointmentId }, { new: true })
         if (add) {
-            await Notification.create({userId:patientId,
-                title:"Prescription Updated",
-                message:`Dr. ${isExist.name} has updated a prescription (id ${add?.customId}) for you.`
+            await Notification.create({
+                userId: patientId,
+                title: "Prescription Updated",
+                message: `Dr. ${isExist.name} has updated a prescription (id ${add?.customId}) for you.`
             })
             return res.status(200).json({ message: "Presctiption update successfully", success: true })
         } else {

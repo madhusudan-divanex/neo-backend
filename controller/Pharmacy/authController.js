@@ -119,7 +119,7 @@ const signInPhar = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
-            { user: isExist._id },
+            { user: isExist._id ,type:"pharmacy",isOwner:true},
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
@@ -524,7 +524,7 @@ const getPharData = async (req, res) => {
     }
 };
 const deletePhar = async (req, res) => {
-    const userId = req.user.user
+    const userId = req.user.userId
     try {
         const user = await Pharmacy.findById(userId)
         if (!user) {

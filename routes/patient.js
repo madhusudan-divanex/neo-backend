@@ -1,9 +1,9 @@
-import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getMedicalHistory, getNameProfile, getPatientDemographic, getPatientKyc, getPatientProfile, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, sendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
+import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getMedicalHistory, getNameProfile, getPatientDemographic, getPatientKyc, getPatientProfile, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, resetPassword, sendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { getLabReport, getNearByDoctor, getPatientAppointment } from "../controller/appointmentController.js";
-import { favoriteController, getMyRating, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPatients, getPrescriptionLabDetail, profileAction } from "../controller/Patient/patientController.js";
+import { getLabReport,  getPatientAppointment } from "../controller/appointmentController.js";
+import { favoriteController, getMyRating, getNearByDoctor, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPatients, getPrescriptionLabDetail, profileAction } from "../controller/Patient/patientController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
@@ -24,6 +24,7 @@ patient.post('/send-otp',sendOtp)
 patient.post('/verify-otp',verifyOtp)
 
 patient.post('/change-password',changePassword)
+patient.post('/reset-password',resetPassword)
 patient.put('',uploader.fields([{ name: 'profileImage', maxCount: 1 },]),authMiddleware,updatePatient)
 patient.delete('',authMiddleware,deletePatient)
 patient.post('/kyc',uploader.fields([{ name: 'frontImage', maxCount: 1 },

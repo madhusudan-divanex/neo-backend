@@ -8,8 +8,13 @@ import {
   saveFcmToken,
   getNotification,
   deleteNotification,
-  deleteOneNotification
+  deleteOneNotification,
+  addPermission,
+  updatePermission,
+  deletePermission,
+  getAllPermission
 } from "../../controller/Hospital/commanController.js";
+import authMiddleware from "../../middleware/authMiddleare.js";
 
 const router = express.Router();
 
@@ -20,4 +25,10 @@ router.post("/save-fcm-token", auth, saveFcmToken);
 router.get("/notification", auth, getNotification);
 router.delete("/delete-all-notification", auth, deleteNotification);
 router.delete("/delete-notification/:id", auth, deleteOneNotification);
+
+
+router.post('/permission',authMiddleware,addPermission)
+router.put('/permission',authMiddleware,updatePermission)
+router.get('/permission/:id',authMiddleware,getAllPermission)
+router.delete('/permission',authMiddleware,deletePermission)
 export default router;

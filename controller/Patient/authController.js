@@ -19,17 +19,16 @@ import User from '../../models/Hospital/User.js';
 const signUpPatient = async (req, res) => {
     const { name, gender, email, contactNumber, password, created_by } = req.body;
     try {
-        const isExist = await Patient.findOne({ email })
-        if (isExist) {
-            return res.status(200).json({ message: "Patient already exist", success: false })
+        const [userExists, patientExists] = await Promise.all([
+            User.findOne({ email }),
+            Patient.findOne({ $or: [{ email }, { contactNumber }] })
+        ]);
+        if (userExists || patientExists) {
+            return res.status(409).json({ success: false, message: "Patient already exists" });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user
-        const isLast = await User.findOne()?.sort({ createdAt: -1 })
-        const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
+        // Create user       
         const newPatient = await Patient.create({
             name,
             gender,
@@ -39,12 +38,12 @@ const signUpPatient = async (req, res) => {
 
         if (newPatient) {
             // const code = generateOTP()
-            // const isOtpExist = await Otp.findOne({ userId: newPatient._id })
+            // const isOtpExist = await Otp.findOne({ phone: contactNumber })
             // if (isOtpExist) {
             //     await Otp.findByIdAndDelete(isOtpExist._id)
-            //     const otp = await Otp.create({ userId: newPatient._id, code })
+            //     const otp = await Otp.create({ phone: contactNumber, code })
             // } else {
-            //     const otp = await Otp.create({ userId: newPatient._id, code })
+            //     const otp = await Otp.create({ phone: contactNumber, code })
             // }
             const user = await User.create(
                 {
@@ -64,7 +63,7 @@ const signUpPatient = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: 'Server Error' });
+        return res.status(500).json({ message: err.message });
     }
 }
 const signInPatient = async (req, res) => {
@@ -118,10 +117,15 @@ const verifyOtp = async (req, res) => {
         if (name && gender && email && contactNumber && password) {
             const isValid = code == "1234"
             if (isValid) {
-                const isExist = await Patient.findOne({ email })
-                if (isExist) {
-                    return res.status(200).json({ message: "Patient already exist", success: false })
+                const [userExists, patientExists] = await Promise.all([
+                    User.findOne({ email }),
+                    Patient.findOne({ $or: [{ email }, { contactNumber }] })
+                ]);
+
+                if (userExists || patientExists) {
+                    return res.status(409).json({ success: false, message: "Patient already exists" });
                 }
+
                 const hashedPassword = await bcrypt.hash(password, 10);
                 const newPatient = await Patient.create({
                     name,
@@ -156,7 +160,7 @@ const verifyOtp = async (req, res) => {
                 return res.status(200).json({ message: "Invalid otp", success: false })
             }
         } else {
-            const patient = await Patient.findOne({ contactNumber: phone })
+            const patient = await Patient.findOne({ contactNumber })
             const user = await User.findById(patient.userId)
             const userId = patient.userId
             const [
@@ -213,7 +217,7 @@ const verifyOtp = async (req, res) => {
 const resendOtp = async (req, res) => {
     const { contactNumber } = req.body;
     try {
-        const isExist = await Patient.findOne({contactNumber: phone });
+        const isExist = await Patient.findOne({ contactNumber: phone });
         if (!isExist) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
@@ -347,6 +351,7 @@ const changePassword = async (req, res) => {
         return res.status(500).json({ message: 'Server Error' });
     }
 }
+
 const updatePatient = async (req, res) => {
     const { userId, email, contactNumber, name, gender } = req.body;
     const profileImage = req.files?.['profileImage']?.[0]?.path
@@ -361,10 +366,10 @@ const updatePatient = async (req, res) => {
         if (userEmail > 1) {
             return res.status(200).json({ message: 'Email already exist' });
         }
-        if(profileImage && alreadyEmail.profileImage){
+        if (profileImage && alreadyEmail.profileImage) {
             safeUnlink(alreadyEmail.profileImage)
         }
-        const updatePatient = await Patient.findByIdAndUpdate(isExist.patientId, { email, contactNumber, name, gender,profileImage }, { new: true })
+        const updatePatient = await Patient.findByIdAndUpdate(isExist.patientId, { email, contactNumber, name, gender, profileImage }, { new: true })
         if (updatePatient) {
             await User.findOneAndUpdate({ patientId: userId }, { name, email }, { new: true })
             return res.status(200).json({ message: "Patient data change successfully", userId: isExist._id, success: true })
@@ -372,7 +377,7 @@ const updatePatient = async (req, res) => {
             return res.status(200).json({ message: "Error occure in user data", success: false })
         }
     } catch (err) {
-        if(fs.existsSync(profileImage)){
+        if (fs.existsSync(profileImage)) {
             safeUnlink(profileImage)
         }
         console.error(err.message);
@@ -390,7 +395,7 @@ function generateOTP() {
 
 const getProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.user).select('-password');
+        const user = await User.findById(req.user.userIdId).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
@@ -416,9 +421,9 @@ const getCustomProfile = async (req, res) => {
         }
         const patientData = await Patient.findById(user.patientId).lean()
         const ptDemographic = await PatientDemographic.findOne({ userId: user.patientId }).sort({ createdAt: -1 })
-        
+
         return res.status(200).json({
-            success: true,customId:user.unique_id,
+            success: true, customId: user.unique_id,
             data: { ...patientData, dob: ptDemographic?.dob }
         });
 
@@ -450,7 +455,7 @@ const getProfileDetail = async (req, res) => {
             kyc,
             medicalHistory,
             demographic,
-            prescription,isRequest,allowEdit
+            prescription, isRequest, allowEdit
         ] = await Promise.all([
             Patient.findOne({ userId: fullId }).lean(),
             PatientKyc.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
@@ -458,16 +463,16 @@ const getProfileDetail = async (req, res) => {
             PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             EditRequest.findOne({ patientId: fullId }),
-            EditRequest.exists({patientId:fullId,status:'approved'}).then(Boolean)
+            EditRequest.exists({ patientId: fullId, status: 'approved' }).then(Boolean)
         ]);
 
         return res.status(200).json({
             success: true,
             user: patient,
-            kyc,customId:user.unique_id,role:user.role,
+            kyc, customId: user.unique_id, role: user.role,
             demographic,
             prescription,
-            medicalHistory,isRequest,allowEdit
+            medicalHistory, isRequest, allowEdit
         });
 
     } catch (err) {
@@ -494,7 +499,7 @@ const getPatientProfile = async (req, res) => {
 
         // Run all queries in parallel
         const [
-            patient,            
+            patient,
             medicalHistory,
             demographic,
             prescription,
@@ -508,7 +513,7 @@ const getPatientProfile = async (req, res) => {
         return res.status(200).json({
             success: true,
             user: patient,
-            customId:user.unique_id,role:user.role,
+            customId: user.unique_id, role: user.role,
             demographic,
             prescription,
             medicalHistory,
@@ -520,7 +525,7 @@ const getPatientProfile = async (req, res) => {
 };
 
 const deletePatient = async (req, res) => {
-    const userId = req.user.user
+    const userId = req.user.userIdId
     try {
         const user = await Patient.findById(userId)
         if (!user) {
@@ -582,7 +587,7 @@ const patientKyc = async (req, res) => {
     }
 };
 const patientDemographic = async (req, res) => {
-    const { userId, bloodGroup, height, weight, dob,contact,address } = req.body;
+    const { userId, bloodGroup, height, weight, dob, contact, address } = req.body;
 
     try {
         const user = await User.findById(userId)
@@ -590,14 +595,14 @@ const patientDemographic = async (req, res) => {
 
         const data = await PatientDemographic.findOne({ userId });
         if (data) {
-            await PatientDemographic.findByIdAndUpdate(data._id, { bloodGroup, height, weight, dob,contact,address }, { new: true })
+            await PatientDemographic.findByIdAndUpdate(data._id, { bloodGroup, height, weight, dob, contact, address }, { new: true })
 
             return res.status(200).json({
                 success: true,
                 message: "Demographic update successfully",
             });
         } else {
-            await PatientDemographic.create({ bloodGroup, height, weight, dob, userId,contact,address })
+            await PatientDemographic.create({ bloodGroup, height, weight, dob, userId, contact, address })
 
             return res.status(200).json({
                 success: true,
@@ -640,12 +645,13 @@ const getPatientKyc = async (req, res) => {
     try {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
-
+        const pt =  await Patient.findOne({userId:user._id})
         const data = await PatientKyc.findOne({ userId });
         if (data) {
             return res.status(200).json({
                 success: true,
                 data,
+                status:pt.status,
                 message: "Kyc fetch successfully",
             });
         }
@@ -922,6 +928,6 @@ const getNameProfile = async (req, res) => {
 
 export {
     signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
-    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory,getPatientProfile,
+    getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory, getPatientProfile,
     sendOtp
 }

@@ -20,6 +20,7 @@ import Prescriptions from '../../models/Prescriptions.js';
 import Patient from '../../models/Patient/patient.model.js';
 import PatientPrescriptions from '../../models/Patient/prescription.model.js';
 import User from '../../models/Hospital/User.js';
+import Permission from '../../models/Permission.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
@@ -125,7 +126,7 @@ const inventoryGetById = async (req, res) => {
     try {
         const id = req.params.id
         if (id?.length < 24) {
-            const updated = await Inventory.findOne({ customId: id, pharId: req.user.user });
+            const updated = await Inventory.findOne({ customId: id, pharId: req.user.userId });
 
             if (!updated) {
                 return res.status(200).json({ success: false, message: "Inventory item not found" });
@@ -134,7 +135,7 @@ const inventoryGetById = async (req, res) => {
             res.status(200).json({ success: true, message: "Inventory get successfully", data: updated });
         } else {
 
-            const updated = await Inventory.findOne({ _id: id, pharId: req.user.user });
+            const updated = await Inventory.findOne({ _id: id, pharId: req.user.userId });
 
             if (!updated) {
                 return res.status(200).json({ success: false, message: "Inventory item not found" });
@@ -1528,7 +1529,7 @@ const saveEmpAccess = async (req, res) => {
         const employee = await PharStaff.findById(empId);
         if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
-        const permission = await PharPermission.findById(permissionId);
+        const permission = await Permission.findById(permissionId);
         if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
 
         const isExist = await EmpAccess.findOne({ empId: empId });
@@ -2036,7 +2037,7 @@ const getSellData = async (req, res) => {
 const deleteSellData = async (req, res) => {
     try {
         const sellId = req.params.id;
-        const sell = await Sell.findOne({ _id: sellId, pharId: req.user.user });
+        const sell = await Sell.findOne({ _id: sellId, pharId: req.user.userId });
         if (!sell) {
             return res.status(200).json({ success: false, message: "Sell record not found" });
         }
