@@ -111,7 +111,6 @@ const permissionSchema = new Schema(
       printReport: { type: Boolean, default: false },
 
       patientCall: { type: Boolean, default: false },
-      patientMail: { type: Boolean, default: false },
 
       paymentStatus: { type: Boolean, default: false },
       appointmentStatus: { type: Boolean, default: false },
@@ -120,10 +119,20 @@ const permissionSchema = new Schema(
 
     // ================== PHARMACY ==================
     pharmacy: {
-      listView: { type: Boolean, default: false },
-      add: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      view: { type: Boolean, default: false },
+      listInventory: { type: Boolean, default: false },
+      addInventory: { type: Boolean, default: false },
+      editInventory: { type: Boolean, default: false },
+      viewInventory: { type: Boolean, default: false },
+      listSupplier: { type: Boolean, default: false },
+      addSupplier: { type: Boolean, default: false },
+      editSupplier: { type: Boolean, default: false },
+      viewSupplier: { type: Boolean, default: false },
+      deleteSupplier: { type: Boolean, default: false },
+      listReturn: { type: Boolean, default: false },
+      addReturn: { type: Boolean, default: false },
+      editReturn: { type: Boolean, default: false },
+      deleteReturn: { type: Boolean, default: false },
+      viewReturn: { type: Boolean, default: false },
       patientList: { type: Boolean, default: false },
       details: { type: Boolean, default: false },
       chat: { type: Boolean, default: false }

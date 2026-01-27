@@ -19,6 +19,7 @@ import EmpAccess from '../../models/Pharmacy/empAccess.model.js';
 import PharStaff from '../../models/Pharmacy/PharEmpPerson.model.js';
 import User from '../../models/Hospital/User.js';
 import Notification from '../../models/Notifications.js';
+import City from '../../models/Hospital/City.js';
 
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
@@ -119,7 +120,7 @@ const signInPhar = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
-            { user: isExist._id ,type:"pharmacy",isOwner:true},
+            { user: isExist._id, type: "pharmacy", isOwner: true },
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
@@ -435,7 +436,7 @@ const getProfileDetail = async (req, res) => {
             rating,
             avgRating,
             ratingCounts, allowEdit,
-            isRequest,notifications
+            isRequest, notifications
         });
 
     } catch (err) {
@@ -542,20 +543,31 @@ const deletePhar = async (req, res) => {
     }
 };
 const pharAddress = async (req, res) => {
-    const { userId, fullAddress, countryId, stateId, cityId, pinCode } = req.body;
+    const { userId, fullAddress, countryId, stateId, cityId, pinCode, lat, long } = req.body;
     try {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
         const data = await PharAddress.findOne({ userId });
+        const cityData = await City.findById(cityId)
+        const finalLat = (lat !== undefined && lat !== null) ? lat : cityData?.latitude;
+        const finalLong = (long !== undefined && long !== null) ? long : cityData?.longitude;
         if (data) {
-            await PharAddress.findByIdAndUpdate(data._id, { fullAddress, countryId, stateId, cityId, pinCode, userId }, { new: true })
+            await PharAddress.findByIdAndUpdate(data._id, {
+                fullAddress, countryId, lat: finalLat,
+                long: finalLong,
+                stateId, cityId, pinCode, userId
+            }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "Pharmacy address update successfully",
             });
         } else {
-            await PharAddress.create({ fullAddress, countryId, stateId, cityId, pinCode, userId })
+            await PharAddress.create({
+                fullAddress, countryId, stateId, cityId, pinCode, lat: finalLat,
+                long: finalLong,
+                userId
+            })
             return res.status(200).json({
                 success: true,
                 message: "Pharmacy address saved successfully",
@@ -854,7 +866,7 @@ const getPharmacy = async (req, res) => {
     try {
         const filter = { role: { $in: ['pharmacy'] } }
         if (name) {
-            filter.name ={$regex: name, $options: "i" };
+            filter.name = { $regex: name, $options: "i" };
         }
         // 1️⃣ Fetch pharmacy users
         const users = await User.find(filter)

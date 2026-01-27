@@ -26,6 +26,7 @@ import User from '../../models/Hospital/User.js';
 import { error } from 'console';
 import path from 'path'
 import Notification from '../../models/Notifications.js';
+import City from '../../models/Hospital/City.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
@@ -125,7 +126,7 @@ const signInLab = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
         const token = jwt.sign(
-            { user: isExist._id,isOwner:true ,type:'lab'},
+            { user: isExist._id, isOwner: true, type: 'lab' },
             process.env.JWT_SECRET,
             // { expiresIn: isRemember ? "30d" : "1d" }
         );
@@ -388,7 +389,7 @@ const getProfileDetail = async (req, res) => {
         const isRequest = Boolean(await EditRequest.exists({ labId: user?._id }))
         const allowEdit = Boolean(await EditRequest.exists({ labId: user?._id, status: "approved" }))
         const notifications = await Notification.countDocuments({ userId }) || 0;
-             
+
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?.labId })
@@ -436,7 +437,7 @@ const getProfileDetail = async (req, res) => {
             rating, allowEdit,
             avgRating,
             ratingCounts,
-            isRequest,notifications
+            isRequest, notifications
         });
 
     } catch (err) {
@@ -466,20 +467,31 @@ const deleteLab = async (req, res) => {
     }
 };
 const labAddress = async (req, res) => {
-    const { userId, fullAddress, countryId, stateId, cityId, pinCode } = req.body;
+    const { userId, fullAddress, countryId, stateId, cityId, pinCode, lat, long } = req.body;
     try {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
 
+        const cityData = await City.findById(cityId)
+        const finalLat = (lat !== undefined && lat !== null) ? lat : cityData?.latitude;
+        const finalLong = (long !== undefined && long !== null) ? long : cityData?.longitude;
         const data = await LabAddress.findOne({ userId });
         if (data) {
-            await LabAddress.findByIdAndUpdate(data._id, { fullAddress, countryId, stateId, cityId, pinCode, userId }, { new: true })
+            await LabAddress.findByIdAndUpdate(data._id, {
+                fullAddress, lat: finalLat,
+                long: finalLong,
+                countryId, stateId, cityId, pinCode, userId
+            }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "Lab address update successfully",
             });
         } else {
-            await LabAddress.create({ fullAddress, countryId, stateId, cityId, pinCode, userId })
+            await LabAddress.create({
+                fullAddress, countryId, lat: finalLat,
+                long: finalLong,
+                stateId, lat, long, cityId, pinCode, userId
+            })
             return res.status(200).json({
                 success: true,
                 message: "Lab address saved successfully",
@@ -791,12 +803,12 @@ const sendReport = async (req, res) => {
         // uploaded reports attach karo
         testReports.forEach(report => {
             // if (Array.isArray(report.upload?.report)) {
-                // report.upload.report.forEach(filePath => {
-                    attachments.push({
-                        filename: path.basename(report.upload?.report), // extract file name from path
-                        path: path.join(process.cwd(), report.upload?.report), // local file path
-                    });
-                // });
+            // report.upload.report.forEach(filePath => {
+            attachments.push({
+                filename: path.basename(report.upload?.report), // extract file name from path
+                path: path.join(process.cwd(), report.upload?.report), // local file path
+            });
+            // });
             // }
         });
 
@@ -824,14 +836,14 @@ const getLabs = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
     const name = req.query.name
-
+    const location = req.query.location
     try {
-        const filter={ role: {$in:['lab']} }
-        if(name){
-            filter.name={$regex: name, $options: "i" };
+        const filter = { role: { $in: ['lab'] } }
+        if (name) {
+            filter.name = { $regex: name, $options: "i" };
         }
         // 1️⃣ Fetch lab users
-        const users = await User.find(filter)
+        let users = await User.find(filter)
             .select('-passwordHash')
             .populate('labId')
             .limit(limit)
@@ -839,13 +851,26 @@ const getLabs = async (req, res) => {
             .lean();
 
         const labIds = users.map(u => u._id);
+        let labAddresses;
+        if (location) {
+            console.log(location)
+            const city = await City.findOne({ name: new RegExp(`^${location}$`, "i") });
 
-        // 2️⃣ Fetch addresses
-        const labAddresses = await LabAddress.find({
-            userId: { $in: labIds }
-        })
-            .populate('countryId stateId cityId', 'name')
-            .lean();
+            // 2️⃣ Fetch addresses
+            labAddresses = await LabAddress.find({
+                userId: { $in: labIds }, cityId: city._id
+            })
+                .populate('countryId stateId cityId', 'name')
+                .lean();
+            const filteredUserIds = labAddresses.map(addr => addr.userId.toString());
+            users = users.filter(u => filteredUserIds.includes(u._id.toString()));
+        } else {
+            labAddresses = await LabAddress.find({
+                userId: { $in: labIds },
+            })
+                .populate('countryId stateId cityId', 'name')
+                .lean();
+        }
 
         const addressMap = {};
         labAddresses.forEach(addr => {

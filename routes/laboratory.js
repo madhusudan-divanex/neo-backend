@@ -4,6 +4,7 @@ import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import {  getLabAppointment, getLabAppointmentData, getPatientLabReport, labDashboardData } from "../controller/appointmentController.js";
 import { addLabPermission, addPatient, addTest, deleteLabPermission, deleteStaffData, deleteSubEmpProffesional, deleteTest, getAllPermission, getTest, getTestData, getTestReport, labStaff, labStaffAction, labStaffData, labTestAction, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff, saveReport, updateLabPermission, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
+import { checkPermission } from "../middleware/permissionCheck.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
@@ -44,9 +45,9 @@ lab.post('/update-image',uploader.fields([{ name: 'logo', maxCount: 1 }
 
 lab.post('/image',uploader.fields([{ name: 'thumbnail' },{ name: 'labImg' }]),authMiddleware,labImage)
 
-lab.post('/permission',authMiddleware,addLabPermission)
+lab.post('/permission',authMiddleware,checkPermission("lab","addPermission"),addLabPermission)
 lab.put('/permission',authMiddleware,updateLabPermission)
-lab.get('/permission/:id',authMiddleware,getAllPermission)
+lab.get('/permission/:id',authMiddleware,checkPermission("lab","getPermission"),getAllPermission)
 lab.delete('/permission',authMiddleware,deleteLabPermission)
 
 
@@ -68,9 +69,9 @@ lab.get('/dashboard/:id',authMiddleware,labDashboardData)
 
 
 
-lab.post('/test',authMiddleware,addTest)
-lab.put('/test',authMiddleware,updateTest)
-lab.get('/test-data/:id',authMiddleware,getTestData)
+lab.post('/test',authMiddleware,checkPermission("lab","addTest"),addTest)
+lab.put('/test',authMiddleware,checkPermission("lab","editTest"),updateTest)
+lab.get('/test-data/:id',authMiddleware,checkPermission("lab","viewTest"),getTestData)
 lab.post('/test-report',authMiddleware,uploader.single('report'),saveReport)
 lab.post('/test-report-data',authMiddleware,getTestReport)
 
@@ -80,7 +81,7 @@ lab.delete('/test/:id',authMiddleware,deleteTest)
 lab.post('/test-action',authMiddleware,labTestAction)
 lab.post('/delete-image',authMiddleware,deleteLabImage)
 
-lab.post('/send-report',authMiddleware,sendReport)
+lab.post('/send-report',authMiddleware,checkPermission("lab","sendReportMail"),sendReport)
 lab.post('/add-patient',authMiddleware,addPatient)
 
 lab.get('/patient-lab-report/:labId/patientId',authMiddleware,getPatientLabReport)

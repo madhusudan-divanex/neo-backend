@@ -10,13 +10,13 @@ export const checkPermission = (module, action) => {
 
     // ❌ STAFF without permissionId
     if (!req.user.permissionId) {
-      return res.status(403).json({ message: "Permission denied" });
+      return res.status(200).json({ message: "Permission denied" ,success:false});
     }
 
     const permission = await Permission.findById(req.user.permissionId);
 
     if (!permission) {
-      return res.status(403).json({ message: "Permission not found" });
+      return res.status(200).json({ message: "Permission not found" });
     }
 
     const panelType = req.user.type; // lab / doctor / hospital / pharmacy
@@ -27,7 +27,7 @@ export const checkPermission = (module, action) => {
       permission?.[panelType]?.[action] === true;
 
     if (!hasPermission) {
-      return res.status(403).json({ message: "Permission denied" });
+      return res.status(200).json({ message: "Permission denied" });
     }
 
     next();

@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
-import {  deleteStaffData, deleteSubEmpProffesional, doctorDashboard, doctorStaff, doctorStaffAction, doctorStaffData,  getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, saveDoctorStaff, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, sendReminder,  } from "../controller/Doctor/doctorController.js";
+import {  addTimeSlot, deleteStaffData, deleteSubEmpProffesional, deleteTimeSlot, doctorDashboard, doctorStaff, doctorStaffAction, doctorStaffData,  getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, getTimeSlots, saveDoctorStaff, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, sendReminder, updateTimeSlot,  } from "../controller/Doctor/doctorController.js";
 const doctor=express.Router()
 const uploader = getUploader('doctor');
 
@@ -66,4 +66,8 @@ doctor.post('/staff-action',authMiddleware,doctorStaffAction)
 doctor.get('/staff-data/:id',authMiddleware,doctorStaffData)
 doctor.delete('/staff/:id',authMiddleware,deleteStaffData)
 
+doctor.post('/time-slot',authMiddleware,addTimeSlot)
+doctor.get('/time-slot/:userId',getTimeSlots)
+doctor.put('/time-slot',authMiddleware,updateTimeSlot)
+doctor.delete('/time-slot/:slotId',authMiddleware,deleteTimeSlot)
 export default doctor

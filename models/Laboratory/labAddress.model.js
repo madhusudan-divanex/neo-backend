@@ -13,6 +13,8 @@ const addressSchema = new Schema({
   stateId: { type: mongoose.Schema.Types.ObjectId,ref:'State', required: true },
   cityId: { type: mongoose.Schema.Types.ObjectId,ref:'City', required: true },
   pinCode: { type: String, required: true },
+  lat: Number,
+  long: Number
 }, { timestamps: true });
 
 const LabAddress = mongoose.model("lab-address", addressSchema);

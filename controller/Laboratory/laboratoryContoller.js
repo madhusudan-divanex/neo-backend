@@ -4,7 +4,6 @@ import EmpEmployement from "../../models/Laboratory/employement.model.js";
 import EmpProfesional from "../../models/Laboratory/empProffesional.js";
 import LabStaff from "../../models/Laboratory/LabEmpPerson.model.js";
 import Laboratory from "../../models/Laboratory/laboratory.model.js";
-import LabPermission from "../../models/Laboratory/LabPermission.model.js";
 import fs from 'fs'
 import Test from "../../models/Laboratory/test.model.js";
 import safeUnlink from "../../utils/globalFunction.js";
@@ -407,7 +406,7 @@ const labStaffData = async (req, res) => {
 
         const employment = await EmpEmployement.findOne({ empId: id })
         const professional = await EmpProfesional.findOne({ empId: id })
-        const empAccess = await EmpAccess.findOne({ empId: id })?.populate({ path: 'permissionId', select: 'name' })
+        const empAccess = await EmpAccess.findOne({ empId: id })?.populate('permissionId')
 
         return res.status(200).json({
             success: true,
@@ -417,6 +416,7 @@ const labStaffData = async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -528,7 +528,7 @@ const addTest = async (req, res) => {
         }
 
         if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
-        
+
         const isStaff = await Test.create({ labId, hospitalId, precautions, shortName, testCategory, sampleType, price, component, type });
 
         if (isStaff) {
@@ -589,7 +589,7 @@ const labTestAction = async (req, res) => {
 };
 const getTest = async (req, res) => {
     const ownerId = req.params.id
-    const { page, limit = 10,type='lab' ,name} = req.query
+    const { page, limit = 10, type = 'lab', name } = req.query
     try {
         const user = await User.findById(ownerId);
         if (!user) {
@@ -611,8 +611,8 @@ const getTest = async (req, res) => {
             filter.labId = new mongoose.Types.ObjectId(ownerId);
             filter.type = 'lab';
         }
-        if(name){
-            filter.name=name
+        if (name) {
+            filter.name = name
         }
 
 
@@ -669,20 +669,32 @@ const deleteTest = async (req, res) => {
     }
 };
 const saveReport = async (req, res) => {
-    const report=req.file?.path
+    const report = req.file?.path
     try {
         const {
             labId,
             patientId,
             testId,
             appointmentId,
-            manualComment,remark,
+            manualComment, remark,
             manualName
         } = req.body;
-        const component=JSON.parse(req.body.component)
+        const component = JSON.parse(req.body.component)
         const isExist = await TestReport.findOne({ testId, appointmentId })
+        if (req.user.isOwner !== true || !req.user.permissionId) {
+            const permission = await Permission.findById(req.user.permissionId);
+            const panelType = req.user.type;
+
+            // 🔍 Check permission
+            if (!isExist && !permission?.lab?.addReport) {
+                return res.status(200).json({ message: "Permission denied" });
+            }
+            if(isExist && !permission?.lab?.editReport){
+                return res.status(200).json({ message: "Permission denied" });
+            }
+        }
         if (isExist) {
-            if(report){
+            if (report) {
                 safeUnlink(isExist.upload.report)
             }
             await TestReport.findByIdAndUpdate(isExist._id, {
@@ -690,7 +702,7 @@ const saveReport = async (req, res) => {
                 patientId,
                 testId,
                 appointmentId,
-                component,remark
+                component, remark
                 // upload:{report,name:manual.name,comment:manual.comment}
             }, { new: true })
             return res.status(201).json({
@@ -699,13 +711,12 @@ const saveReport = async (req, res) => {
             });
         }
         else {
-            console.log(report)
             const newReport = new TestReport({
                 labId,
                 patientId,
                 testId,
-                appointmentId,remark,
-                upload:{report,name:manualName,comment:manualComment},
+                appointmentId, remark,
+                upload: { report, name: manualName, comment: manualComment },
                 component
             });
 
@@ -718,8 +729,8 @@ const saveReport = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error("Report Errr",error);
-        if(fs.existsSync(report)){
+        console.error("Report Errr", error);
+        if (fs.existsSync(report)) {
             safeUnlink(report)
         }
         res.status(500).json({ success: false, message: "Error saving report" });
@@ -732,7 +743,7 @@ const getTestReport = async (req, res) => {
             appointmentId,
         } = req.body;
         const isExist = await TestReport.findOne({ testId, appointmentId }).populate('testId')
-        .populate({path:'labId',select:'-passwordHash',populate:"labId"}).populate('appointmentId')
+            .populate({ path: 'labId', select: '-passwordHash', populate: "labId" }).populate('appointmentId')
         if (isExist) {
             return res.status(201).json({
                 success: true,
@@ -752,44 +763,44 @@ const getTestReport = async (req, res) => {
     }
 };
 export const addPatient = async (req, res) => {
-  const { name, dob, gender, contactNumber, email,  address, countryId, stateId, cityId, pinCode,  contact } = req.body
+    const { name, dob, gender, contactNumber, email, address, countryId, stateId, cityId, pinCode, contact } = req.body
 
-  try {
-    const labId = req.user._id;
-    const data = req.body;
-    if (!name || !dob || !gender || !contactNumber) {
-      return res.status(400).json({
-        success: false,
-        message: "Required fields missing"
-      });
+    try {
+        const labId = req.user._id;
+        const data = req.body;
+        if (!name || !dob || !gender || !contactNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "Required fields missing"
+            });
+        }
+
+        // ✅ CREATE PATIENT
+        const patient = await Patient.create({ name, gender, contactNumber, email });
+        if (patient) {
+            const rawPassword = contactNumber.slice(-4) + "@123";
+            const passwordHash = await bcrypt.hash(rawPassword, 10);
+            const pt = await User.create({ name, patientId: patient._id, email, role: 'patient', created_by: "lab", created_by_id: labId, passwordHash })
+            await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
+            await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
+            return res.status(200).json({
+                success: true,
+                message: "Patient added successfully",
+                data: pt
+            });
+        }
+        return res.status(200).json({
+            success: false,
+            message: "Patient not added ",
+        });
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
-
-    // ✅ CREATE PATIENT
-    const patient = await Patient.create({ name, gender, contactNumber,  email });
-    if (patient) {
-      const rawPassword = contactNumber.slice(-4) + "@123";
-      const passwordHash = await bcrypt.hash(rawPassword, 10);
-      const pt = await User.create({ name, patientId: patient._id, email, role: 'patient', created_by: "lab", created_by_id: labId, passwordHash })
-      await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
-      await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
-      return res.status(200).json({
-        success: true,
-        message: "Patient added successfully",
-        data: pt
-      });
-    }
-     return res.status(200).json({
-        success: false,
-        message: "Patient not added ",
-      });
-
-  } catch (err) {
-    console.log(err)
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
 };
 export {
     getAllLaboratory, getAllPermission, addLabPermission, deleteLabPermission, saveEmpAccess, saveEmpEmployement, saveEmpProfessional, saveLabStaff,

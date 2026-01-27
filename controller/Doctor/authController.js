@@ -214,7 +214,7 @@ const verifyOtp = async (req, res) => {
                     return res.status(401).json({ success: false, message: "Invalid credentials" });
                 }
 
-                const user=await User.findById(employee.doctorId)
+                const user = await User.findById(employee.doctorId)
                 const token = jwt.sign(
                     { user: user._id },
                     process.env.JWT_SECRET,
@@ -224,57 +224,56 @@ const verifyOtp = async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     isOwner: false,
-                    permissions: access.permissionId,
-                    staffId: employee._id,token,userId:user._id,doctorId:user.doctorId
+                    staffId: employee._id, token, userId: user._id, doctorId: user.doctorId
                 });
             }
-            else{
+            else {
 
                 const doctor = await Doctor.findOne({ contactNumber: phone })
                 const user = await User.findById(doctor.userId)
-            const userId = doctor.userId
-            const [
-                kyc,
-                education,
-                medicalLicense,
-                address,
-            ] = await Promise.all([
-                DoctorKyc.findOne({ userId }),
-                DoctorEduWork.findOne({ userId }),
-                MedicalLicense.findOne({ userId }),
-                DoctorAbout.findOne({
-                    userId,
-                }),
-            ]);
+                const userId = doctor.userId
+                const [
+                    kyc,
+                    education,
+                    medicalLicense,
+                    address,
+                ] = await Promise.all([
+                    DoctorKyc.findOne({ userId }),
+                    DoctorEduWork.findOne({ userId }),
+                    MedicalLicense.findOne({ userId }),
+                    DoctorAbout.findOne({
+                        userId,
+                    }),
+                ]);
 
-            let nextStep = null;
-            
-            if (!kyc) {
-                nextStep = "/doctor/kyc";
-            } else if (!education) {
-                nextStep = "/doctor/education-work";
-            } else if (!medicalLicense) {
-                nextStep = "/doctor/medical-license";
-            } else if (!address) {
-                nextStep = "doctor/address";
+                let nextStep = null;
+
+                if (!kyc) {
+                    nextStep = "/doctor/kyc";
+                } else if (!education) {
+                    nextStep = "/doctor/education-work";
+                } else if (!medicalLicense) {
+                    nextStep = "/doctor/medical-license";
+                } else if (!address) {
+                    nextStep = "doctor/address";
+                }
+                const isValid = code == "1234"
+                let isNew = true;
+                const isLogin = await Login.findOne({ userId })
+                if (isLogin) {
+                    isNew = false;
+                }
+                if (isValid) {
+                    const token = jwt.sign(
+                        { user: user._id, isOwner: true, type: 'doctor' },
+                        process.env.JWT_SECRET,
+                        // { expiresIn: isRemember ? "30d" : "1d" }
+                    );
+                    return res.status(200).json({ message: "Verify Success", nextStep, isOwner: true, token, doctorId: user?.doctorId, userId, user: user, success: true })
+                } else {
+                    return res.status(200).json({ message: "Invalid credentials", success: false })
+                }
             }
-            const isValid = code == "1234"
-            let isNew = true;
-            const isLogin = await Login.findOne({ userId })
-            if (isLogin) {
-                isNew = false;
-            }
-            if (isValid) {
-                const token = jwt.sign(
-                    { user: user._id,isOwner:true,type:'doctor' },
-                    process.env.JWT_SECRET,
-                    // { expiresIn: isRemember ? "30d" : "1d" }
-                );
-                return res.status(200).json({ message: "Verify Success", nextStep, isOwner:true, token, doctorId: user?.doctorId, userId, user: user, success: true })
-            } else {
-                return res.status(200).json({ message: "Invalid credentials", success: false })
-            }
-        }
         }
     } catch (err) {
         console.log(err)
@@ -626,20 +625,22 @@ const getDoctorKyc = async (req, res) => {
     }
 };
 const doctorAbout = async (req, res) => {
-    const { userId, hospitalName, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou } = req.body;
+    const { userId, lat, long, hospitalName, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou } = req.body;
     try {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
-
+        const cityData = await City.findById(cityId)
+        const finalLat = (lat !== undefined && lat !== null) ? lat : cityData?.latitude;
+        const finalLong = (long !== undefined && long !== null) ? long : cityData?.longitude;
         const data = await DoctorAbout.findOne({ userId });
         if (data) {
-            await DoctorAbout.findByIdAndUpdate(data._id, { hospitalName, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou }, { new: true })
+            await DoctorAbout.findByIdAndUpdate(data._id, { hospitalName, lat:finalLat, long:finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "About data update successfully",
             });
         } else {
-            await DoctorAbout.create({ hospitalName, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou, userId })
+            await DoctorAbout.create({ hospitalName, lat:finalLat, long:finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou, userId })
             return res.status(200).json({
                 success: true,
                 message: "About data saved successfully",

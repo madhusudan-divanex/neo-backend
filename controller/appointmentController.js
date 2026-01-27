@@ -701,6 +701,39 @@ const actionLabAppointment = async (req, res) => {
         return res.status(200).json({ message: 'Server Error' });
     }
 }
+const paymentLabAppointment = async (req, res) => {
+    const { labId, appointmentId, status, note, type, paymentStatus } = req.body;
+    try {
+        const isExist = await User.findById(labId);
+        if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
+
+        const isPatient = await LabAppointment.findById(appointmentId);
+        if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
+
+        const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note }, { new: true })
+        if (update) {
+            if (status == 'approved') {
+                await Notification.create({
+                    userId: isPatient.patientId,
+                    title: "Appointment Approved!",
+                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been approved by ${isExist.name}`
+                })
+            } else if (status == 'rejected') {
+                await Notification.create({
+                    userId: isPatient.patientId,
+                    title: "Appointment Rejected!",
+                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been rejected by ${isExist.name}`
+                })
+            }
+            return res.status(200).json({ message: "Appointment status updated", success: true })
+        } else {
+            return res.status(200).json({ message: "Appointment status not updated", success: false })
+        }
+
+    } catch (err) {
+        return res.status(200).json({ message: 'Server Error' });
+    }
+}
 const getLabReport = async (req, res) => {
     const patientId = req.params.id;
     const { page = 1, limit = 10 } = req.query
@@ -1236,7 +1269,7 @@ const getHospitalDoctorAppointment = async (req, res) => {
 export {
     bookDoctorAppointment, actionDoctorAppointment, cancelDoctorAppointment, getLabAppointmentData, getPatientLabReport,
     doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, labDashboardData, getHospitalDoctorAppointment,
-    getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, actionLabAppointment,
+    getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment,paymentLabAppointment, actionLabAppointment,
     getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData, getPastPatientLabAppointment,
     getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment, getHospitalAppointment, getHospitalPastAppointment
 }

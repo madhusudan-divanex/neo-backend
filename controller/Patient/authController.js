@@ -15,6 +15,7 @@ import LabAppointment from '../../models/LabAppointment.js';
 import safeUnlink from '../../utils/globalFunction.js';
 import PatientPrescriptions from '../../models/Patient/prescription.model.js';
 import User from '../../models/Hospital/User.js';
+import DoctorAppointment from '../../models/DoctorAppointment.js';
 
 const signUpPatient = async (req, res) => {
     const { name, gender, email, contactNumber, password, created_by } = req.body;
@@ -455,7 +456,8 @@ const getProfileDetail = async (req, res) => {
             kyc,
             medicalHistory,
             demographic,
-            prescription, isRequest, allowEdit
+            prescription, isRequest, allowEdit, doctorAppointmentsCount,
+            labAppointmentsCount
         ] = await Promise.all([
             Patient.findOne({ userId: fullId }).lean(),
             PatientKyc.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
@@ -463,8 +465,12 @@ const getProfileDetail = async (req, res) => {
             PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             PatientPrescriptions.findOne({ userId: fullId }).sort({ createdAt: -1 }).lean(),
             EditRequest.findOne({ patientId: fullId }),
-            EditRequest.exists({ patientId: fullId, status: 'approved' }).then(Boolean)
+            EditRequest.exists({ patientId: fullId, status: 'approved' }).then(Boolean),
+            DoctorAppointment.countDocuments({ patientId: fullId }),  // Count doctor appointments
+            LabAppointment.countDocuments({ patientId: fullId })
         ]);
+
+        const notAllowed = (patient.status!=='approved') && ((doctorAppointmentsCount + labAppointmentsCount) > 5);
 
         return res.status(200).json({
             success: true,
@@ -472,7 +478,7 @@ const getProfileDetail = async (req, res) => {
             kyc, customId: user.unique_id, role: user.role,
             demographic,
             prescription,
-            medicalHistory, isRequest, allowEdit
+            medicalHistory, isRequest, allowEdit, notAllowed
         });
 
     } catch (err) {
@@ -645,13 +651,13 @@ const getPatientKyc = async (req, res) => {
     try {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
-        const pt =  await Patient.findOne({userId:user._id})
+        const pt = await Patient.findOne({ userId: user._id })
         const data = await PatientKyc.findOne({ userId });
         if (data) {
             return res.status(200).json({
                 success: true,
                 data,
-                status:pt.status,
+                status: pt.status,
                 message: "Kyc fetch successfully",
             });
         }

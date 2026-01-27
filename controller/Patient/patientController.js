@@ -564,7 +564,7 @@ async function getPatientFavoriteData(req, res) {
       ]);
 
     }
-    const [labCount, hospitalCount, doctorCount,pharCount] = await Promise.all([
+    const [labCount, hospitalCount, doctorCount, pharCount] = await Promise.all([
       Favorite.countDocuments({ userId, labId: { $ne: null } }),
       Favorite.countDocuments({ userId, hospitalId: { $ne: null } }),
       Favorite.countDocuments({ userId, doctorId: { $ne: null } }),
@@ -580,7 +580,7 @@ async function getPatientFavoriteData(req, res) {
         lab: labCount,
         hospital: hospitalCount,
         doctor: doctorCount,
-        pharmacy:pharCount
+        pharmacy: pharCount
       },
       pagination: {
         currentPage: Number(page),
@@ -722,71 +722,81 @@ async function getPatients(req, res) {
   }
 }
 const getNearByDoctor = async (req, res) => {
-  const { lat, long, page = 1, limit = 10, distance = 10 } = req.query;
-
-  if (!lat || !long) {
-    return res.status(400).json({ message: "lat and long required" });
-  }
+  const { lat, long, page = 1, limit = 10, distance = 200, location } = req.query;
 
   try {
-    const cities = await City.find({
-      latitude: { $ne: null },
-      longitude: { $ne: null }
-    });
+    let doctors = [];
 
-    // nearby cities filter
-    const nearbyCityIds = cities
-      .filter(city => {
+    // Case 1️⃣: Search by city name
+    if (location) {
+      // Find city first
+      const city = await City.findOne({ name: new RegExp(`^${location}$`, "i") });
+
+      if (!city) {
+        return res.status(404).json({ success: false, message: "City not found" });
+      }
+
+      doctors = await DoctorAbout.find({ cityId: city._id })
+        .populate("cityId", "name state country")
+        .populate({
+          path: "userId",
+          select: "-passwordHash",
+          populate: "doctorId"
+        })
+        .skip((page - 1) * limit)
+        .limit(Number(limit))
+        .lean();
+    } else {
+      // Case 2️⃣: Search by lat/long + distance
+      if (!lat || !long) {
+        return res
+          .status(400)
+          .json({ success: false, message: "lat and long required" });
+      }
+
+      // Fetch doctors who have lat/long
+      const doctorsWithLocation = await DoctorAbout.find({
+        lat: { $ne: null },
+        long: { $ne: null }
+      })
+        .populate("cityId", "name state country")
+        .populate({
+          path: "userId",
+          select: "-passwordHash",
+          populate: "doctorId"
+        })
+        .skip((page - 1) * limit)
+        .limit(Number(limit))
+        .lean();
+
+      // Filter doctors within given distance
+      doctors = doctorsWithLocation.filter(doc => {
         const dist = getDistanceInKm(
           Number(lat),
           Number(long),
-          Number(city.latitude),
-          Number(city.longitude)
+          Number(doc.lat),
+          Number(doc.long)
         );
         return dist <= Number(distance);
-      })
-      .map(city => city._id);
-
-    if (!nearbyCityIds.length) {
-      return res.status(200).json({
-        success: true,
-        message: "No nearby doctors found",
-        data: []
       });
     }
-
-    const doctors = await DoctorAbout.find({
-      cityId: { $in: nearbyCityIds }
-    })
-      .populate({
-        path: 'userId',
-        select: '-password',
-        populate: 'doctorId'
-      })
-      .populate('cityId')
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-
-    const totalData = await DoctorAbout.countDocuments({
-      cityId: { $in: nearbyCityIds }
-    });
 
     return res.status(200).json({
       success: true,
       message: "Nearby doctors fetched successfully",
       data: doctors,
       pagination: {
-        totalData,
+        totalData: doctors.length,
         currentPage: Number(page),
-        totalPage: Math.ceil(totalData / limit)
+        totalPage: Math.ceil(doctors.length / limit)
       }
     });
-
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server Error" });
+    return res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
 
 const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth radius in KM
@@ -804,4 +814,4 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients ,getNearByDoctor}
+export { favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients, getNearByDoctor }

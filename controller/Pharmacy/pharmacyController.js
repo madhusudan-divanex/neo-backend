@@ -959,6 +959,7 @@ const listReturns = async (req, res) => {
         if (search) {
             matchStage["supplier.name"] = { $regex: search, $options: "i" };
         }
+        console.log(matchStage)
         const pipeline = [
             // Lookup supplier
             {
@@ -1580,8 +1581,7 @@ const pharStaffData = async (req, res) => {
 
         const employment = await EmpEmployement.findOne({ empId: id })
         const professional = await EmpProfesional.findOne({ empId: id })
-        const empAccess = await EmpAccess.findOne({ empId: id })?.populate({ path: 'permissionId', select: 'name' })
-
+        const empAccess = await EmpAccess.findOne({ empId: id })?.populate('permissionId')
         return res.status(200).json({
             success: true,
             message: "Staff fetched",

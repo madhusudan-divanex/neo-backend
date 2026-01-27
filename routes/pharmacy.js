@@ -3,6 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData } from "../controller/Pharmacy/pharmacyController.js";
+import { checkPermission } from "../middleware/permissionCheck.js";
 
 const pharmacy=express.Router()
 const uploader = getUploader('phar');
@@ -68,10 +69,10 @@ pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
 
 pharmacy.post('/delete-image',authMiddleware,deletePharImage)
 
-pharmacy.post('/inventory', authMiddleware, addInventry);
-pharmacy.get('/inventory/:id', authMiddleware, inventoryList);
-pharmacy.get('/inventory-data/:id', authMiddleware, inventoryGetById);
-pharmacy.put('/inventory', authMiddleware, inventoryUpdate);
+pharmacy.post('/inventory', authMiddleware,checkPermission("pharmacy","addInventory") ,addInventry);
+pharmacy.get('/inventory/:id', authMiddleware,checkPermission("pharmacy","listView") , inventoryList);
+pharmacy.get('/inventory-data/:id', authMiddleware,checkPermission("pharmacy","viewInventory") , inventoryGetById);
+pharmacy.put('/inventory', authMiddleware,checkPermission("pharmacy","editInventory") , inventoryUpdate);
 pharmacy.delete('/inventory/:id', authMiddleware, inventoryDelete);
 pharmacy.get('/medicine-data/:name/:pharId', authMiddleware, medicineData);
 

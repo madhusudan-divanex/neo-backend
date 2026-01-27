@@ -94,8 +94,19 @@ Laboratory->
 Patient->
     Notification
     Pharmacy 
+Api->
+    Near by doctor
+    Add Time Slot 
+    Get Time Slot 
+    Update Time Slot
+    Delete Time Slot
+
 Doctor->
-    Reminder
+    Staff Access
+
+Patient->
+    Near by doctor 
+    
 
     Add Appointment
     CRUD Return 

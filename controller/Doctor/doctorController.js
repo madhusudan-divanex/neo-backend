@@ -14,6 +14,8 @@ import EmpAccess from "../../models/Doctor/empAccess.model.js"
 import EmpEmployement from "../../models/Doctor/employement.model.js"
 import EmpProfesional from "../../models/Doctor/empProffesional.js"
 import bcrypt from "bcryptjs"
+import Permission from "../../models/Permission.js"
+import TimeSlot from "../../models/TimeSlot.js"
 const doctorDashboard = async (req, res) => {
   const id = req.params.id
   try {
@@ -72,7 +74,7 @@ const getPatientHistory = async (req, res) => {
     }
 
     // Get unique patient IDs
-    const patientIds = await DoctorAppointment.distinct('patientId', { doctorId ,status:'completed'});
+    const patientIds = await DoctorAppointment.distinct('patientId', { doctorId, status: 'completed' });
 
     // Pagination on patient IDs
     const paginatedIds = patientIds.slice(skip, skip + limit);
@@ -82,7 +84,7 @@ const getPatientHistory = async (req, res) => {
       paginatedIds.map(async (id) => {
         const patient = await Patient.findOne({ userId: id }).populate({ path: 'userId', select: 'unique_id' }).lean()
         const patientDemographic = await PatientDemographic.findOne({ userId: id }).select('dob').lean()
-        const lastApt = await DoctorAppointment.findOne({ patientId: id,doctorId }).sort({ createdAt: -1 }).lean()
+        const lastApt = await DoctorAppointment.findOne({ patientId: id, doctorId }).sort({ createdAt: -1 }).lean()
         return { ...patient, patientDemographic, lastApt };
       })
     );
@@ -216,23 +218,23 @@ async function sendReminder(req, res) {
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
     const revisitDate = new Date(isPrescription.createdAt);
     revisitDate.setDate(revisitDate.getDate() + isPrescription.reVisit);
     revisitDate.setHours(0, 0, 0, 0);
-    
+
     // // agar aaj ka din hai
     // console.log(revisitDate,isPrescription.reVisit)
     // if (revisitDate >= today && revisitDate < tomorrow) {
-      await Notification.create({
-        userId: patientId,
-        title: "Doctor Revisit Reminder",
-        message: `This is a reminder that you have a scheduled revisit today with Dr. ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.`,
-        type: "REVISIT"
-      });
-      return res.status(200).json({ messsage: "Notfication send", success: true })
+    await Notification.create({
+      userId: patientId,
+      title: "Doctor Revisit Reminder",
+      message: `This is a reminder that you have a scheduled revisit today with Dr. ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.`,
+      type: "REVISIT"
+    });
+    return res.status(200).json({ messsage: "Notfication send", success: true })
     // }
     // return res.status(200).json({message:"Reminder not required today",success:false})
 
@@ -242,329 +244,410 @@ async function sendReminder(req, res) {
 }
 
 const saveDoctorStaff = async (req, res) => {
-    const { name, address, dob, state, city, pinCode, doctorId, empId, gender } = req.body
-    const contactInformation = JSON.parse(req.body.contactInformation)
-    const profileImage = req.files?.['profileImage']?.[0]?.path
-    try {
-        const isExist = await User.findById(doctorId);
-        if (!isExist) return res.status(200).json({ message: "Doctor  not found", success: false })
+  const { name, address, dob, state, city, pinCode, doctorId, empId, gender } = req.body
+  const contactInformation = JSON.parse(req.body.contactInformation)
+  const profileImage = req.files?.['profileImage']?.[0]?.path
+  try {
+    const isExist = await User.findById(doctorId);
+    if (!isExist) return res.status(200).json({ message: "Doctor  not found", success: false })
 
-        const isStaff = await DoctorStaff.findById(empId);
+    const isStaff = await DoctorStaff.findById(empId);
 
-        if (profileImage && isStaff) {
-            safeUnlink(isStaff.profileImage)
-        }
-        if (isStaff) {
-            await DoctorStaff.findByIdAndUpdate(empId, { name, address, dob, state, gender, city, pinCode, contactInformation, doctorId, profileImage: profileImage || isStaff.profileImage }, { new: true })
-            return res.status(200).json({
-                success: true,
-                message: "Staff updated",
-            });
-        } else {
-            const staf = await DoctorStaff.create({ name, address, dob, state, gender, city, pinCode, contactInformation, doctorId, profileImage });
-            return res.status(200).json({
-                success: true,
-                message: "Staff created",
-                empId: staf._id
-            });
-        }
-
-
-    } catch (error) {
-        if (profileImage && fs.existsSync(profileImage)) {
-            safeUnlink(profileImage)
-        }
-        return res.status(500).json({ success: false, message: error.message });
+    if (profileImage && isStaff) {
+      safeUnlink(isStaff.profileImage)
     }
+    if (isStaff) {
+      await DoctorStaff.findByIdAndUpdate(empId, { name, address, dob, state, gender, city, pinCode, contactInformation, doctorId, profileImage: profileImage || isStaff.profileImage }, { new: true })
+      return res.status(200).json({
+        success: true,
+        message: "Staff updated",
+      });
+    } else {
+      const staf = await DoctorStaff.create({ name, address, dob, state, gender, city, pinCode, contactInformation, doctorId, profileImage });
+      return res.status(200).json({
+        success: true,
+        message: "Staff created",
+        empId: staf._id
+      });
+    }
+
+
+  } catch (error) {
+    if (profileImage && fs.existsSync(profileImage)) {
+      safeUnlink(profileImage)
+    }
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const saveEmpEmployement = async (req, res) => {
-    const { id, empId, doctorId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note } = req.body;
+  const { id, empId, doctorId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note } = req.body;
 
-    try {
-        // Check if employee exists
-        const employee = await DoctorStaff.findById(empId);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
+  try {
+    // Check if employee exists
+    const employee = await DoctorStaff.findById(empId);
+    if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
-        let data;
-        if (id) {
-            data = await EmpEmployement.findByIdAndUpdate(id, { empId, doctorId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note }, { new: true });
-            if (!data) return res.status(200).json({ success: false, message: "Employment record not found" });
+    let data;
+    if (id) {
+      data = await EmpEmployement.findByIdAndUpdate(id, { empId, doctorId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note }, { new: true });
+      if (!data) return res.status(200).json({ success: false, message: "Employment record not found" });
 
-            return res.status(200).json({
-                success: true,
-                message: "Employee employment updated",
-                data
-            });
-        } else {
-            // Create new
-            data = await EmpEmployement.create({ empId, doctorId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note });
-            return res.status(200).json({
-                success: true,
-                message: "Employee employment created",
-                data
-            });
-        }
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+      return res.status(200).json({
+        success: true,
+        message: "Employee employment updated",
+        data
+      });
+    } else {
+      // Create new
+      data = await EmpEmployement.create({ empId, doctorId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note });
+      return res.status(200).json({
+        success: true,
+        message: "Employee employment created",
+        data
+      });
     }
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const deleteSubEmpProffesional = async (req, res) => {
-    const { id, empId, type } = req.body;
+  const { id, empId, type } = req.body;
 
-    try {
-        // Check if employee exists
-        const employee = await DoctorStaff.findById(empId);
-        if (!employee) {
-            return res.status(200).json({ success: false, message: "Employee not found" });
-        }
-
-        // Build pull query based on type
-        let pullQuery = {};
-
-        if (type === "education") {
-            pullQuery = { $pull: { education: { _id: id } } };
-        } else if (type === "cert") {
-            const data = await EmpProfesional.findOne({ empId }).select('certificates')
-            safeUnlink(data.certificates.certFile)
-            pullQuery = { $pull: { certificates: { _id: id } } };
-        } else {
-            return res.status(400).json({ success: false, message: "Invalid type" });
-        }
-
-        const data = await EmpProfesional.findOneAndUpdate(
-            { empId },
-            pullQuery,
-            { new: true }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Sub-document deleted successfully",
-            data
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+  try {
+    // Check if employee exists
+    const employee = await DoctorStaff.findById(empId);
+    if (!employee) {
+      return res.status(200).json({ success: false, message: "Employee not found" });
     }
+
+    // Build pull query based on type
+    let pullQuery = {};
+
+    if (type === "education") {
+      pullQuery = { $pull: { education: { _id: id } } };
+    } else if (type === "cert") {
+      const data = await EmpProfesional.findOne({ empId }).select('certificates')
+      safeUnlink(data.certificates.certFile)
+      pullQuery = { $pull: { certificates: { _id: id } } };
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid type" });
+    }
+
+    const data = await EmpProfesional.findOneAndUpdate(
+      { empId },
+      pullQuery,
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Sub-document deleted successfully",
+      data
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const saveEmpProfessional = async (req, res) => {
-    const { id, empId, profession, specialization, totalExperience, professionalBio, education } = req.body;
-    const certMeta = JSON.parse(req.body.certificates || "[]");
-    try {
-        const employee = await DoctorStaff.findById(empId);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
-        const uploadedFiles = req.files?.certFile || [];
-        const certificates = certMeta.map((meta, idx) => ({
-            certName: meta.certName,
-            certFile: uploadedFiles[idx] ? uploadedFiles[idx].path : "",
-        }));
-        const isExist = await EmpProfesional.findOne({ empId })
-        let data;
-        if (isExist) {
-            const existing = await EmpProfesional.findById(isExist._id);
-            if (!existing) return res.status(200).json({ success: false, message: "Professional record not found" });
+  const { id, empId, profession, specialization, totalExperience, professionalBio, education } = req.body;
+  const certMeta = JSON.parse(req.body.certificates || "[]");
+  try {
+    const employee = await DoctorStaff.findById(empId);
+    if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
+    const uploadedFiles = req.files?.certFile || [];
+    const certificates = certMeta.map((meta, idx) => ({
+      certName: meta.certName,
+      certFile: uploadedFiles[idx] ? uploadedFiles[idx].path : "",
+    }));
+    const isExist = await EmpProfesional.findOne({ empId })
+    let data;
+    if (isExist) {
+      const existing = await EmpProfesional.findById(isExist._id);
+      if (!existing) return res.status(200).json({ success: false, message: "Professional record not found" });
 
-            if (certificates.length > 0 && existing.certificates?.length) {
-                existing.certificates.forEach(cert => safeUnlink(cert.certFile));
-            }
+      if (certificates.length > 0 && existing.certificates?.length) {
+        existing.certificates.forEach(cert => safeUnlink(cert.certFile));
+      }
 
-            data = await EmpProfesional.findByIdAndUpdate(
-                isExist._id,
-                {
-                    profession,
-                    specialization,
-                    totalExperience,
-                    professionalBio,
-                    education: JSON.parse(education || "[]"), // assuming education comes as JSON string
-                    certificates: certificates.length > 0 ? certificates : existing.certificates
-                },
-                { new: true }
-            );
+      data = await EmpProfesional.findByIdAndUpdate(
+        isExist._id,
+        {
+          profession,
+          specialization,
+          totalExperience,
+          professionalBio,
+          education: JSON.parse(education || "[]"), // assuming education comes as JSON string
+          certificates: certificates.length > 0 ? certificates : existing.certificates
+        },
+        { new: true }
+      );
 
-            return res.status(200).json({
-                success: true,
-                message: "Employee professional updated"
-            });
+      return res.status(200).json({
+        success: true,
+        message: "Employee professional updated"
+      });
 
-        } else {
-            // Create new record
-            data = await EmpProfesional.create({
-                empId,
-                profession,
-                specialization,
-                totalExperience,
-                professionalBio,
-                education: JSON.parse(education || "[]"),
-                certificates
-            });
+    } else {
+      // Create new record
+      data = await EmpProfesional.create({
+        empId,
+        profession,
+        specialization,
+        totalExperience,
+        professionalBio,
+        education: JSON.parse(education || "[]"),
+        certificates
+      });
 
-            return res.status(200).json({
-                success: true,
-                message: "Employee professional created"
-            });
-        }
-
-    } catch (error) {
-        // if (certificatesFiles.length > 0) {
-        //     certificatesFiles.forEach(file => safeUnlink(file.path));
-        // }
-        return res.status(500).json({ success: false, message: error.message });
+      return res.status(200).json({
+        success: true,
+        message: "Employee professional created"
+      });
     }
+
+  } catch (error) {
+    // if (certificatesFiles.length > 0) {
+    //     certificatesFiles.forEach(file => safeUnlink(file.path));
+    // }
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const saveEmpAccess = async (req, res) => {
-    const { id, empId, userName, email, password, permissionId } = req.body;
-    try {
-        const employee = await DoctorStaff.findById(empId);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
+  const { id, empId, userName, email, password, permissionId } = req.body;
+  try {
+    const employee = await DoctorStaff.findById(empId);
+    if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
-        const permission = await DoctorPermission.findById(permissionId);
-        if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
+    const permission = await Permission.findById(permissionId);
+    if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
 
-        const isExist = await EmpAccess.findOne({ empId: empId });
-        let data;
-        let hashedPassword;
-        if(password){
-          hashedPassword=await bcrypt.hash(password,10)
-        }
-        await DoctorStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
-        if (isExist) {
-            data = await EmpAccess.findOneAndUpdate({ empId: empId }, { userName, email, password:hashedPassword, permissionId }, { new: true });
-            if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
-            return res.status(200).json({
-                success: true,
-                message: "Employee access updated",
-                data
-            });
-        } else {
-            data = await EmpAccess.create({userName, email, password:hashedPassword, permissionId});
-            return res.status(200).json({
-                success: true,
-                message: "Employee access created",
-                data
-            });
-        }
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+    const isExist = await EmpAccess.findOne({ empId: empId });
+    let data;
+    let hashedPassword;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10)
     }
+    await DoctorStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
+    if (isExist) {
+      data = await EmpAccess.findOneAndUpdate({ empId: empId }, { userName, email, password: hashedPassword, permissionId }, { new: true });
+      if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
+      return res.status(200).json({
+        success: true,
+        message: "Employee access updated",
+        data
+      });
+    } else {
+      data = await EmpAccess.create({ userName, email, password: hashedPassword, permissionId });
+      return res.status(200).json({
+        success: true,
+        message: "Employee access created",
+        data
+      });
+    }
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const doctorStaffData = async (req, res) => {
-    const id = req.params.id
-    try {
-        const personal = await DoctorStaff.findById(id);
-        if (!personal) return res.status(200).json({ message: "Employee  not found", success: false })
+  const id = req.params.id
+  try {
+    const personal = await DoctorStaff.findById(id);
+    if (!personal) return res.status(200).json({ message: "Employee  not found", success: false })
 
-        const employment = await EmpEmployement.findOne({ empId: id })
-        const professional = await EmpProfesional.findOne({ empId: id })
-        const empAccess = await EmpAccess.findOne({ empId: id })?.populate({ path: 'permissionId', select: 'name' })
+    const employment = await EmpEmployement.findOne({ empId: id })
+    const professional = await EmpProfesional.findOne({ empId: id })
+    const empAccess = await EmpAccess.findOne({ empId: id })?.populate('permissionId')
 
-        return res.status(200).json({
-            success: true,
-            message: "Staff fetched",
-            employee: personal, employment, professional, empAccess
+    return res.status(200).json({
+      success: true,
+      message: "Staff fetched",
+      employee: personal, employment, professional, empAccess
 
-        });
+    });
 
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const doctorStaffAction = async (req, res) => {
-    const { empId, status } = req.body
-    try {
-        const isExist = await DoctorStaff.findById(empId);
-        if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
+  const { empId, status } = req.body
+  try {
+    const isExist = await DoctorStaff.findById(empId);
+    if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
 
-        const employment = await DoctorStaff.findByIdAndUpdate(empId, { status }, { new: true })
+    const employment = await DoctorStaff.findByIdAndUpdate(empId, { status }, { new: true })
 
-        return res.status(200).json({
-            success: true,
-            message: "Staff status updated"
+    return res.status(200).json({
+      success: true,
+      message: "Staff status updated"
 
-        });
+    });
 
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const doctorStaff = async (req, res) => {
-    const id = req.params.id;
-    let { page, limit, name } = req.query;
+  const id = req.params.id;
+  let { page, limit, name } = req.query;
 
-    const pageNumber = parseInt(page) > 0 ? parseInt(page) : 1;
-    const limitNumber = parseInt(limit) > 0 ? parseInt(limit) : 10;
+  const pageNumber = parseInt(page) > 0 ? parseInt(page) : 1;
+  const limitNumber = parseInt(limit) > 0 ? parseInt(limit) : 10;
 
-    try {
-        const isExist = await User.findById(id);
-        if (!isExist) {
-            return res.status(404).json({ message: "Doctor not found", success: false });
-        }
-
-        const filter = { doctorId: id };
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
-        }
-
-        const total = await DoctorStaff.countDocuments(filter);
-        const employee = await DoctorStaff.find(filter)
-            .populate({ path: "permissionId", select: 'name' })
-            .sort({ createdAt: -1 })
-            .skip((pageNumber - 1) * limitNumber)
-            .limit(limitNumber)
-            .lean();
-
-        return res.status(200).json({
-            success: true,
-            message: "Staff fetched",
-            data: employee,
-            pagination: {
-                page: pageNumber,
-                limit: limitNumber,
-                total,
-                totalPages: Math.ceil(total / limitNumber)
-            },
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+  try {
+    const isExist = await User.findById(id);
+    if (!isExist) {
+      return res.status(404).json({ message: "Doctor not found", success: false });
     }
+
+    const filter = { doctorId: id };
+    if (name) {
+      filter.name = { $regex: name, $options: "i" };
+    }
+
+    const total = await DoctorStaff.countDocuments(filter);
+    const employee = await DoctorStaff.find(filter)
+      .populate({ path: "permissionId", select: 'name' })
+      .sort({ createdAt: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Staff fetched",
+      data: employee,
+      pagination: {
+        page: pageNumber,
+        limit: limitNumber,
+        total,
+        totalPages: Math.ceil(total / limitNumber)
+      },
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 const deleteStaffData = async (req, res) => {
-    const id = req.params.id;
+  const id = req.params.id;
 
-    try {
-        const employee = await DoctorStaff.findById(id);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
+  try {
+    const employee = await DoctorStaff.findById(id);
+    if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
-        safeUnlink(employee.profileImage);
+    safeUnlink(employee.profileImage);
 
-        // Find related professional data
-        const professional = await EmpProfesional.findOne({ empId: id });
-        if (professional?.certificates?.length) {
-            professional.certificates.forEach(cert => safeUnlink(cert.certFile));
-        }
-
-        // Find employment and access records
-        const employment = await EmpEmployement.findOne({ empId: id });
-        const empAccess = await EmpAccess.findOne({ empId: id });
-
-        // Delete all related records
-        await EmpProfesional.deleteMany({ empId: id });
-        await EmpEmployement.deleteMany({ empId: id });
-        await EmpAccess.deleteMany({ empId: id });
-        await DoctorStaff.findByIdAndDelete(id);
-
-        return res.status(200).json({
-            success: true,
-            message: "Employee and related data deleted successfully"
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+    // Find related professional data
+    const professional = await EmpProfesional.findOne({ empId: id });
+    if (professional?.certificates?.length) {
+      professional.certificates.forEach(cert => safeUnlink(cert.certFile));
     }
+
+    // Find employment and access records
+    const employment = await EmpEmployement.findOne({ empId: id });
+    const empAccess = await EmpAccess.findOne({ empId: id });
+
+    // Delete all related records
+    await EmpProfesional.deleteMany({ empId: id });
+    await EmpEmployement.deleteMany({ empId: id });
+    await EmpAccess.deleteMany({ empId: id });
+    await DoctorStaff.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Employee and related data deleted successfully"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
-export { doctorDashboard, getPatientHistory, getOccupiedSlots, getDoctorPatientReport, getPatientPending, sendReminder ,
- saveDoctorStaff,deleteStaffData,doctorStaff,
-  doctorStaffAction,doctorStaffData,saveEmpAccess,saveEmpEmployement,deleteSubEmpProffesional,saveEmpProfessional
+
+//      time slots 
+export const addTimeSlot = async (req, res) => {
+  try {
+
+
+    const { userId, day, startTime, endTime } = req.body;
+
+    let doc = await TimeSlot.findOne({ userId, day });
+
+    if (!doc) {
+      doc = new TimeSlot({ userId, day, slots: [] });
+    }
+
+    // overlap check
+    const overlap = doc.slots.some(
+      s => !(endTime <= s.startTime || startTime >= s.endTime)
+    );
+
+    if (overlap) {
+      return res.status(400).json({
+        success: false,
+        message: "Time slot overlaps with existing slot"
+      });
+    }
+
+    doc.slots.push({ startTime, endTime });
+    await doc.save();
+
+    return res.json({ success: true, message: "Slot added successfully" });
+  } catch (error) {
+    console.log(error)
+    return res.status(200).json({ message: "Server Error", success: false })
+  }
+};
+export const getTimeSlots = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const data = await TimeSlot.find({ userId }).sort({ day: 1 });
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(200).json({ message: "Server Error", success: false })
+  }
+};
+export const updateTimeSlot = async (req, res) => {
+  try {
+    const { startTime, endTime,slotId } = req.body;
+    const doc = await TimeSlot.findOne({ "slots._id": slotId });
+    if (!doc) return res.status(404).json({ success: false });
+    const slot = doc.slots.id(slotId);
+    slot.startTime = startTime;
+    slot.endTime = endTime;
+
+    await doc.save();
+
+    return res.json({ success: true, message: "Slot updated" });
+  } catch (error) {
+    console.log(error)
+    return res.status(200).json({ message: "Server Error", success: false })
+  }
+};
+export const deleteTimeSlot = async (req, res) => {
+  try {
+
+    const { slotId } = req.params;
+
+    const doc = await TimeSlot.findOne({ "slots._id": slotId });
+    if (!doc) return res.status(404).json({ success: false });
+
+    doc.slots.id(slotId).deleteOne();
+    await doc.save();
+
+    return res.json({ success: true, message: "Slot deleted" });
+  } catch (error) {
+    return res.status(200).json({ message: "Server Error", success: false })
+  }
+};
+
+export {
+  doctorDashboard, getPatientHistory, getOccupiedSlots, getDoctorPatientReport, getPatientPending, sendReminder,
+  saveDoctorStaff, deleteStaffData, doctorStaff,
+  doctorStaffAction, doctorStaffData, saveEmpAccess, saveEmpEmployement, deleteSubEmpProffesional, saveEmpProfessional
 }
