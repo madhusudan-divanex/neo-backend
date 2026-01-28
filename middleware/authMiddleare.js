@@ -7,9 +7,10 @@ const authMiddleware = (req, res, next) => {
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
         // req.user = decoded;
         req.user = {
-            userId: decoded.user,
+            userId: decoded.user || decoded.id,
             type: decoded.type,
             permissionId: decoded.permissionId || null,
             isOwner: decoded.isOwner || false

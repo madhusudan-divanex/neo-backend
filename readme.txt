@@ -95,18 +95,18 @@ Patient->
     Notification
     Pharmacy 
 Api->
-    Near by doctor
-    Add Time Slot 
-    Get Time Slot 
-    Update Time Slot
-    Delete Time Slot
-
-Doctor->
-    Staff Access
+    Add specialty 
+    Get specialty 
+    Update specialty
+    Delete specialty
 
 Patient->
-    Near by doctor 
-    
+    Hospital Lab /lab Details
+
+Hospital->
+    Lab Appointment List
+    CRUD Test  
+
 
     Add Appointment
     CRUD Return 

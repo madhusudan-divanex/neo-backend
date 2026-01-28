@@ -19,6 +19,7 @@ import User from '../../models/Hospital/User.js';
 import safeUnlink from '../../utils/globalFunction.js';
 import DoctorStaff from '../../models/Doctor/DoctorEmpPerson.model.js';
 import EmpAccess from '../../models/Doctor/empAccess.model.js';
+import City from '../../models/Hospital/City.js';
 const signUpDoctor = async (req, res) => {
     try {
         const { name, gender, email, contactNumber, password, dob } = req.body;
@@ -1008,7 +1009,7 @@ const getDoctors = async (req, res) => {
                 }
             })
         })
-            .populate('countryId stateId cityId', 'name')
+            .populate('countryId stateId cityId specialty', 'name')
             .lean();
 
 
@@ -1090,7 +1091,7 @@ const getDoctorData = async (req, res) => {
             });
         }
         const doctorData = await Doctor.findById(user.doctorId).select("-password");
-        const doctorAbout = await DoctorAbout.findOne({ userId }).populate('countryId').populate('stateId')
+        const doctorAbout = await DoctorAbout.findOne({ userId }).populate('countryId specialty stateId treatmentAreas')
             .populate('cityId').sort({ createdAt: -1 });
         const doctorLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 });
         const uniquePatientIds = await DoctorAppointment.distinct(

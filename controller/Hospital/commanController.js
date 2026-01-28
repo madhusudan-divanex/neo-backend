@@ -272,9 +272,10 @@ export const addPermission = async (req, res) => {
     if (!req.user.isOwner) {
       return res.status(403).json({ success: false, message: "Only owner allowed" });
     }
+    console.log(req.user)
 
     const { name, ...permissions } = req.body;
-    const ownerId = req.user.userId;
+    const ownerId = req.user.userId || req.user.id;
     const type = req.user.type;
 
     if (!name) {
@@ -329,7 +330,7 @@ export const updatePermission = async (req, res) => {
     }
 
     const { permissionId, name, ...permissions } = req.body;
-    const ownerId = req.user.userId;
+    const ownerId = req.user.userId || req.user.id;
     const type = req.user.type;
 
     if (!permissionId || !name) {
@@ -380,7 +381,7 @@ export const deletePermission = async (req, res) => {
     }
 
     const { permissionId } = req.body;
-    const ownerId = req.user.userId;
+    const ownerId = req.user.userId || req.user.id;
     const type = req.user.type;
 
     if (!permissionId) {

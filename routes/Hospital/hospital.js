@@ -10,14 +10,19 @@ import * as contact from "../../controller/Hospital/hospitalContactController.js
 import * as cert from "../../controller/Hospital/hospitalCertificateController.js";
 import * as kyc from "../../controller/Hospital/kycController.js";
 import * as profile from "../../controller/Hospital/profileController.js";
+import authMiddleware from "../../middleware/authMiddleare.js";
+import { addTest, getTestData, getTestReport, saveReport, updateTest } from "../../controller/Laboratory/laboratoryContoller.js";
+import getUploader from "../../config/multerConfig.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const uploader = getUploader('hospital');
 
 router.get("",  profile.getHospitals);
 router.get("/list",  profile.getHospitalList);
 router.get("/dashboard", auth, profile.hospitalDashboard);
 router.get("/profile-data/:id",  profile.getHospitalProfile);
+router.get("/profile-detail/:id",  profile.getProfileDetail);
 router.get("/doctor/:id",  profile.getHospitalDoctorList);
 // ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
@@ -78,4 +83,12 @@ router.post('/permission',auth,profile.addHospitalPermission)
 router.put('/permission',auth,profile.updateHospitalPermission)
 router.get('/permission/:id',auth,profile.getAllPermission)
 router.delete('/permission',auth,profile.deleteHospitalPermission)
+
+
+
+router.post('/test',authMiddleware,addTest)
+router.put('/test',authMiddleware,updateTest)
+router.get('/test-data/:id',authMiddleware,getTestData)
+router.post('/test-report',authMiddleware,uploader.single('report'),saveReport)
+router.post('/test-report-data',authMiddleware,getTestReport)
 export default router;

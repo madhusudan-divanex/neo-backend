@@ -31,4 +31,6 @@ router.post('/permission',authMiddleware,addPermission)
 router.put('/permission',authMiddleware,updatePermission)
 router.get('/permission/:id',authMiddleware,getAllPermission)
 router.delete('/permission',authMiddleware,deletePermission)
+
+
 export default router;

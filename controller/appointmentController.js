@@ -395,7 +395,7 @@ const getPatientAppointment = async (req, res) => {
 
         const doctorAddresses = await DoctorAbout.find({
             userId: { $in: doctorIds }
-        }).populate('countryId stateId cityId', 'name').populate({ path: 'hospitalName', select: 'hospitalName' })
+        }).populate('countryId stateId cityId specialty', 'name').populate({ path: 'hospitalName', select: 'hospitalName' })
             .lean();
 
         const addressMap = {};

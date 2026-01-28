@@ -18,6 +18,7 @@ export const saveAddress = async (req, res) => {
 
     res.json({ message: "Address saved", address });
   } catch (err) {
+    console.log(err)
     res.status(500).json({ message: "Server error" });
   }
 };

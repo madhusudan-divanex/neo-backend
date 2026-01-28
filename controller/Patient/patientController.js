@@ -395,6 +395,20 @@ async function getPatientFavoriteData(req, res) {
             preserveNullAndEmptyArrays: true
           }
         },
+        {
+          $lookup: {
+            from: "specialities",
+            localField: "doctorAbout.specialty",
+            foreignField: "_id",
+            as: "specialty"
+          }
+        },
+        {
+          $unwind: {
+            path: "$specialty",
+            preserveNullAndEmptyArrays: true
+          }
+        },
 
 
 
@@ -425,6 +439,7 @@ async function getPatientFavoriteData(req, res) {
               about: "$doctorAbout.aboutYou",
               city: "$city.name",
               state: "$state.name",
+              specialty:"$specialty?.name",
               fees: "$doctorAbout.fees",
               specialty: "$doctorAbout.specialty",
               hospitalName: "$doctorAbout.hospitalName"

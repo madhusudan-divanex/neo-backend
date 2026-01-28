@@ -36,6 +36,7 @@ import './utils/cronFunction.js'
 
 import Conversation from './models/Hospital/Conversation.js'
 import jwt from 'jsonwebtoken';
+import admin from './routes/admin.js'
 dotenv.config()
 const app = express()
 app.use(cors())
@@ -339,6 +340,7 @@ app.use('/doctor', doctor)
 app.use('/appointment', appointment)
 app.use('/lab', lab)
 app.use('/pharmacy', pharmacy)
+app.use('/admin',admin)
 app.use('/user/:id', async (req, res) => {
     const userId = req.params.id
     try {

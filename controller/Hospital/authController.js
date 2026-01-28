@@ -120,8 +120,12 @@ export const register = async (req, res) => {
       passwordHash,
       role: "hospital",
       created_by_id: hospital._id,
+      hospitalId:hospital._id,
       created_by: "hospital"
     });
+    if(user){
+      await HospitalBasic.findByIdAndUpdate(hospital._id,{userId:user._id},{new:true})
+    }
 
     const token = jwt.sign(
       { id: user._id },
@@ -151,11 +155,13 @@ export const login = async (req, res) => {
       {
         id: user._id,
         role: user.role,
+        isOwner:true,type:"hospital",
         created_by_id: user.created_by_id
       },
       process.env.JWT_SECRET,
       { expiresIn: "1y" }
     );
+    
 
     res.json({
       message: "Login successful",

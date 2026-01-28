@@ -9,9 +9,9 @@ const Schema = new mongoose.Schema(
       required: true
     },
     fullAddress: String,
-    country: String,
-    state: String,
-    city: String,
+    country: { type: mongoose.Schema.Types.ObjectId, ref: "Country", required: true },
+    state: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },
+    city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', required: true },
     pinCode: String
   },
   { timestamps: true }

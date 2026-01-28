@@ -71,7 +71,7 @@ lab.get('/dashboard/:id',authMiddleware,labDashboardData)
 
 lab.post('/test',authMiddleware,checkPermission("lab","addTest"),addTest)
 lab.put('/test',authMiddleware,checkPermission("lab","editTest"),updateTest)
-lab.get('/test-data/:id',authMiddleware,checkPermission("lab","viewTest"),getTestData)
+lab.get('/test-data/:id',authMiddleware,getTestData)
 lab.post('/test-report',authMiddleware,uploader.single('report'),saveReport)
 lab.post('/test-report-data',authMiddleware,getTestReport)
 

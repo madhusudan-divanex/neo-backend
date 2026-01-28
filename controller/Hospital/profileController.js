@@ -17,6 +17,7 @@ import HospitalDepartment from "../../models/Hospital/HospitalDepartment.js";
 import HospitalStaff from "../../models/Hospital/HospitalStaff.js";
 import BedAllotment from "../../models/Hospital/BedAllotment.js";
 import mongoose from "mongoose";
+import Test from "../../models/Laboratory/test.model.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -60,7 +61,7 @@ export const getProfile = async (req, res) => {
     }
 
     const basic = await HospitalBasic.findById(hospitalId);
-    const address = await HospitalAddress.findOne({ hospitalId });
+    const address = await HospitalAddress.findOne({ hospitalId }).populate('state country city');
 
     // CONTACT (with image URL)
     const rawContact = await HospitalContact.findOne({ hospitalId });
@@ -99,6 +100,8 @@ export const getProfile = async (req, res) => {
     const lastEditRequest = await EditRequest
       .findOne({ hospitalId })
       .sort({ createdAt: -1 });
+
+
 
     return res.json({
       message: "Hospital profile fetched",
@@ -224,9 +227,9 @@ export const getHospitals = async (req, res) => {
 
   try {
     // 1️⃣ Fetch hospital users
-    const filter={}
-    if(name){
-      filter.hospitalName={$regex: name, $options: "i" };
+    const filter = {}
+    if (name) {
+      filter.hospitalName = { $regex: name, $options: "i" };
     }
     const users = await HospitalBasic.find(filter)
       .limit(limit)
@@ -313,7 +316,7 @@ export const hospitalDashboard = async (req, res) => {
     const bookedBed = await BedAllotment.countDocuments({ hospitalId, status: { $in: ['Active'] } });
     const departments = await HospitalDepartment.aggregate([
       {
-        $match: { hospitalId :new mongoose.Types.ObjectId(hospitalId) }
+        $match: { hospitalId: new mongoose.Types.ObjectId(hospitalId) }
       },
       {
         $sort: { createdAt: -1 }
@@ -324,8 +327,8 @@ export const hospitalDashboard = async (req, res) => {
       {
         $lookup: {
           from: "doctor-employments",
-          localField: "_id",       
-          foreignField: "department", 
+          localField: "_id",
+          foreignField: "department",
           as: "doctors"
         }
       },
@@ -359,8 +362,7 @@ export const hospitalDashboard = async (req, res) => {
 export const getHospitalList = async (req, res) => {
 
   try {
-    const users = await HospitalBasic.find()
-      .lean();
+    const users = await HospitalBasic.find().sort({ createdAt: -1 }).lean();
 
     return res.status(200).json({
       success: true,
@@ -383,6 +385,7 @@ export const getHospitalProfile = async (req, res) => {
     if (!hospitalId) {
       return res.status(400).json({ message: "Hospital ID missing" });
     }
+    const user = await User.findOne({ created_by_id: hospitalId, role: "hospital" }).select('name email')
     const basic = await HospitalBasic.findById(hospitalId);
     const address = await HospitalAddress.findOne({ hospitalId });
     const rawContact = await HospitalContact.findOne({ hospitalId });
@@ -406,11 +409,67 @@ export const getHospitalProfile = async (req, res) => {
         ...img._doc,
         url: baseUrl + img.fileId
       }));
+    const filter = { hospitalId: user._id }
+    const query = { role: 'doctor' };
+    const users = await EmpEmployement.find(filter).select('userId')
+    const usersIds = users.map(item => item.userId)
+    query._id = { $in: usersIds };
+
+    const [staff, total] = await Promise.all([
+      User.find(query)
+        .populate('doctorId')
+        .select("-passwordHash")
+        .sort({ createdAt: -1 })
+        .limit(10),
+      User.countDocuments(query)
+    ]);
+
+    const userIds = staff.map(user => user._id);
+
+    const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } }).populate('specialty','name');
+    const doctorEmp = await EmpEmployement.find({ userId: { $in: userIds } });
+
+
+    const ratingStats = await Rating.aggregate([
+      {
+        $match: {
+          doctorId: { $in: userIds }
+        }
+      },
+      {
+        $group: {
+          _id: "$doctorId",
+          avgRating: { $avg: "$star" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const ratingMap = {};
+    ratingStats.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+    const staffWithAbout = staff.map(user => {
+      const about = doctorAbouts.find(da => da.userId.toString() === user._id.toString());
+      const employement = doctorEmp.find(da => da.userId.toString() === user._id.toString());
+
+      return {
+        ...user.toObject(),
+        doctorAbout: about || null,
+        avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
+        fees: employement?.fees || null,
+      };
+    });
+
     return res.json({
       message: "Hospital profile fetched",
       success: true,
+      doctors: staffWithAbout,
       profile: {
-        basic,
+        basic, user,
         images: {
           thumbnail,
         },
@@ -448,7 +507,7 @@ export const getHospitalDoctorList = async (req, res) => {
         { "email": { $regex: search, $options: "i" } },
       ];
     }
-    const filter={hospitalId}
+    const filter = { hospitalId }
     if (status) {
       filter.status = status;
     }
@@ -497,7 +556,7 @@ export const getHospitalDoctorList = async (req, res) => {
     const staffWithAbout = staff.map(user => {
       const about = doctorAbouts.find(da => da.userId.toString() === user._id.toString());
       const employement = doctorEmp.find(da => da.userId.toString() === user._id.toString());
-      
+
       return {
         ...user.toObject(),
         doctorAbout: about || null,
@@ -687,3 +746,56 @@ export const deleteHospitalPermission = async (req, res) => {
     });
   }
 }
+export const getProfileDetail = async (req, res) => {
+  try {
+    const {id} = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Hospital ID missing" });
+    }
+
+    const basic = await HospitalBasic.findById(id);
+    const address = await HospitalAddress.findOne({ hospitalId:id }).populate('state country city');
+    const certificates = await HospitalCertificate.find({ hospitalId:id });  
+    // Images
+    const allImages = await HospitalImages.find({ hospitalId:id });
+    const baseUrl = `${process.env.BACKEND_URL}://${req.get("host")}/api/file/`;
+    const thumbnail = allImages
+      .filter(img => img.type === "thumbnail")
+      .map(img => ({
+        ...img._doc,
+        url: baseUrl + img.fileId
+      }));
+
+    const gallery = allImages
+      .filter(img => img.type === "gallery")
+      .map(img => ({
+        ...img._doc,
+        url: baseUrl + img.fileId
+      }));
+    const labTest=await Test.find({type:"hospital",hospitalId:basic.userId})
+
+
+
+
+    return res.json({success:true,
+      message: "Hospital profile fetched",labTest,
+      profile: {
+        basic,
+        images: {
+          thumbnail,
+          gallery
+        },
+        address,
+        certificates: certificates.map(c => ({
+          ...c._doc,
+          url: baseUrl + c.fileId
+        })),
+       
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};

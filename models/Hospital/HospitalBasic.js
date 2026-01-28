@@ -11,6 +11,7 @@ const Schema = new mongoose.Schema(
     gstNumber: String,
     about: String,
     logoFileId: String, // GridFS file id (string)
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true }, 
     kycStatus: {
       type: String,
       enum: ["draft", "pending", "in_review", "approved", "rejected"],

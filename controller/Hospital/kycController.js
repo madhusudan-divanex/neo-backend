@@ -16,7 +16,7 @@ export const submitKyc = async (req, res) => {
       toStatus: "pending"
     });
 
-    res.json({ message: "KYC submitted", status: h.kycStatus });
+    return res.json({ message: "KYC submitted", status: h.kycStatus });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

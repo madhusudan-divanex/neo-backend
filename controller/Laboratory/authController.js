@@ -27,6 +27,8 @@ import { error } from 'console';
 import path from 'path'
 import Notification from '../../models/Notifications.js';
 import City from '../../models/Hospital/City.js';
+import HospitalAddress from '../../models/Hospital/HospitalAddress.js';
+import HospitalBasic from '../../models/Hospital/HospitalBasic.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
@@ -833,57 +835,102 @@ const sendReport = async (req, res) => {
     }
 };
 const getLabs = async (req, res) => {
-    const limit = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.query.page) || 1;
-    const name = req.query.name
-    const location = req.query.location
     try {
-        const filter = { role: { $in: ['lab'] } }
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const name = req.query.name;
+        const location = req.query.location;
+        const type = req.query.type;
+
+        /* ================= USER FILTER ================= */
+        const userFilter = {};
+
+        if (type) {
+            userFilter.role = type; // lab OR hospital
+        } else {
+            userFilter.role = { $in: ['lab', 'hospital'] };
         }
-        // 1️⃣ Fetch lab users
-        let users = await User.find(filter)
+
+        if (name) {
+            userFilter.name = { $regex: name, $options: 'i' };
+        }
+
+        /* ================= USERS (PAGINATED & MIXED) ================= */
+        let users = await User.find(userFilter)
             .select('-passwordHash')
             .populate('labId')
+            .populate('hospitalId')
             .limit(limit)
             .skip((page - 1) * limit)
+            .sort({ createdAt: -1 })
             .lean();
 
-        const labIds = users.map(u => u._id);
-        let labAddresses;
-        if (location) {
-            console.log(location)
-            const city = await City.findOne({ name: new RegExp(`^${location}$`, "i") });
+        const total = await User.countDocuments(userFilter);
 
-            // 2️⃣ Fetch addresses
-            labAddresses = await LabAddress.find({
-                userId: { $in: labIds }, cityId: city._id
-            })
-                .populate('countryId stateId cityId', 'name')
-                .lean();
-            const filteredUserIds = labAddresses.map(addr => addr.userId.toString());
-            users = users.filter(u => filteredUserIds.includes(u._id.toString()));
-        } else {
-            labAddresses = await LabAddress.find({
-                userId: { $in: labIds },
-            })
-                .populate('countryId stateId cityId', 'name')
-                .lean();
+        /* ================= SPLIT IDS ================= */
+        const labUserIds = users
+            .filter(u => u.role === 'lab')
+            .map(u => u._id);
+
+        const hospitalUserIds = users
+            .filter(u => u.role === 'hospital')
+            .map(u => u.hospitalId);
+
+        /* ================= LOCATION ================= */
+        let cityId = null;
+        if (location) {
+            const city = await City.findOne({
+                name: new RegExp(`^${location}$`, 'i')
+            });
+            if (city) cityId = city._id;
         }
 
-        const addressMap = {};
-        labAddresses.forEach(addr => {
-            addressMap[addr.userId.toString()] = addr;
+        /* ================= LAB ADDRESSES ================= */
+        const labAddressFilter = {
+            userId: { $in: labUserIds }
+        };
+        if (cityId) labAddressFilter.cityId = cityId;
+
+        const labAddresses = await LabAddress.find(labAddressFilter)
+            .populate('countryId stateId cityId', 'name')
+            .lean();
+
+        const labAddressMap = {};
+        labAddresses.forEach(a => {
+            labAddressMap[a.userId.toString()] = a;
+        });
+        /* ================= HOSPITAL ADDRESSES ================= */
+        const hospitalAddressFilter = {
+            hospitalId: { $in: hospitalUserIds }
+        };
+        if (cityId) hospitalAddressFilter.cityId = cityId;
+
+        const hospitalAddresses = await HospitalAddress.find(hospitalAddressFilter)
+            .populate('country state city', 'name')
+            .lean();
+
+        const hospitalAddressMap = {};
+        hospitalAddresses.forEach(a => {
+            hospitalAddressMap[a.hospitalId.toString()] = a;
         });
 
-        // 3️⃣ Fetch rating stats (AVG + COUNT)
-        const ratingStats = await Rating.aggregate([
-            {
-                $match: {
-                    labId: { $in: labIds }
-                }
-            },
+        /* ================= LOCATION FILTER APPLY ================= */
+        if (location) {
+            const validIds = new Set([
+                ...labAddresses.map(a => a.userId.toString()),
+                ...hospitalAddresses.map(a => a.hospitalId.toString())
+            ]);
+
+            users = users.filter(u =>
+                validIds.has(u._id.toString())
+            );
+        }
+
+        /* ================= RATINGS ================= */
+        const ratingIds = users.map(u => u._id);
+
+        const ratings = await Rating.aggregate([
+            { $match: { labId: { $in: ratingIds } } },
             {
                 $group: {
                     _id: "$labId",
@@ -894,22 +941,24 @@ const getLabs = async (req, res) => {
         ]);
 
         const ratingMap = {};
-        ratingStats.forEach(r => {
+        ratings.forEach(r => {
             ratingMap[r._id.toString()] = {
                 avgRating: Number(r.avgRating.toFixed(1)),
                 totalReviews: r.totalReviews
             };
         });
 
-        // 4️⃣ Merge everything
-        const finalData = users.map(user => ({
-            ...user,
-            labAddress: addressMap[user._id.toString()] || null,
-            avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-            totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+        /* ================= FINAL DATA ================= */
+        console.log(hospitalAddressMap)
+        const finalData = users.map(u => ({
+            ...u,
+            address:
+                u.role === 'lab'
+                    ? labAddressMap[u._id.toString()] || null
+                    : hospitalAddressMap[u?.hospitalId?.toString()] || null,
+            avgRating: ratingMap[u._id.toString()]?.avgRating || 0,
+            totalReviews: ratingMap[u._id.toString()]?.totalReviews || 0
         }));
-
-        const total = await User.countDocuments(filter);
 
         return res.status(200).json({
             success: true,
@@ -929,6 +978,7 @@ const getLabs = async (req, res) => {
         });
     }
 };
+
 
 const getLabDetail = async (req, res) => {
     const userId = req.params.id;
@@ -1002,6 +1052,10 @@ const getLabDetail = async (req, res) => {
             message: err.message
         });
     }
+};
+const paginateArray = (array, page, limit) => {
+    const start = (page - 1) * limit;
+    return array.slice(start, start + limit);
 };
 
 export {
