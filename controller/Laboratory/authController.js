@@ -843,7 +843,7 @@ const getLabs = async (req, res) => {
         const type = req.query.type;
 
         /* ================= USER FILTER ================= */
-        const userFilter = {};
+        const userFilter = { labId: { $exists: true, $ne: null }};
 
         if (type) {
             userFilter.role = type; // lab OR hospital
@@ -859,7 +859,6 @@ const getLabs = async (req, res) => {
         let users = await User.find(userFilter)
             .select('-passwordHash')
             .populate('labId')
-            .populate('hospitalId')
             .limit(limit)
             .skip((page - 1) * limit)
             .sort({ createdAt: -1 })
@@ -868,13 +867,8 @@ const getLabs = async (req, res) => {
         const total = await User.countDocuments(userFilter);
 
         /* ================= SPLIT IDS ================= */
-        const labUserIds = users
-            .filter(u => u.role === 'lab')
-            .map(u => u._id);
-
-        const hospitalUserIds = users
-            .filter(u => u.role === 'hospital')
-            .map(u => u.hospitalId);
+        const labUserIds = users.map(u => u._id);
+        
 
         /* ================= LOCATION ================= */
         let cityId = null;
@@ -899,26 +893,12 @@ const getLabs = async (req, res) => {
         labAddresses.forEach(a => {
             labAddressMap[a.userId.toString()] = a;
         });
-        /* ================= HOSPITAL ADDRESSES ================= */
-        const hospitalAddressFilter = {
-            hospitalId: { $in: hospitalUserIds }
-        };
-        if (cityId) hospitalAddressFilter.cityId = cityId;
-
-        const hospitalAddresses = await HospitalAddress.find(hospitalAddressFilter)
-            .populate('country state city', 'name')
-            .lean();
-
-        const hospitalAddressMap = {};
-        hospitalAddresses.forEach(a => {
-            hospitalAddressMap[a.hospitalId.toString()] = a;
-        });
+        
 
         /* ================= LOCATION FILTER APPLY ================= */
         if (location) {
             const validIds = new Set([
                 ...labAddresses.map(a => a.userId.toString()),
-                ...hospitalAddresses.map(a => a.hospitalId.toString())
             ]);
 
             users = users.filter(u =>
@@ -949,13 +929,9 @@ const getLabs = async (req, res) => {
         });
 
         /* ================= FINAL DATA ================= */
-        console.log(hospitalAddressMap)
         const finalData = users.map(u => ({
             ...u,
-            address:
-                u.role === 'lab'
-                    ? labAddressMap[u._id.toString()] || null
-                    : hospitalAddressMap[u?.hospitalId?.toString()] || null,
+            address: labAddressMap[u._id.toString()] || null,                    
             avgRating: ratingMap[u._id.toString()]?.avgRating || 0,
             totalReviews: ratingMap[u._id.toString()]?.totalReviews || 0
         }));

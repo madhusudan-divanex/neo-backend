@@ -101,11 +101,14 @@ Api->
     Delete specialty
 
 Patient->
-    Hospital Lab /lab Details
+    Book Lab(hospital) Appointment 
 
 Hospital->
-    Lab Appointment List
-    CRUD Test  
+    Notifications
+    Lab Appointment Status
+    Appointment Details 
+    Lab Appointment Labels 
+    Lab Appointment invoice
 
 
     Add Appointment

@@ -1,9 +1,11 @@
 import HospitalImage from "../../models/Hospital/HospitalImage.js";
+import LabImage from "../../models/Laboratory/labImages.model.js";
 import { saveToGrid } from "../../services/gridfsService.js";
 
 export const uploadImages = async (req, res) => {
   try {
-
+    const userId = req.user.id
+    const baseUrl = `api/file/`;
     const thumbnail = req.files?.thumbnail
       ? req.files.thumbnail[0]
       : null;
@@ -31,11 +33,14 @@ export const uploadImages = async (req, res) => {
         fileUrl: `/api/file/${fileDoc._id}`, // frontend friendly
         type: "thumbnail"
       });
-
+      await LabImage.findOneAndUpdate({userId:userId},{        
+        thumbnail: `/api/file/${fileDoc._id}`,
+      },{new:true});
       created.push(img);
     }
 
     // 2️⃣ Upload Gallery Images
+    const galleryImg=[]
     for (const f of gallery) {
 
       const fileDoc = await saveToGrid(
@@ -53,8 +58,15 @@ export const uploadImages = async (req, res) => {
         fileId: fileDoc._id.toString(),
         type: "gallery"
       });
+      galleryImg.push(img.fileId)
 
       created.push(img);
+    }
+    if(galleryImg?.length>0){
+
+      await LabImage.findOneAndUpdate({userId:userId},{        
+        labImg: galleryImg,
+      },{new:true});
     }
 
     res.json({

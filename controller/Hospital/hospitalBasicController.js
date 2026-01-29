@@ -3,6 +3,7 @@ import DoctorAppointment from "../../models/DoctorAppointment.js";
 import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import User from "../../models/Hospital/User.js";
 import LabAppointment from "../../models/LabAppointment.js";
+import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import TestReport from "../../models/testReport.js";
 import { saveToGrid } from "../../services/gridfsService.js";
 
@@ -10,7 +11,8 @@ import { saveToGrid } from "../../services/gridfsService.js";
 export const saveBasic = async (req, res) => {
   try {
     const hospital = await HospitalBasic.findById(req.user.created_by_id);
-
+    const basic = req.body
+    const userId=req.user.id
     Object.assign(hospital, req.body);
 
     if (req.file) {
@@ -23,6 +25,18 @@ export const saveBasic = async (req, res) => {
     }
 
     await hospital.save();
+    if (hospital) {
+      const baseUrl = `api/file/`;
+      await User.findByIdAndUpdate(userId, { name: basic.hospitalName, email: basic.email }, { new: true })
+      await Laboratory.findOneAndUpdate({userId:userId}, {
+        name: basic.hospitalName,
+        email: basic.email,
+        contactNumber: basic.mobileNo,
+        gstNumber: basic.gstNumber,
+        about: basic.about,
+        logo:basic.logoFieldId ? baseUrl + basic.logoFieldId:null,
+      }, { new: true })
+    }
 
     res.json({ message: "Basic details saved", hospital });
   } catch (err) {
@@ -83,7 +97,7 @@ export const getHospitalPatientReport = async (req, res) => {
     const doctorAdd = await DoctorAbout.find({ hospitalName: hospitalId })
     const doctorIds = doctorAdd.map(item => item.userId)
     const appointments = await DoctorAppointment.find({
-      doctorId:{$in:doctorIds}, patientId,
+      doctorId: { $in: doctorIds }, patientId,
       "labTest.lab": { $exists: true, $ne: null },
       "labTest.labTests.0": { $exists: true }
     })

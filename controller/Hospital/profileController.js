@@ -18,6 +18,10 @@ import HospitalStaff from "../../models/Hospital/HospitalStaff.js";
 import BedAllotment from "../../models/Hospital/BedAllotment.js";
 import mongoose from "mongoose";
 import Test from "../../models/Laboratory/test.model.js";
+import Laboratory from "../../models/Laboratory/laboratory.model.js";
+import LabAddress from "../../models/Laboratory/labAddress.model.js";
+import LabPerson from "../../models/Laboratory/contactPerson.model.js";
+import { capitalizeFirst } from "../../utils/globalFunction.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -71,7 +75,7 @@ export const getProfile = async (req, res) => {
       contact = {
         ...rawContact._doc,
         profilePhotoUrl: rawContact.profilePhotoId
-          ? `${process.env.BACKEND_URL}://${req.get("host")}/api/file/${rawContact.profilePhotoId}`
+          ? `${process.env.BACKEND_URL}/api/file/${rawContact.profilePhotoId}`
           : null
       };
     }
@@ -80,9 +84,8 @@ export const getProfile = async (req, res) => {
     const kyc = await Kyc.findOne({ hospitalId });
 
     // Images
-    const allImages = await HospitalImages.find({ hospitalId });
-    const baseUrl = `${process.env.BACKEND_URL}://${req.get("host")}/api/file/`;
-
+    const allImages = await HospitalImages.find({ hospitalId }).sort({createdAt:-1});
+    const baseUrl = `${process.env.BACKEND_URL}/api/file/`;
     const thumbnail = allImages
       .filter(img => img.type === "thumbnail")
       .map(img => ({
@@ -133,34 +136,66 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const hospitalId = req.user.created_by_id;
+    const userId = req.user.id
     const payload = req.body;
+    console.log(req.user)
 
     if (!hospitalId) {
       return res.status(400).json({ message: "Hospital ID missing" });
     }
-
+    const baseUrl = `api/file/`;
     if (payload.basic) {
-      await HospitalBasic.findByIdAndUpdate(
+      const exists = await User.findOne({ email: basic.email, _id: { $ne: userId } });
+      if (exists)
+        return res.status(200).json({ message: "User already exists" });
+      const isName = await User.findOne({ name: basic.hospitalName, _id: { $ne: userId } });
+      if (isName)
+        return res.status(200).json({ message: "This name already exists" });
+
+      const basic = await HospitalBasic.findByIdAndUpdate(
         hospitalId,
         payload.basic,
         { new: true }
       );
+      await User.findByIdAndUpdate(userId, { name: basic.hospitalName, email: basic.email }, { new: true })
+      await Laboratory.findOneAndUpdate({ userId: userId }, {
+        name: basic.hospitalName,
+        email: basic.email,
+        contactNumber: basic.mobileNo,
+        gstNumber: basic.gstNumber,
+        about: basic.about,
+        logo: baseUrl + basic.logoFieldId,
+      }, { new: true })
     }
 
     if (payload.address) {
-      await HospitalAddress.findOneAndUpdate(
+      const address = await HospitalAddress.findOneAndUpdate(
         { hospitalId },
         payload.address,
         { upsert: true, new: true }
       );
+      await LabAddress.findOneAndUpdate(userId, {
+        fullAddress: address.fullAddress,
+        cityId: address.city,
+        stateId: address.state,
+        countryId: address.country,
+        pinCode: address.pinCode
+      }, { new: true })
     }
 
     if (payload.contact) {
-      await HospitalContact.findOneAndUpdate(
+      const contact = await HospitalContact.findOneAndUpdate(
         { hospitalId },
         payload.contact,
         { upsert: true, new: true }
       );
+      await LabPerson.findOneAndUpdate(userId, {
+        name: contact.name,
+        email: contact.email,
+        contactNumber: contact.mobileNumber,
+        photo: baseUrl + contact.profilePhotoId,
+        gender: capitalizeFirst(contact.gender)
+      }, { new: true })
     }
 
     res.json({ message: "Profile updated" });
@@ -426,7 +461,7 @@ export const getHospitalProfile = async (req, res) => {
 
     const userIds = staff.map(user => user._id);
 
-    const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } }).populate('specialty','name');
+    const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } }).populate('specialty', 'name');
     const doctorEmp = await EmpEmployement.find({ userId: { $in: userIds } });
 
 
@@ -748,17 +783,17 @@ export const deleteHospitalPermission = async (req, res) => {
 }
 export const getProfileDetail = async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params;
 
     if (!id) {
       return res.status(400).json({ message: "Hospital ID missing" });
     }
 
     const basic = await HospitalBasic.findById(id);
-    const address = await HospitalAddress.findOne({ hospitalId:id }).populate('state country city');
-    const certificates = await HospitalCertificate.find({ hospitalId:id });  
+    const address = await HospitalAddress.findOne({ hospitalId: id }).populate('state country city');
+    const certificates = await HospitalCertificate.find({ hospitalId: id });
     // Images
-    const allImages = await HospitalImages.find({ hospitalId:id });
+    const allImages = await HospitalImages.find({ hospitalId: id });
     const baseUrl = `${process.env.BACKEND_URL}://${req.get("host")}/api/file/`;
     const thumbnail = allImages
       .filter(img => img.type === "thumbnail")
@@ -773,13 +808,14 @@ export const getProfileDetail = async (req, res) => {
         ...img._doc,
         url: baseUrl + img.fileId
       }));
-    const labTest=await Test.find({type:"hospital",hospitalId:basic.userId})
+    const labTest = await Test.find({ type: "hospital", hospitalId: basic.userId })
 
 
 
 
-    return res.json({success:true,
-      message: "Hospital profile fetched",labTest,
+    return res.json({
+      success: true,
+      message: "Hospital profile fetched", labTest,
       profile: {
         basic,
         images: {
@@ -791,7 +827,7 @@ export const getProfileDetail = async (req, res) => {
           ...c._doc,
           url: baseUrl + c.fileId
         })),
-       
+
       }
     });
   } catch (err) {

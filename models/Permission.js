@@ -123,6 +123,7 @@ const permissionSchema = new Schema(
       addInventory: { type: Boolean, default: false },
       editInventory: { type: Boolean, default: false },
       viewInventory: { type: Boolean, default: false },
+      deleteInventory: { type: Boolean, default: false },
       listSupplier: { type: Boolean, default: false },
       addSupplier: { type: Boolean, default: false },
       editSupplier: { type: Boolean, default: false },

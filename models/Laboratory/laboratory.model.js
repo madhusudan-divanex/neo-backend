@@ -7,10 +7,10 @@ const userSchema = new mongoose.Schema({
    
     gstNumber: { type: String, required: true }  , 
     about: { type: String, required: true }  , 
-    logo: { type: String,required:true},
+    logo: { type: String},
     role:{type:String,default:'parent'},
     allowEdit:{type:Boolean,default:false},
-    status: { type: String,enum:['pending','verify'], default: 'pending' }  ,
+    status: { type: String, default: 'pending' }  ,
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' ,index:true},      
 
 }, { timestamps: true });

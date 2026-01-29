@@ -1,9 +1,12 @@
 import HospitalCertificate from "../../models/Hospital/HospitalCertificate.js";
+import LabLicense from "../../models/Laboratory/labLicense.model.js";
 import { saveToGrid } from "../../services/gridfsService.js";
 
 export const uploadCertificate = async (req, res) => {
   try {
     const { certificateType, licenseNumber } = req.body;
+    const userId = req.user.id
+    const baseUrl = `api/file/`;
 
     // 1️⃣ VALIDATION
     if (!certificateType) {
@@ -36,6 +39,31 @@ export const uploadCertificate = async (req, res) => {
       licenseNumber,
       fileId: fileDoc._id.toString()
     });
+
+    let labLicenseNumber = "";
+    let licenseFile = "";
+    const labCert = [];
+    const certificates = await HospitalCertificate.find({ hospitalId: req.user.created_by_id });
+
+    certificates.forEach(cert => {
+      if (cert.certificateType === "registration") {
+        labLicenseNumber = cert.licenseNumber;
+        licenseFile = cert.fileId;
+      } else {
+        labCert.push({
+          certName: cert.certificateType,
+          certFile: cert.fileId
+        });
+      }
+    });
+
+    if (labLicenseNumber && licenseFile) {
+      await LabLicense.findOneAndUpdate({ userId: userId }, {
+        labLicenseNumber,
+        licenseFile,
+        labCert
+      }, { new: true });
+    }
 
     // 4️⃣ RESPONSE
     res.json({

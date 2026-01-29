@@ -6,7 +6,7 @@ import LabStaff from "../../models/Laboratory/LabEmpPerson.model.js";
 import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import fs from 'fs'
 import Test from "../../models/Laboratory/test.model.js";
-import safeUnlink from "../../utils/globalFunction.js";
+import safeUnlink, { capitalizeFirst } from "../../utils/globalFunction.js";
 import TestReport from "../../models/testReport.js";
 import User from "../../models/Hospital/User.js";
 import mongoose from "mongoose";
@@ -14,6 +14,16 @@ import PatientDemographic from "../../models/Patient/demographic.model.js";
 import Patient from "../../models/Patient/patient.model.js";
 import bcrypt from "bcryptjs";
 import Permission from "../../models/Permission.js";
+import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
+import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
+import HospitalContact from "../../models/Hospital/HospitalContact.js";
+import LabAddress from "../../models/Laboratory/labAddress.model.js";
+import LabPerson from "../../models/Laboratory/contactPerson.model.js";
+import LabImage from "../../models/Laboratory/labImages.model.js";
+import LabLicense from "../../models/Laboratory/labLicense.model.js";
+import HospitalCertificate from "../../models/Hospital/HospitalCertificate.js";
+import HospitalImage from "../../models/Hospital/HospitalImage.js";
+import LabAppointment from "../../models/LabAppointment.js";
 
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
@@ -499,6 +509,11 @@ const deleteStaffData = async (req, res) => {
         const employment = await EmpEmployement.findOne({ empId: id });
         const empAccess = await EmpAccess.findOne({ empId: id });
 
+        await LabAppointment.updateMany(
+            { labStaff: id },
+            { $unset: { labStaff: '' } }
+        )
+
         // Delete all related records
         await EmpProfesional.deleteMany({ empId: id });
         await EmpEmployement.deleteMany({ empId: id });
@@ -514,38 +529,184 @@ const deleteStaffData = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
 const addTest = async (req, res) => {
-    const { labId, precautions, shortName, testCategory, sampleType, price, component, type, hospitalId } = req.body
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        let isExist = null;
+        const {
+            labId,
+            precautions,
+            shortName,
+            testCategory,
+            sampleType,
+            price,
+            component,
+            type,
+            hospitalId
+        } = req.body;
+        if (hospitalId) {
+            // 🔹 Check hospital exists
+            const hospital = await User.findById(hospitalId).session(session);
+            if (!hospital) {
+                await session.abortTransaction();
+                return res.status(200).json({ success: false, message: "Hospital not found" });
+            }
 
-        if (labId) {
-            isExist = await User.findById(labId);
-        }
+            // 🔹 Check lab already exists
+            let lab = await Laboratory.findOne({ userId: hospitalId }).session(session);
 
-        if (!isExist && hospitalId) {
-            isExist = await User.findById(hospitalId);
-        }
+            // =========================
+            // CREATE LAB (FIRST TIME)
+            // =========================
+            if (!lab) {
+                const basicId = hospital.hospitalId
+                const basic = await HospitalBasic.findById(basicId).session(session);
+                const address = await HospitalAddress.findOne({ hospitalId: basicId }).session(session);
+                const contact = await HospitalContact.findOne({ hospitalId: basicId }).session(session);
+                const images = await HospitalImage.find({ hospitalId: basicId }).session(session);
+                const certificates = await HospitalCertificate.find({ hospitalId: basicId }).session(session);
 
-        if (!isExist) return res.status(200).json({ message: "Laboratory  not found", success: false })
+                const baseUrl = `api/file/`;
 
-        const isStaff = await Test.create({ labId, hospitalId, precautions, shortName, testCategory, sampleType, price, component, type });
+                // 🔹 Laboratory
+                lab = await Laboratory.create({
+                    userId: hospitalId,
+                    name: basic.hospitalName,
+                    email: basic.email,
+                    contactNumber: basic.mobileNo,
+                    gstNumber: basic.gstNumber,
+                    about: basic.about,
+                    logo: baseUrl + basic.logoFieldId,
+                    allowEdit: true,
+                    status: basic.kycStatus
+                }, { session });
 
-        if (isStaff) {
+                hospital.labId = lab._id;
+                await hospital.save({ session })
+
+                // 🔹 Address
+                await LabAddress.create([{
+                    userId: hospitalId,
+                    fullAddress: address.fullAddress,
+                    cityId: address.city,
+                    stateId: address.state,
+                    countryId: address.country,
+                    pinCode: address.pinCode
+                }], { session });
+
+                // 🔹 Contact Person
+                await LabPerson.create([{
+                    userId: hospitalId,
+                    name: contact.name,
+                    email: contact.email,
+                    contactNumber: contact.mobileNumber,
+                    photo: baseUrl + contact.profilePhotoId,
+                    gender: capitalizeFirst(contact.gender)
+                }], { session });
+
+                // 🔹 Certificates → LabLicense
+                let labLicenseNumber = "";
+                let licenseFile = "";
+                const labCert = [];
+
+                certificates.forEach(cert => {
+                    if (cert.certificateType === "registration") {
+                        labLicenseNumber = cert.licenseNumber;
+                        licenseFile = cert.fileId;
+                    } else {
+                        labCert.push({
+                            certName: cert.certificateType,
+                            certFile: cert.fileId
+                        });
+                    }
+                });
+
+                if (labLicenseNumber && licenseFile) {
+                    await LabLicense.create([{
+                        userId: hospitalId,
+                        labLicenseNumber,
+                        licenseFile,
+                        labCert
+                    }], { session });
+                }
+
+                // 🔹 Images
+                const thumbnail = images
+                    .filter(i => i.type === "thumbnail")
+                    .map(i => ({ ...i._doc, url: baseUrl + i.fileId }));
+
+                const gallery = images
+                    .filter(i => i.type === "gallery")
+                    .map(i => baseUrl + i.fileId);
+                await LabImage.create([{
+                    userId: hospitalId,
+                    thumbnail: thumbnail[0].url,
+                    labImg: gallery
+                }], { session });
+            }
+
+            // =========================
+            // CREATE TEST
+            // =========================
+            await Test.create([{
+                labId: hospitalId,
+                hospitalId,
+                precautions,
+                shortName,
+                testCategory,
+                sampleType,
+                price,
+                component,
+                type
+            }], { session });
+
+            // ✅ COMMIT
+            await session.commitTransaction();
+            session.endSession();
+
             return res.status(200).json({
                 success: true,
-                message: "Test created"
+                message: "Test added successfully"
             });
         } else {
+            const lab = await User.findById(labId);
+            if (!lab) {
+                return res.status(200).json({ success: false, message: "Lab not found" });
+            }
+            await Test.create({
+                labId,
+                hospitalId,
+                precautions,
+                shortName,
+                testCategory,
+                sampleType,
+                price,
+                component,
+                type
+            });
+            await session.commitTransaction();
+            session.endSession();
             return res.status(200).json({
                 success: true,
-                message: "Test not created"
+                message: "Test added successfully"
             });
+
         }
+
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        console.log(error)
+        await session.abortTransaction();
+        session.endSession();
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };
+
 const updateTest = async (req, res) => {
     const { testId, precautions, shortName, testCategory, sampleType, price, component, type, hospitalId } = req.body
     try {
@@ -689,7 +850,7 @@ const saveReport = async (req, res) => {
             if (!isExist && !permission?.lab?.addReport) {
                 return res.status(200).json({ message: "Permission denied" });
             }
-            if(isExist && !permission?.lab?.editReport){
+            if (isExist && !permission?.lab?.editReport) {
                 return res.status(200).json({ message: "Permission denied" });
             }
         }

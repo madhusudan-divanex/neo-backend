@@ -70,10 +70,10 @@ pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
 pharmacy.post('/delete-image',authMiddleware,deletePharImage)
 
 pharmacy.post('/inventory', authMiddleware,checkPermission("pharmacy","addInventory") ,addInventry);
-pharmacy.get('/inventory/:id', authMiddleware,checkPermission("pharmacy","listView") , inventoryList);
+pharmacy.get('/inventory/:id', authMiddleware,checkPermission("pharmacy","listInventory") , inventoryList);
 pharmacy.get('/inventory-data/:id', authMiddleware,checkPermission("pharmacy","viewInventory") , inventoryGetById);
 pharmacy.put('/inventory', authMiddleware,checkPermission("pharmacy","editInventory") , inventoryUpdate);
-pharmacy.delete('/inventory/:id', authMiddleware, inventoryDelete);
+pharmacy.delete('/inventory/:id', authMiddleware,checkPermission("pharmacy","deleteInventory"), inventoryDelete);
 pharmacy.get('/medicine-data/:name/:pharId', authMiddleware, medicineData);
 
 
@@ -82,18 +82,18 @@ pharmacy.get('/medicine-request/:id', authMiddleware, getMedicineRequestsList);
 pharmacy.get('/medicine-request/all', authMiddleware, getAllMedicineRequestsForAdmin);
 pharmacy.patch('/medicine-request/:id/status', authMiddleware, changeRequestStatus);
 
-pharmacy.post("/supplier", authMiddleware, addSupplier);
-pharmacy.get("/supplier/:id", authMiddleware, getSupplier);
+pharmacy.post("/supplier", authMiddleware,checkPermission('pharmacy',"addSupplier"), addSupplier);
+pharmacy.get("/supplier/:id", authMiddleware,checkPermission('pharmacy',"listSupplier"), getSupplier);
 pharmacy.get("/supplier/:id", authMiddleware, getSupplierById);
-pharmacy.put("/supplier", authMiddleware, updateSupplier);
-pharmacy.delete("/supplier/:id", authMiddleware, deleteSupplier);
+pharmacy.put("/supplier", authMiddleware,checkPermission('pharmacy',"editSupplier"), updateSupplier);
+pharmacy.delete("/supplier/:id", authMiddleware,checkPermission('pharmacy',"deleteSupplier"), deleteSupplier);
 
-pharmacy.post("/return", authMiddleware, createReturn);
-pharmacy.get("/return/:id", authMiddleware, listReturns);
+pharmacy.post("/return", authMiddleware,checkPermission('pharmacy',"addReturn"), createReturn);
+pharmacy.get("/return/:id", authMiddleware,checkPermission('pharmacy',"listReturn"), listReturns);
 pharmacy.get("/return-data/:id", authMiddleware, getReturnById);
 pharmacy.post("/return/:id/complete", authMiddleware, completeReturn);
 pharmacy.put("/return", authMiddleware, updateReturn);
-pharmacy.delete("/return/:id", authMiddleware, deleteReturn);
+pharmacy.delete("/return/:id", authMiddleware,checkPermission('pharmacy',"deleteReturn"), deleteReturn);
 
 pharmacy.post("/purchase-order", authMiddleware, createPO);
 pharmacy.get("/purchase-order/:id", authMiddleware, getPOList);

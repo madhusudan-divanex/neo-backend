@@ -26,7 +26,7 @@ const requestSchema=new Schema({
     price:{type:String,required:true},
     customId: { type: String },
     status:{type:String,enum:['active','inactive'],default:'inactive'},
-    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic',index:true },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },
     type:{type:String,enum:['lab','hospital'],default:'lab'}
 
 },{timestamps:true})

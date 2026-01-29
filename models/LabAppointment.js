@@ -24,6 +24,12 @@ const requestSchema = new Schema({
     customId: { type: String, required: true },
     date: { type: Date, required: true },
     fees: { type: String, required: true },
+    hospitalStaff:{ type: mongoose.Schema.Types.ObjectId,
+        ref: 'HospitalStaff'},
+    labStaff:{
+         type: mongoose.Schema.Types.ObjectId,
+        ref: 'lab-staff'
+    },
     paymentStatus: { type: String, enum: ['due', 'paid'], default: 'due' },
     status: { type: String, enum: ['pending', 'approved', 'deliver-report', 'pending-report', 'rejected', 'cancel'], default: 'pending' },
     cancelMessage: String

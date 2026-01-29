@@ -11,8 +11,9 @@ import * as cert from "../../controller/Hospital/hospitalCertificateController.j
 import * as kyc from "../../controller/Hospital/kycController.js";
 import * as profile from "../../controller/Hospital/profileController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
-import { addTest, getTestData, getTestReport, saveReport, updateTest } from "../../controller/Laboratory/laboratoryContoller.js";
+import { addTest, deleteTest, getTest, getTestData, getTestReport, labTestAction, saveReport, updateTest } from "../../controller/Laboratory/laboratoryContoller.js";
 import getUploader from "../../config/multerConfig.js";
+import { addInventry, addSupplier, completeReturn, createReturn, deleteReturn, deleteSupplier, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, updateReturn, updateSupplier } from "../../controller/Pharmacy/pharmacyController.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -91,4 +92,26 @@ router.put('/test',authMiddleware,updateTest)
 router.get('/test-data/:id',authMiddleware,getTestData)
 router.post('/test-report',authMiddleware,uploader.single('report'),saveReport)
 router.post('/test-report-data',authMiddleware,getTestReport)
+router.get('/test/:id',authMiddleware,getTest)
+router.delete('/test/:id',authMiddleware,deleteTest)
+router.post('/test-action',authMiddleware,labTestAction)
+
+router.post('/inventory', authMiddleware,addInventry);
+router.get('/inventory/:id', authMiddleware, inventoryList);
+router.get('/inventory-data/:id', authMiddleware, inventoryGetById);
+router.put('/inventory', authMiddleware,inventoryUpdate);
+router.delete('/inventory/:id', authMiddleware,inventoryDelete);
+
+router.post("/supplier", authMiddleware, addSupplier);
+router.get("/supplier/:id", authMiddleware, getSupplier);
+router.get("/supplier/:id", authMiddleware, getSupplierById);
+router.put("/supplier", authMiddleware, updateSupplier);
+router.delete("/supplier/:id", authMiddleware, deleteSupplier);
+
+router.post("/return", authMiddleware,createReturn);
+router.get("/return/:id", authMiddleware,listReturns);
+router.get("/return-data/:id", authMiddleware, getReturnById);
+router.post("/return/:id/complete", authMiddleware, completeReturn);
+router.put("/return", authMiddleware, updateReturn);
+router.delete("/return/:id", authMiddleware, deleteReturn);
 export default router;

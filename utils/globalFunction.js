@@ -49,5 +49,8 @@ const checkStockAvailability = async (pharId,products) => {
     }
     return { success: true };
 };
-export { updateInventoryStock, checkStockAvailability };
+const capitalizeFirst = (str = "") =>
+  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+export { updateInventoryStock, checkStockAvailability,capitalizeFirst };
 export default safeUnlink;
