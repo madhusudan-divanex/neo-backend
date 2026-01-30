@@ -1,6 +1,7 @@
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import Doctor from "../models/Doctor/doctor.model.js";
 import DoctorAppointment from "../models/DoctorAppointment.js";
+import EmpEmployement from "../models/Hospital/DoctorEmployement.js";
 import HospitalBasic from "../models/Hospital/HospitalBasic.js";
 import User from "../models/Hospital/User.js";
 import LabAppointment from "../models/LabAppointment.js";
@@ -165,13 +166,13 @@ const actionDoctorAppointment = async (req, res) => {
                 await Notification.create({
                     userId: isPatient.patientId,
                     title: "Appointment Approved!",
-                    message: `Your doctor appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been approved by ${isExist.name}`
+                    message: `Your doctor appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been approved by ${isExist.name}`
                 })
             } else if (status == 'rejected') {
                 await Notification.create({
                     userId: isPatient.patientId,
                     title: "Appointment Rejected!",
-                    message: `Your doctor appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been rejected by ${isExist.name}`
+                    message: `Your doctor appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been rejected by ${isExist.name}`
                 })
             }
             return res.status(200).json({ message: "Appointment status updated", success: true })
@@ -648,7 +649,7 @@ const bookLabAppointment = async (req, res) => {
             await Notification.create({
                 userId: labId,
                 title: "New Appointment Request!",
-                message: `You have received a new appointment request from ${isPatient.name} for ${new Date(date).toLocaleDateString('en-GB')}.`
+                message: `You have received a new appointment request from ${isPatient.name} for ${new Date(date).toLocaleString('en-GB')}.`
             })
             return res.status(200).json({ message: "Appointment book successfully", success: true, data: book })
         } else {
@@ -715,13 +716,13 @@ const paymentLabAppointment = async (req, res) => {
                 await Notification.create({
                     userId: isPatient.patientId,
                     title: "Appointment Approved!",
-                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been approved by ${isExist.name}`
+                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been approved by ${isExist.name}`
                 })
             } else if (status == 'rejected') {
                 await Notification.create({
                     userId: isPatient.patientId,
                     title: "Appointment Rejected!",
-                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been rejected by ${isExist.name}`
+                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been rejected by ${isExist.name}`
                 })
             }
             return res.status(200).json({ message: "Appointment status updated", success: true })
@@ -1011,11 +1012,11 @@ const getHospitalPastAppointment = async (req, res) => {
             isExist = await User.findById(patientId);
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
-        const isHospital = await HospitalBasic.findById(hospitalId);
+        const isHospital = await User.findById(hospitalId);
         if (!isHospital) {
             return res.status(200).json({ message: 'Hospital not exist', success: false });
         }
-        const doctorAdd = await DoctorAbout.find({ hospitalName: hospitalId })
+        const doctorAdd = await EmpEmployement.find({ hospitalId })
         const doctorIds = doctorAdd.map(item => item.userId)
         const appointments = await DoctorAppointment.find({ patientId, doctorId: { $in: doctorIds } }).populate('prescriptionId')
             .populate({

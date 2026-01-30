@@ -30,7 +30,7 @@ appointment.post('/lab-cancel',authMiddleware,cancelLabAppointment)
 appointment.get('/doctor/past-appointments/:doctorId/:patientId',authMiddleware,getDoctorPastAppointment)
 appointment.get('/hospital/past-appointments/:hospitalId/:patientId',authMiddleware,getHospitalPastAppointment)
 appointment.get('/hospital/:id',authMiddleware,getHospitalAppointment)
-appointment.get('/lab/past-appointments/:labId/:patientId',authMiddleware,checkPermission("lab","patientDetails"),getPastPatientLabAppointment)
+appointment.get('/lab/past-appointments/:labId/:patientId',authMiddleware,getPastPatientLabAppointment)
 
 appointment.get('/hospital/doctor/:id',authMiddleware,getHospitalDoctorAppointment)
 export default appointment

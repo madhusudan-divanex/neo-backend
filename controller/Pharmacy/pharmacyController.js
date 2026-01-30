@@ -21,6 +21,8 @@ import Patient from '../../models/Patient/patient.model.js';
 import PatientPrescriptions from '../../models/Patient/prescription.model.js';
 import User from '../../models/Hospital/User.js';
 import Permission from '../../models/Permission.js';
+import bcrypt from 'bcryptjs';
+import Doctor from '../../models/Doctor/doctor.model.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
@@ -28,20 +30,15 @@ const addInventry = async (req, res) => {
         const isExist = await User.findById(pharId)
         if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
         let data;
-        const isLast = await Inventory.findOne()?.sort({ createdAt: -1 })
-        const nextId = isLast
-            ? String(Number(isLast.customId) + 1).padStart(4, '0')
-            : '0001';
+
         if (req.body.schedule == 'H1') {
             data = {
                 ...req.body,
-                customId: 'MED-' + nextId,
                 status: 'Pending'
             }
         } else {
             data = {
                 ...req.body,
-                customId: 'MED-' + nextId,
                 status: 'Approved'
             }
         }
@@ -1752,7 +1749,7 @@ const pharDashboardData = async (req, res) => {
             },
         ])
         const totalH1Quantity = h1ComplianceData[0]?.totalQuantity || 0;
-        const marginAnalysis = await Inventory.find({  pharId }).sort({ margin: -1 }).limit(5)
+        const marginAnalysis = await Inventory.find({ pharId }).sort({ margin: -1 }).limit(5)
         const inventory = await Inventory.find({ pharId }).sort({ sellCount: -1 }).limit(5)
         const suppliers = await Supplier.find({ pharId }).sort({ createdAt: -1 }).limit(5)
         const supplierData = await Promise.all(
@@ -1815,13 +1812,106 @@ const pharDashboardData = async (req, res) => {
     }
 }
 const sellMedicine = async (req, res) => {
-    const { pharId, patientId, doctorId, prescriptionId, sellId } = req.body;
+    const { pharId, prescriptionId, sellId, hospitalId, ptMob, ptName, dtMob, dtName,paymentStatus } = req.body;
     const prescriptionFile = req.files?.['prescriptionFile']?.[0]?.path;
     const products = JSON.parse(req.body.products || "[]");
+    let patientId = req.body.patientId
+    let doctorId = req.body.doctorId || null
     try {
-        const pharmacy = await User.findById(pharId);
+        const userId = pharId || hospitalId
+        const pharmacy = await User.findById(userId);
         if (!pharmacy) {
-            return res.status(404).json({ success: false, message: "Pharmacy not found" });
+            return res.status(200).json({ success: false, message: "User not found" });
+        }
+        if (patientId) {
+            // Existing patient by ID
+            const patient = await User.findById(patientId);
+            if (!patient) {
+                return res.status(400).json({ success: false, message: "Invalid Patient ID" });
+            }
+        } else {
+            // Find by mobile
+            let ptData = await Patient.findOne({ contactNumber: ptMob });
+
+            if (ptData) {
+                patientId = ptData.userId;
+            } else {
+                // Create new patient
+                const rawPassword = ptMob.slice(-4) + "@123";
+                const passwordHash = await bcrypt.hash(rawPassword, 10);
+                const user = new User({
+                    name: ptName,
+                    role: "patient",
+                    passwordHash,
+                    created_by: pharmacy.role,
+                    created_by_id: pharmacy._id
+                });
+                await user.save({ validateBeforeSave: false });
+
+                const patient = new Patient({
+                    userId: user._id,
+                    name: ptName,
+                    contactNumber: ptMob
+                });
+
+                await patient.save({ validateBeforeSave: false });
+                user.patientId = patient._id
+                await user.save()
+                patientId = user._id;
+            }
+        }
+        if (doctorId) {
+            // Doctor ID provided → validate
+            const doctor = await User.findById(doctorId);
+            if (!doctor) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid Doctor ID"
+                });
+            }
+        }
+        // Doctor ID nahi hai BUT name + mobile dono aaye hain
+        else if (dtName && dtMob) {
+            let dtData = await Doctor.findOne({ contactNumber: dtMob });
+
+            if (dtData) {
+                doctorId = dtData.userId;
+            } else {
+                const rawPassword = dtMob.slice(-4) + "@123";
+                const passwordHash = await bcrypt.hash(rawPassword, 10);
+
+                const user = new User({
+                    name: dtName,
+                    role: "doctor",
+                    passwordHash,
+                    created_by: pharmacy.role,
+                    created_by_id: pharmacy._id
+                });
+                await user.save({ validateBeforeSave: false });
+
+
+                const doctor = new Doctor({
+                    userId: user._id,
+                    name: dtName,
+                    contactNumber: dtMob
+                });
+                await doctor.save({ validateBeforeSave: false })
+                user.doctorId = doctor._id
+                await user.save()
+                doctorId = user._id;
+            }
+        }
+        let data = { patientId, doctorId, prescriptionId, products,paymentStatus }
+        if (sellId) {
+            data.sellId = sellId
+        }
+        if (prescriptionFile) {
+            data.prescriptionFile = prescriptionFile
+        }
+        if (pharmacy.role == 'hospital') {
+            data.hospitalId = hospitalId
+        } else {
+            data.pharId = pharId
         }
 
         const isSell = sellId ? await Sell.findById(sellId) : null;
@@ -1830,7 +1920,7 @@ const sellMedicine = async (req, res) => {
             await updateInventoryStock(isSell.products, "increase");
 
             // 2️⃣ New stock check
-            const stockCheck = await checkStockAvailability(pharId, products);
+            const stockCheck = await checkStockAvailability(userId, products);
             if (!stockCheck.success) {
                 // rollback old stock
                 await updateInventoryStock(isSell.products, "decrease");
@@ -1858,21 +1948,14 @@ const sellMedicine = async (req, res) => {
             return res.status(200).json({ success: true, message: "Sell updated successfully" });
         }
 
-        const stockCheck = await checkStockAvailability(pharId, products);
+        const stockCheck = await checkStockAvailability(userId, products);
         if (!stockCheck.success) {
             return res.status(400).json(stockCheck);
         }
 
         await updateInventoryStock(products, "decrease");
 
-        await Sell.create({
-            pharId,
-            patientId,
-            doctorId,
-            prescriptionId,
-            products,
-            prescriptionFile
-        });
+        await Sell.create(data);
 
         return res.status(201).json({ success: true, message: "Sell created successfully" });
 
@@ -1884,7 +1967,10 @@ const sellMedicine = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
 const getSellMedicine = async (req, res) => {
+    const { id } = req.params;
+
     try {
         const {
             startDate,
@@ -1896,51 +1982,53 @@ const getSellMedicine = async (req, res) => {
             limit = 10
         } = req.query;
 
-        let filter = {};
+        const skip = (page - 1) * limit;
 
-        // 📅 Date Range Filter
-        if (startDate && startDate !== 'undefined' && endDate && endDate !== 'undefined') {
-            filter.createdAt = {
+        let matchStage = {
+            $or: [
+                { pharId: new mongoose.Types.ObjectId(id) },
+                { hospitalId: new mongoose.Types.ObjectId(id) }
+            ]
+        };
+
+        // 📅 Date filter
+        if (startDate && endDate && startDate) {
+            matchStage.createdAt = {
                 $gte: new Date(startDate),
                 $lte: new Date(endDate)
             };
         }
 
-        // 💊 Inventory / Medicine Filter
+        // 💊 Inventory filter
         if (inventoryId) {
-            filter["products.inventoryId"] = inventoryId;
+            matchStage["products.inventoryId"] = new mongoose.Types.ObjectId(inventoryId);
         }
-
-        // 🔍 Search Filter (Patient / Doctor)
-        if (search) {
-            filter.$or = [
-                { "patientId.name": { $regex: search, $options: "i" } },
-                { "doctorId.name": { $regex: search, $options: "i" } }
-            ];
-        }
-
-        const skip = (page - 1) * limit;
-
         const sells = await Sell.aggregate([
+            { $match: matchStage },
+
+            // Lookup patient
             {
                 $lookup: {
-                    from: "patients",
+                    from: "users",
                     localField: "patientId",
                     foreignField: "_id",
                     as: "patient"
                 }
             },
-            { $unwind: "$patient" },
+            { $unwind: { path: "$patient", preserveNullAndEmptyArrays: true } },
 
+            // Lookup doctor
             {
                 $lookup: {
-                    from: "doctors",
+                    from: "users",
                     localField: "doctorId",
                     foreignField: "_id",
                     as: "doctor"
                 }
             },
-            { $unwind: "$doctor" },
+            { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
+
+            // Lookup inventory details (all inventories related to any product)
             {
                 $lookup: {
                     from: "inventories",
@@ -1949,6 +2037,8 @@ const getSellMedicine = async (req, res) => {
                     as: "inventoryDetails"
                 }
             },
+
+            // Map inventory details into each product item
             {
                 $addFields: {
                     products: {
@@ -1959,7 +2049,7 @@ const getSellMedicine = async (req, res) => {
                                 $mergeObjects: [
                                     "$$prod",
                                     {
-                                        inventory: {
+                                        inventoryDetail: {
                                             $arrayElemAt: [
                                                 {
                                                     $filter: {
@@ -1979,21 +2069,24 @@ const getSellMedicine = async (req, res) => {
                 }
             },
 
-            // 🔹 Extra field remove
+            // Optional: Remove the separate inventoryDetails array (if you want)
             {
                 $project: {
                     inventoryDetails: 0
                 }
             },
 
-            {
+            // Search filter if provided
+            ...(search ? [{
                 $match: {
                     $or: [
                         { "patient.name": { $regex: search, $options: "i" } },
-                        { "doctor.name": { $regex: search, $options: "i" } }
+                        { "patient.unique_id": { $regex: search, $options: "i" } },
+                        { "doctor.name": { $regex: search, $options: "i" } },
+                        { "doctor.unique_id": { $regex: search, $options: "i" } }
                     ]
                 }
-            },
+            }] : []),
 
             { $sort: { createdAt: sort === "newest" ? -1 : 1 } },
             { $skip: skip },
@@ -2001,9 +2094,9 @@ const getSellMedicine = async (req, res) => {
         ]);
 
 
-        const total = await Sell.countDocuments(filter);
+        const total = await Sell.countDocuments(matchStage);
 
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             message: "Sell list fetched successfully",
             total,
@@ -2013,18 +2106,19 @@ const getSellMedicine = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: error.message
         });
     }
 };
+
 const getSellData = async (req, res) => {
     try {
         const sellId = req.params.id;
-        const sell = await Sell.findById(sellId).populate({ path: "patientId", select: "name contactNumber" })
-            .populate({ path: "doctorId", select: "name" })
-            .populate({ path: "products.inventoryId", select: "medicineName batchNumber schedule" });
+        const sell = await Sell.findById(sellId).populate({ path: "patientId", select: "name unique_id", populate: { path: "patientId" } })
+            .populate({ path: "doctorId", select: "name unique_id", populate: { path: "doctorId" } })
+            .populate({ path: "products.inventoryId", select: "medicineName batchNumber schedule salePrice" });
         if (!sell) {
             return res.status(200).json({ success: false, message: "Sell record not found" });
         }
@@ -2037,7 +2131,12 @@ const getSellData = async (req, res) => {
 const deleteSellData = async (req, res) => {
     try {
         const sellId = req.params.id;
-        const sell = await Sell.findOne({ _id: sellId, pharId: req.user.userId });
+        const sell = await Sell.findOne({
+            _id: sellId, $or: [
+                { pharId: req.user.userId },
+                { hospitalId: req.user.userId }
+            ]
+        });
         if (!sell) {
             return res.status(200).json({ success: false, message: "Sell record not found" });
         }

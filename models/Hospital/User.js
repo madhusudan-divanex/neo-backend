@@ -8,26 +8,19 @@ const UserSchema = new mongoose.Schema(
       type: String,
       unique: true
     },
-
     name: { type: String },
-
-    email: { type: String, required: true, unique: true },
-
+    email: { type: String,  },
     passwordHash: { type: String, required: true },
-
     role: { type: String, default: "hospital" },
-
     // REAL-TIME STATUS
     isOnline: {
       type: Boolean,
       default: false
     },
-
     isAvailable: {
       type: Boolean,
       default: false
     },
-
     lastSeen: {
       type: Date
     },

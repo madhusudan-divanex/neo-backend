@@ -95,20 +95,16 @@ Patient->
     Notification
     Pharmacy 
 Api->
-    Add specialty 
-    Get specialty 
-    Update specialty
-    Delete specialty
+    CRUD Test Category 
+    CRUD Patient Banner
 
-Patient->
-    Book Lab(hospital) Appointment 
+Pharmacy->
+    CRUD Sell 
 
 Hospital->
-    Notifications
-    Lab Appointment Status
-    Appointment Details 
-    Lab Appointment Labels 
-    Lab Appointment invoice
+    CRUD Sell 
+    CRUD Supplier 
+    CRUD Inventory
 
 
     Add Appointment
