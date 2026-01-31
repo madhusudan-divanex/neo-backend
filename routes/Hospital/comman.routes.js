@@ -12,7 +12,8 @@ import {
   addPermission,
   updatePermission,
   deletePermission,
-  getAllPermission
+  getAllPermission,
+  getProfile
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 
@@ -31,6 +32,8 @@ router.post('/permission',authMiddleware,addPermission)
 router.put('/permission',authMiddleware,updatePermission)
 router.get('/permission/:id',authMiddleware,getAllPermission)
 router.delete('/permission',authMiddleware,deletePermission)
+
+router.get('/profile',authMiddleware,getProfile)
 
 
 export default router;

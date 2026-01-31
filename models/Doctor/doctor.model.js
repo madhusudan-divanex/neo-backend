@@ -7,9 +7,9 @@ const userSchema = new mongoose.Schema({
     dob: { type: Date, required: true }    ,
     contactNumber: { type: String, required: true },
     profileImage: { type: String}  ,
-     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
     
-    status: { type: String,enum:['pending','verify'], default: 'pending' }      
+    status: { type: String,enum:['pending','approved','rejected'], default: 'pending' }      
 
 }, { timestamps: true });
 

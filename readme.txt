@@ -98,13 +98,34 @@ Api->
     CRUD Test Category 
     CRUD Patient Banner
 
-Pharmacy->
-    CRUD Sell 
+Doctor->
+    Edit Profile
+    Notification
+Api->
+    Bed Allotment History
+    Add/Update Allotment Payment 
+    Get Allotment Payment
 
 Hospital->
-    CRUD Sell 
-    CRUD Supplier 
-    CRUD Inventory
+    Generate Report 
+    View Report
+    Edit Report 
+    Bed Allotment History
+    IPD 
+    OPD
+    Add/Update Allotment Payment
+    
+    Scan 
+    Profile Management 
+    Staff Access
+    
+
+Pharmacy->
+    Scan sell
+    Notification
+
+All Panels->
+    Permission base access
 
 
     Add Appointment

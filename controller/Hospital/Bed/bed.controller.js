@@ -1,4 +1,7 @@
+import { populate } from "dotenv";
+import BedAllotment from "../../../models/Hospital/BedAllotment.js";
 import HospitalBed from "../../../models/Hospital/HospitalBed.js";
+import HospitalPayment from "../../../models/Hospital/HospitalPayment.js";
 
 /* ======================================================
    ADD BED
@@ -157,3 +160,142 @@ export const deleteBed = async (req, res) => {
     });
   }
 };
+export const getAllotmentHistory = async (req, res) => {
+  const { id } = req.params;
+
+  // pagination params
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const totalRecords = await BedAllotment.countDocuments({
+      hospitalId: id
+    });
+
+    const allotment = await BedAllotment.find({ hospitalId: id })
+      .populate({path:"patientId",select: "name email unique_id",populate:{path:"patientId",select:"contactNumber profileImage"}})
+      .populate("primaryDoctorId", "name unique_id")
+      .populate({
+        path: "bedId",
+        populate: [
+          { path: "floorId", select: "floorName" },
+          { path: "departmentId", select: "departmentName" },
+          { path: "roomId", select: "roomName" }
+        ]
+      })
+      .populate("attendingStaff.staffId", "name")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // optional but recommended
+
+    if (!allotment.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No allotment history found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: allotment,
+      pagination: {
+        totalRecords,
+        currentPage: page,
+        totalPages: Math.ceil(totalRecords / limit),
+        limit
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to load allotment"
+    });
+  }
+};
+
+export const addOrUpdateHospitalPayment = async (req, res) => {
+  try {
+    const {
+      paymentId, // optional
+      allotmentId,
+      hospitalId,
+      patientId,
+      services,
+      payments,
+      status
+    } = req.body;
+
+    let payment;
+
+    if (paymentId) {
+      // 👉 UPDATE
+      payment = await HospitalPayment.findByIdAndUpdate(
+        paymentId,
+        {
+          allotmentId,
+          hospitalId,
+          patientId,
+          services,
+          payments,
+          status
+        },
+        { new: true, runValidators: true }
+      );
+
+      if (!payment) {
+        return res.status(404).json({
+          success: false,
+          message: "Payment not found"
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment updated successfully",
+        data: payment
+      });
+    } else {
+      // 👉 CREATE
+      payment = new HospitalPayment({
+        allotmentId,
+        hospitalId,
+        patientId,
+        services,
+        payments,
+        status
+      });
+
+      await payment.save();
+      await BedAllotment.findByIdAndUpdate(allotmentId,{paymentId:payment._id},{new:true})
+
+      return res.status(201).json({
+        success: true,
+        message: "Payment created successfully",
+        data: payment
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+
+export const getAllotmentPayment =async(req,res)=>{
+  const {id}=req.params
+  try {
+    const isExist=await HospitalPayment.findOne({allotmentId:id})
+    if(isExist){
+      return res.status(200).json({message:"Payment found",data:isExist,success:true})
+    }
+    return res.status(200).json({message:"Payment not found",success:false})
+  } catch (error) {
+    return res.status(200).json({message:"Server error"})
+  }
+}

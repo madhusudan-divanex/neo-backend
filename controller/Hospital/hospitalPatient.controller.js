@@ -32,14 +32,14 @@ export const addPatient = async (req, res) => {
     // ✅ AUTO PATIENT ID
     const patientId = await generatePatientId(hospitalId);
     // ✅ CREATE PATIENT
-    const patient = await Patient.create({ name, gender, contactNumber,  email });
+    const patient = await Patient.create({ name, gender, contactNumber, email });
     if (patient) {
       const rawPassword = contactNumber.slice(-4) + "@123";
       const passwordHash = await bcrypt.hash(rawPassword, 10);
       const pt = await User.create({ name, patientId: patient._id, email, role: 'patient', created_by: "hospital", created_by_id: hospitalId, passwordHash })
       await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
       await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
-      await PatientDepartment.create({ patientId: pt._id,  departmentId: department,hospitalId,status})
+      await PatientDepartment.create({ patientId: pt._id, departmentId: department, hospitalId, status })
     }
     res.status(200).json({
       success: true,
@@ -59,6 +59,7 @@ export const addPatient = async (req, res) => {
 export const listPatients = async (req, res) => {
   try {
     const hospitalId = req.user._id;
+    const deptType = req.query.deptType
     let { page = 1, limit = 10, search = "" } = req.query;
 
     page = Math.max(Number(page), 1);
@@ -113,7 +114,33 @@ export const listPatients = async (req, res) => {
         }
       },
 
-      // 🔗 Populate patientId from User table
+      // 🔗 Join HospitalDepartment
+      {
+        $lookup: {
+          from: "hospitaldepartments",
+          localField: "departmentInfo.departmentId",
+          foreignField: "_id",
+          as: "departmentDetails"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$departmentDetails",
+          preserveNullAndEmptyArrays: false
+        }
+      },
+
+      // 🏥 Filter by department type
+      ...(deptType
+        ? [{
+          $match: {
+            "departmentDetails.type": deptType
+          }
+        }]
+        : []),
+
+      // 🔗 Populate patient data
       {
         $lookup: {
           from: "patients",
@@ -130,7 +157,6 @@ export const listPatients = async (req, res) => {
         }
       },
 
-      // ❌ Remove passwordHash
       {
         $project: {
           passwordHash: 0,
@@ -150,9 +176,8 @@ export const listPatients = async (req, res) => {
         }
       }
     ];
-
+    
     const result = await User.aggregate(pipeline);
-
     const patients = result[0].data;
     const total = result[0].totalCount[0]?.count || 0;
 
@@ -222,9 +247,9 @@ export const updatePatient = async (req, res) => {
     await PatientDemographic.findOneAndUpdate({ userId: patient.patientId }, { dob, contact, address, pinCode, countryId, stateId, cityId }, { new: true })
     const isExist = await PatientDepartment.findOne({ patientId: patient._id, hospitalId })
     if (isExist) {
-      await PatientDepartment.findOneAndUpdate({ patientId: patient._id, hospitalId }, { departmentId: department,status }, { new: true })
+      await PatientDepartment.findOneAndUpdate({ patientId: patient._id, hospitalId }, { departmentId: department, status }, { new: true })
     } else {
-      await PatientDepartment.create({ patientId: patient._id, hospitalId, departmentId: department,status })
+      await PatientDepartment.create({ patientId: patient._id, hospitalId, departmentId: department, status })
     }
 
     res.json({
@@ -297,7 +322,7 @@ export const deletePatient = async (req, res) => {
     //     message: "Patient not found"
     //   });
     // }
-    await PatientDepartment.findOneAndDelete({ patientId: id ,hospitalId})
+    await PatientDepartment.findOneAndDelete({ patientId: id, hospitalId })
 
     return res.json({
       success: true,

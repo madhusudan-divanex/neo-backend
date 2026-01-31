@@ -23,7 +23,10 @@ import {
   addBed,
   getBedById,
   updateBed,
-  deleteBed
+  deleteBed,
+  getAllotmentHistory,
+  addOrUpdateHospitalPayment,
+  getAllotmentPayment
 } from "../../controller/Hospital/Bed/bed.controller.js";
 
 // ===== BED MANAGEMENT =====
@@ -37,6 +40,7 @@ import {
   getAllotmentById,
   updateAllotment
 } from "../../controller/Hospital/Bed/bedAllotment.controller.js";
+import authMiddleware from "../../middleware/authMiddleare.js";
 
 const router = express.Router();
 
@@ -67,5 +71,7 @@ router.put("/allotment/update/:id", auth, updateAllotment);
 
 // ---------- MANAGEMENT ----------
 router.get("/management/list", auth, bedManagementList);
-
+router.get("/allotment/history/:id",authMiddleware,getAllotmentHistory)
+router.post("/allotment/payment",authMiddleware,addOrUpdateHospitalPayment)
+router.get("/allotment-payment/:id",authMiddleware,getAllotmentPayment)
 export default router;

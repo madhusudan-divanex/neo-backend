@@ -588,13 +588,13 @@ const getLabAppointmentData = async (req, res) => {
         let isExist;
         if (appointmentId.length < 24) {
             isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'testId', select: 'shortName price' })
-                .populate({ path: 'labStaff', select: 'name' })
+                .populate({ path: 'labStaff', select: 'name' }).populate({ path: 'hospitalStaff', select: 'personalInfo' })
                 .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
                 .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
                 .populate({ path: 'doctorId', select: '-passwordHash' })
         } else {
             isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
-                .populate({ path: 'labStaff', select: 'name' })
+                .populate({ path: 'labStaff', select: 'name' }).populate({ path: 'hospitalStaff', select: 'personalInfo' })
                 .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
                 .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
                 .populate({ path: 'doctorId', select: '-passwordHash' })
@@ -662,7 +662,7 @@ const bookLabAppointment = async (req, res) => {
 }
 
 const actionLabAppointment = async (req, res) => {
-    const { labId, appointmentId, status, note, type, paymentStatus, labStaff } = req.body;
+    const { labId, appointmentId, status, note, type, paymentStatus, labStaff ,hospitalStaff} = req.body;
     try {
         const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
@@ -670,7 +670,14 @@ const actionLabAppointment = async (req, res) => {
         const isPatient = await LabAppointment.findById(appointmentId);
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
         if (type == 'payment') {
-            const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note, labStaff }, { new: true })
+            const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note, labStaff,hospitalStaff }, { new: true })
+            if (update) {
+                return res.status(200).json({ message: "Appointment status updated", success: true })
+            } else {
+                return res.status(200).json({ message: "Appointment status not updated", success: false })
+            }
+        } else {
+            const update = await LabAppointment.findByIdAndUpdate(appointmentId, { status, note, labStaff,hospitalStaff }, { new: true })
             if (update) {
                 if (status == 'approved') {
                     await Notification.create({
@@ -685,13 +692,6 @@ const actionLabAppointment = async (req, res) => {
                         message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been rejected by ${isExist.name}`
                     })
                 }
-                return res.status(200).json({ message: "Appointment status updated", success: true })
-            } else {
-                return res.status(200).json({ message: "Appointment status not updated", success: false })
-            }
-        } else {
-            const update = await LabAppointment.findByIdAndUpdate(appointmentId, { status, note, labStaff }, { new: true })
-            if (update) {
                 return res.status(200).json({ message: "Appointment status updated", success: true })
             } else {
                 return res.status(200).json({ message: "Appointment status not updated", success: false })

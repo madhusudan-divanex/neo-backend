@@ -593,7 +593,7 @@ const patientKyc = async (req, res) => {
     }
 };
 const patientDemographic = async (req, res) => {
-    const { userId, bloodGroup, height, weight, dob, contact, address } = req.body;
+    const { userId, bloodGroup, height, weight, dob, contact, address,lat,long,stateId,countryId,cityId } = req.body;
 
     try {
         const user = await User.findById(userId)
@@ -601,14 +601,45 @@ const patientDemographic = async (req, res) => {
 
         const data = await PatientDemographic.findOne({ userId });
         if (data) {
-            await PatientDemographic.findByIdAndUpdate(data._id, { bloodGroup, height, weight, dob, contact, address }, { new: true })
+            await PatientDemographic.findByIdAndUpdate(data._id, { bloodGroup, height, weight, dob, contact, address ,lat,long,stateId,countryId,cityId}, { new: true })
 
             return res.status(200).json({
                 success: true,
                 message: "Demographic update successfully",
             });
         } else {
-            await PatientDemographic.create({ bloodGroup, height, weight, dob, userId, contact, address })
+            await PatientDemographic.create({ bloodGroup, height, weight, dob, userId, contact, address,lat,long,stateId,countryId,cityId })
+
+            return res.status(200).json({
+                success: true,
+                message: "Demographic saved successfully",
+            });
+        }
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+const patientLocation = async (req, res) => {
+    const { userId, address,lat,long,stateId,countryId,cityId,pinCode } = req.body;
+
+    try {
+        const user = await User.findById(userId)
+        if (!user) return res.status(200).json({ message: "User not found", success: false })
+
+        const data = await PatientDemographic.findOne({ userId });
+        if (data) {
+            await PatientDemographic.findByIdAndUpdate(data._id, { address ,lat,long,stateId,countryId,cityId,pinCode}, { new: true })
+
+            return res.status(200).json({
+                success: true,
+                message: "Demographic update successfully",
+            });
+        } else {
+            await PatientDemographic.create({ userId,  address,lat,long,stateId,countryId,cityId ,pinCode})
 
             return res.status(200).json({
                 success: true,
@@ -935,5 +966,5 @@ const getNameProfile = async (req, res) => {
 export {
     signInPatient, updateImage, addPrescriptions, getProfileDetail, editRequest, deletePrescription, signUpPatient, resetPassword, patientKyc, patientDemographic, patientMedicalHistory, forgotEmail, verifyOtp, resendOtp, getProfile, updatePatient, changePassword, deletePatient,
     getPatientDemographic, getCustomProfile, getNameProfile, familyMedicalHistory, getPatientKyc, getMedicalHistory, getPatientProfile,
-    sendOtp
+    sendOtp,patientLocation
 }

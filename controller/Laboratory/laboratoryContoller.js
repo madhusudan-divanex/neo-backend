@@ -569,7 +569,6 @@ const addTest = async (req, res) => {
                 const certificates = await HospitalCertificate.find({ hospitalId: basicId }).session(session);
 
                 const baseUrl = `api/file/`;
-
                 // 🔹 Laboratory
                 lab = await Laboratory.create({
                     userId: hospitalId,
@@ -842,7 +841,7 @@ const saveReport = async (req, res) => {
         } = req.body;
         const component = JSON.parse(req.body.component)
         const isExist = await TestReport.findOne({ testId, appointmentId })
-        if (req.user.isOwner !== true || !req.user.permissionId) {
+        if ((req.user.isOwner !== true || !req.user.permissionId) && req.user.type !=='hospital') {
             const permission = await Permission.findById(req.user.permissionId);
             const panelType = req.user.type;
 
@@ -863,7 +862,7 @@ const saveReport = async (req, res) => {
                 patientId,
                 testId,
                 appointmentId,
-                component, remark
+                component, remark,status:"deliver-report"
                 // upload:{report,name:manual.name,comment:manual.comment}
             }, { new: true })
             return res.status(201).json({
@@ -876,7 +875,7 @@ const saveReport = async (req, res) => {
                 labId,
                 patientId,
                 testId,
-                appointmentId, remark,
+                appointmentId, remark,status:"deliver-report",
                 upload: { report, name: manualName, comment: manualComment },
                 component
             });

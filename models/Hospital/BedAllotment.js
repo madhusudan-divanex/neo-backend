@@ -43,6 +43,10 @@ const BedAllotmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
     },
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "HospitalPayment"
+    },
 
     allotmentDate: {
       type: Date,

@@ -33,23 +33,15 @@ const signUpDoctor = async (req, res) => {
         }
 
         // Check doctor
-        const isDoctorExist = await Doctor.findOne({ email });
+        const isDoctorExist = await Doctor.findOne({ email }) || await Doctor.findOne({ contactNumber })|| await User.findOne({ email });
         if (isDoctorExist) {
-            return res.status(409).json({
-                success: false,
-                message: "Doctor already exists"
-            });
-        }
-
-        // Check user
-        const isUserExist = await User.findOne({ email });
-        if (isUserExist) {
-            return res.status(409).json({
+            return res.status(200).json({
                 success: false,
                 message: "User already exists"
             });
         }
 
+  
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create doctor
@@ -230,7 +222,7 @@ const verifyOtp = async (req, res) => {
             }
             else {
 
-                const doctor = await Doctor.findOne({ contactNumber: phone })
+                const doctor = await Doctor.findOne({ contactNumber: contactNumber })
                 const user = await User.findById(doctor.userId)
                 const userId = doctor.userId
                 const [

@@ -161,8 +161,8 @@ export const dischargePatient = async (req, res) => {
 export const getAllotmentById = async (req, res) => {
   try {
     const allotment = await BedAllotment.findById(req.params.id)
-      .populate("patientId", "name email _id")
-      .populate("primaryDoctorId", "name")
+      .populate("patientId", "name email unique_id")
+      .populate("primaryDoctorId", "name unique_id")
       .populate({
         path: "bedId",
         populate: [

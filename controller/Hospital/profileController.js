@@ -22,6 +22,7 @@ import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import LabAddress from "../../models/Laboratory/labAddress.model.js";
 import LabPerson from "../../models/Laboratory/contactPerson.model.js";
 import { capitalizeFirst } from "../../utils/globalFunction.js";
+import Notification from "../../models/Notifications.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -63,7 +64,7 @@ export const getProfile = async (req, res) => {
     if (!hospitalId) {
       return res.status(400).json({ message: "Hospital ID missing" });
     }
-
+    const user=await User.findById(req.user.id)
     const basic = await HospitalBasic.findById(hospitalId);
     const address = await HospitalAddress.findOne({ hospitalId }).populate('state country city');
 
@@ -82,6 +83,7 @@ export const getProfile = async (req, res) => {
 
     const certificates = await HospitalCertificate.find({ hospitalId });
     const kyc = await Kyc.findOne({ hospitalId });
+    const unRead=await Notification.countDocuments({userId:req.user.id})
 
     // Images
     const allImages = await HospitalImages.find({ hospitalId }).sort({createdAt:-1});
@@ -106,10 +108,10 @@ export const getProfile = async (req, res) => {
 
 
 
-    return res.json({
+    return res.json({success:true,
       message: "Hospital profile fetched",
       profile: {
-        basic,
+        basic,user,
         images: {
           thumbnail,
           gallery
@@ -123,7 +125,7 @@ export const getProfile = async (req, res) => {
         kyc,
         editRequestStatus: lastEditRequest
           ? lastEditRequest.status
-          : "none"
+          : "none",unRead
       }
     });
   } catch (err) {
@@ -348,7 +350,7 @@ export const hospitalDashboard = async (req, res) => {
     const totalPatients = uniquePatient.length;
     const totalDepartments = await HospitalDepartment.countDocuments({ hospitalId });
     const totalStaffs = await HospitalStaff.countDocuments({ hospitalId });
-    const bookedBed = await BedAllotment.countDocuments({ hospitalId, status: { $in: ['Active'] } });
+    const bookedBed = await BedAllotment.countDocuments({ hospitalId, status:'Active' });
     const departments = await HospitalDepartment.aggregate([
       {
         $match: { hospitalId: new mongoose.Types.ObjectId(hospitalId) }

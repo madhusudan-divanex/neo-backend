@@ -1,4 +1,4 @@
-import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getMedicalHistory, getNameProfile, getPatientDemographic, getPatientKyc, getPatientProfile, getProfile, getProfileDetail, patientDemographic, patientKyc, patientMedicalHistory, resendOtp, resetPassword, sendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
+import { addPrescriptions, changePassword, deletePatient, deletePrescription, editRequest, familyMedicalHistory, forgotEmail, getCustomProfile, getMedicalHistory, getNameProfile, getPatientDemographic, getPatientKyc, getPatientProfile, getProfile, getProfileDetail, patientDemographic, patientKyc, patientLocation, patientMedicalHistory, resendOtp, resetPassword, sendOtp, signInPatient, signUpPatient, updateImage, updatePatient, verifyOtp } from "../controller/Patient/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
@@ -46,6 +46,7 @@ patient.post('/update-image',uploader.fields([{ name: 'profileImage', maxCount: 
 ]),authMiddleware,updateImage)
 
 patient.get('/appointment/:id',authMiddleware,getPatientAppointment)
+patient.post('/location',authMiddleware,patientLocation)
 patient.get('/lab-report/:id',authMiddleware,getLabReport)
 
 patient.post('/favorite',authMiddleware,favoriteController)
