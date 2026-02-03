@@ -87,12 +87,10 @@ const signUpDoctor = async (req, res) => {
 const signInDoctor = async (req, res) => {
     const { contactNumber, password } = req.body;
     try {
-
-
         const isExist = await Doctor.findOne({ contactNumber }).populate('userId')
         const isEmployee = await DoctorStaff.findOne({
             "contactInformation.contactNumber": contactNumber
-        });;
+        });
         if (!isExist && !isEmployee) return res.status(200).json({ message: 'Doctor not Found', success: false });
         const access = isEmployee && await EmpAccess
             .findOne({ empId: isEmployee._id })
@@ -196,7 +194,7 @@ const verifyOtp = async (req, res) => {
             }
         } else {
             const employee = await DoctorStaff.findOne({
-                "contactInformation.contactNumber": phone
+                "contactInformation.contactNumber": contactNumber
             });
             if (employee) {
                 const access = await EmpAccess

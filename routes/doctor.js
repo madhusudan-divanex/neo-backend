@@ -56,11 +56,11 @@ doctor.post('/send-reminder',authMiddleware,sendReminder)
 
 
 doctor.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,saveDoctorStaff)
-doctor.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
-doctor.post('/employment',authMiddleware,saveEmpEmployement)
+doctor.post('/staff-professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
+doctor.post('/staff-employment',authMiddleware,saveEmpEmployement)
 doctor.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
 
-doctor.post('/access',authMiddleware,saveEmpAccess)
+doctor.post('/staff-access',authMiddleware,saveEmpAccess)
 doctor.get('/staff/:id',authMiddleware,doctorStaff)
 doctor.post('/staff-action',authMiddleware,doctorStaffAction)
 doctor.get('/staff-data/:id',authMiddleware,doctorStaffData)

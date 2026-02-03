@@ -181,7 +181,7 @@ export const deleteNotification = async (req, res) => {
 
     return res.json({
       success: true,
-      message:"Notification deleted"
+      message: "Notification deleted"
     });
 
   } catch (e) {
@@ -192,17 +192,17 @@ export const deleteNotification = async (req, res) => {
 export const deleteOneNotification = async (req, res) => {
   try {
     const myId = req.user.id;
-    const notifyId=req.params.id;
-    const deleteNotification=await Notification.findOneAndDelete({ userId: myId,_id:notifyId });
-    if(!deleteNotification){
+    const notifyId = req.params.id;
+    const deleteNotification = await Notification.findOneAndDelete({ userId: myId, _id: notifyId });
+    if (!deleteNotification) {
       return res.json({
-      success: false,
-      message:"Notification not found"
-    });
+        success: false,
+        message: "Notification not found"
+      });
     }
     return res.json({
       success: true,
-      message:"Notification deleted"
+      message: "Notification deleted"
     });
 
   } catch (e) {
@@ -244,10 +244,20 @@ export const getAllPermission = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 });
+    const filteredPermissions = permissions.map((perm) => ({
+      _id: perm._id,
+      name: perm.name,
+      type: perm.type,
+      ownerId: perm.ownerId,
+      permissions: perm[type] || {}, // only the section for the user's type
+      createdAt: perm.createdAt,
+      updatedAt: perm.updatedAt
+    }));
+
 
     return res.status(200).json({
       message: "Permissions fetched successfully",
-      data: permissions,
+      data: filteredPermissions,
       pagination: {
         page,
         limit,
@@ -297,7 +307,7 @@ export const addPermission = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Permission updated successfully",
-        data: updated
+        data: updated[type]
       });
     }
 
@@ -362,7 +372,7 @@ export const updatePermission = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Permission updated successfully",
-      data: updated
+      data: updated[type]
     });
 
   } catch (error) {
@@ -420,17 +430,17 @@ export const deletePermission = async (req, res) => {
   }
 };
 export const getProfile = async (req, res) => {
-    const id = req.user.userId
-    try {
-        const user = await User.findById(id)
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-        return res.status(200).json({
-            success: true,
-            data: user
-        });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+  const id = req.user.userId
+  try {
+    const user = await User.findById(id)
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
+    return res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };

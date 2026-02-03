@@ -4,7 +4,6 @@ import mongoose, { Schema }  from 'mongoose';
 
 const userSchema = new mongoose.Schema({
     userName: { type: String, required: true },
-    // email: { type: String, required: true },
     password: { type: String, required: true }    ,
     permissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'permission', required: true },
     empId: { type: mongoose.Schema.Types.ObjectId, ref: 'doctor-staff', required: true },

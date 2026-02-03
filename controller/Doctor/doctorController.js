@@ -16,6 +16,7 @@ import EmpProfesional from "../../models/Doctor/empProffesional.js"
 import bcrypt from "bcryptjs"
 import Permission from "../../models/Permission.js"
 import TimeSlot from "../../models/TimeSlot.js"
+import safeUnlink from "../../utils/globalFunction.js"
 const doctorDashboard = async (req, res) => {
   const id = req.params.id
   try {
@@ -417,6 +418,7 @@ const saveEmpProfessional = async (req, res) => {
 const saveEmpAccess = async (req, res) => {
   const { id, empId, userName, email, password, permissionId } = req.body;
   try {
+    console.log(req.body)
     const employee = await DoctorStaff.findById(empId);
     if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
 
@@ -429,7 +431,8 @@ const saveEmpAccess = async (req, res) => {
     if (password) {
       hashedPassword = await bcrypt.hash(password, 10)
     }
-    await DoctorStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
+    const d=await DoctorStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
+    
     if (isExist) {
       data = await EmpAccess.findOneAndUpdate({ empId: empId }, { userName, email, password: hashedPassword, permissionId }, { new: true });
       if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
@@ -439,7 +442,7 @@ const saveEmpAccess = async (req, res) => {
         data
       });
     } else {
-      data = await EmpAccess.create({ userName, email, password: hashedPassword, permissionId });
+      data = await EmpAccess.create({ userName, email, password: hashedPassword, permissionId ,empId});
       return res.status(200).json({
         success: true,
         message: "Employee access created",
@@ -448,6 +451,7 @@ const saveEmpAccess = async (req, res) => {
     }
 
   } catch (error) {
+    console.log(error)
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -510,7 +514,7 @@ const doctorStaff = async (req, res) => {
 
     const total = await DoctorStaff.countDocuments(filter);
     const employee = await DoctorStaff.find(filter)
-      .populate({ path: "permissionId", select: 'name' })
+      .populate({ path: "permissionId",select:'name doctor'})
       .sort({ createdAt: -1 })
       .skip((pageNumber - 1) * limitNumber)
       .limit(limitNumber)

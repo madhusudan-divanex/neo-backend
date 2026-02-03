@@ -118,6 +118,16 @@ Hospital->
     Scan 
     Profile Management 
     Staff Access
+
+Socket->
+    auth: { token}
+    call-rejected
+    call-busy
+    end-call (toUserId)
+    reject-call (toUserId)
+    answer-call (toUserId,answer)
+    typing (toUserId)
+    stop-typing (toUserId)
     
 
 Pharmacy->

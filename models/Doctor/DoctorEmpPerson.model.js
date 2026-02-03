@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
     pinCode: { type: String, required: true }  , 
     contactInformation:contactSchema,
     profileImage: { type: String}  ,
-    permissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'doctor-permission' },
+    permissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'permission' },
     status: { type: String,enum:['active','inactive'], default: 'active' },
     doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true,index:true },
     
