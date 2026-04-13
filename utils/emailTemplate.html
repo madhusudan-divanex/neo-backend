@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to NeoHealthCard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: Arial, sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:20px 0;">
+    <tr>
+      <td align="center">
+
+        <!-- Main Container -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:#0f172b; padding:20px; text-align:center; color:#ffffff;">
+              <img src="https://api.neohealthcard.com:9100/uploads/emailAssets/logo.png" alt="NeoHealthCard" width="50" style="margin-bottom:10px;">
+              <h2 style="margin:0;">NeoHealthCard</h2>
+              <p style="margin:5px 0 0; font-size:13px;">Transforming healthcare with security & care</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333333;">
+
+              <h3 style="margin-top:0;">Hi {{userName}}, 👋</h3>
+
+              <p>
+                Welcome to <strong>NeoHealthCard</strong>! Your account has been successfully created.
+              </p>
+
+              <p>
+                You are now part of a unified healthcare ecosystem connecting 
+                <strong>Hospitals, Doctors, Patients, Pharmacies, and Laboratories</strong>.
+              </p>
+
+              <!-- Info Box -->
+              <table width="100%" style="background:#f1f5f9; padding:15px; border-radius:8px; margin:20px 0;">
+                <tr>
+                  <td>
+                    <p style="margin:5px 0;"><strong>Email:</strong> {{email}}</p>
+                    <p style="margin:5px 0;"><strong>Role:</strong> {{role}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <div style="text-align:center; margin:30px 0;">
+                <a href="{{loginUrl}}" 
+                   style="background:#0f172b; color:#ffffff; padding:12px 25px; text-decoration:none; border-radius:6px; font-weight:bold;">
+                   Login to Your Dashboard
+                </a>
+              </div>
+
+              <!-- Features -->
+              <h4>What you can do:</h4>
+              <ul style="padding-left:18px;">
+                <li>Access your dedicated {{role}} panel</li>
+                <li>Manage records with consent-based security</li>
+                <li>Collaborate across healthcare providers</li>
+                <li>Track data with audit-ready logs</li>
+              </ul>
+
+              <p>
+                If you did not create this account, you can safely ignore this email.
+              </p>
+
+              <p style="margin-top:30px;">
+                Regards,<br>
+                <strong>Team NeoHealthCard</strong>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb; padding:20px; text-align:center; font-size:12px; color:#777;">
+              <p style="margin:5px 0;">Need help? support@neohealthcard.com</p>
+              <p style="margin:5px 0;">© 2026 NeoHealthCard. All rights reserved.</p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
