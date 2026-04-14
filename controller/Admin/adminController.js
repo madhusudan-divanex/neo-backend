@@ -23,6 +23,7 @@ import PharmacyCategory from "../../models/PharmacyCategory.js"
 import PatientService from "../../models/LandingPage.js/PatientService.js"
 import ScheduleMedicines from "../../models/Admin/ScheduleMedicines.js"
 import Queries from "../../models/Admin/Queries.js"
+import CardGenerate from "../../models/Admin/CardGenerate.js"
 export const addSpecialty = async (req, res) => {
     const icon = req?.file?.path
     const { name } = req.body
@@ -50,7 +51,7 @@ export const getServices = async (req, res) => {
         return res.status(200).json({ message: "Server Error", success: false })
     }
 }
-export const getSpecialty  = async (req, res) => {
+export const getSpecialty = async (req, res) => {
     try {
         const isExist = await Speciality.find()
         return res.status(200).json({ message: "Speciality fetched", data: isExist, success: true })
@@ -341,14 +342,14 @@ export const getPatientBanner = async (req, res) => {
 }
 export const updatePatientBanner = async (req, res) => {
     const image = req?.file?.path
-    const {  spId } = req.body
+    const { spId } = req.body
     try {
         const isExist = await PatientBanner.findById(spId)
-       
+
         if (isExist?.image && image) {
             safeUnlink(isExist?.image)
         }
-        const data = await PatientBanner.findByIdAndUpdate(spId, {  image }, { new: true })
+        const data = await PatientBanner.findByIdAndUpdate(spId, { image }, { new: true })
         if (data) {
             return res.status(200).json({ message: "Patient Banner updated", success: true })
         }
@@ -382,7 +383,7 @@ export const getCmsData = async (req, res) => {
         if (req.query.slug) {
             filter.slug = req.query.slug
         }
-        if(req.query.panel){
+        if (req.query.panel) {
             filter.panel = req.query.panel || 'website'
         }
         const data = await CMS.find(filter)
@@ -622,11 +623,11 @@ export const addScheduleMedicines = async (req, res) => {
     }
 }
 export const getScheduleMedicines = async (req, res) => {
-    const {name}=req.query
+    const { name } = req.query
     try {
-        let filter={}
-        if(name){
-            filter.name={ $regex: name, $options: "i" }
+        let filter = {}
+        if (name) {
+            filter.name = { $regex: name, $options: "i" }
         }
         const isExist = await ScheduleMedicines.find(filter) || []
         return res.status(200).json({ message: "Schedule Medicine fetched", data: isExist, success: true })
@@ -689,13 +690,50 @@ export const getContactQuery = async (req, res) => {
         return res.status(500).json({ message: "Server Error", success: false });
     }
 };
-export const deleteContactQuery =async(req,res)=>{
+export const deleteContactQuery = async (req, res) => {
     try {
-        const data=await Queries.findByIdAndDelete(req.params.id)
-        if(data){
+        const data = await Queries.findByIdAndDelete(req.params.id)
+        if (data) {
             return res.status(200).json({ message: "Query deleted", success: true })
         }
         return res.status(404).json({ message: "Query not found", success: false })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const generateCard = async (req, res) => {
+    try {
+        const data = await CardGenerate.create(req.body)
+        if (data) {
+            return res.status(200).json({ message: "Card generated", success: true })
+        }
+        return res.status(404).json({ message: "Card not generated", success: false })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const getUsers = async (req, res) => {
+    const { search } = req.query
+    try {
+        let filter = { role: { $ne: "staff" } };
+
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { contactNumber: { $regex: search, $options: "i" } },
+            ];
+        }
+        const data = await User.findOne(filter).select("name email contactNumber role nh12 labId pateintId doctorId hospitalId pharmacyId")
+            .populate("patientId", "profileImage")
+            .populate("doctorId", "profileImage")
+            .populate("pharId", "profileImage")
+            .populate("labId", "profileImage")
+            .populate("hospitalId", "logoFileId")
+        if (data) {
+            return res.status(200).json({ message: "User found", success: true, data })
+        }
+        return res.status(404).json({ message: "User not found", success: false })
     } catch (error) {
         return res.status(200).json({ message: error?.message, success: false })
     }
