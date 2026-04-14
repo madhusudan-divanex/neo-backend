@@ -15,8 +15,6 @@ import Rating from '../../models/Rating.js';
 import PharLicense from '../../models/Pharmacy/pharmacyLicense.model.js';
 import mongoose from 'mongoose';
 import safeUnlink from '../../utils/globalFunction.js';
-import EmpAccess from '../../models/Pharmacy/empAccess.model.js';
-import PharStaff from '../../models/Pharmacy/PharEmpPerson.model.js';
 import Notification from '../../models/Notifications.js';
 import City from '../../models/Hospital/City.js';
 

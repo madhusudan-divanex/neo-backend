@@ -1,12 +1,6 @@
 
 import Inventory from '../../models/Pharmacy/inventory.model.js';
 import MedicineRequest from '../../models/Pharmacy/medicineRequest.model.js';
-import PharPermission from '../../models/Pharmacy/permission.model.js';
-import Pharmacy from '../../models/Pharmacy/pharmacy.model.js';
-import EmpAccess from "../../models/Pharmacy/empAccess.model.js";
-import EmpEmployement from "../../models/Pharmacy/employement.model.js";
-import EmpProfesional from "../../models/Pharmacy/empProffesional.js";
-import PharStaff from "../../models/Pharmacy/PharEmpPerson.model.js";
 import Supplier from "../../models/Pharmacy/supplier.model.js"
 import PurchaseOrder from '../../models/Pharmacy/purchaseOrder.model.js';
 import Return from '../../models/Pharmacy/return.model.js'
@@ -20,13 +14,13 @@ import Prescriptions from '../../models/Prescriptions.js';
 import Patient from '../../models/Patient/patient.model.js';
 import PatientPrescriptions from '../../models/Patient/prescription.model.js';
 import User from '../../models/Hospital/User.js';
-import Permission from '../../models/Permission.js';
 import bcrypt from 'bcryptjs';
 import Doctor from '../../models/Doctor/doctor.model.js';
 import BedAllotment from '../../models/Hospital/BedAllotment.js';
 import HospitalAudit from '../../models/Hospital/HospitalAudit.js';
 import PharmacyAudit from '../../models/Pharmacy/PharmacyAudit.model.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
+import ScheduleMedicines from '../../models/Admin/ScheduleMedicines.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
@@ -123,7 +117,7 @@ const inventoryList = async (req, res) => {
         }
         // Fetch data
         const [items, total] = await Promise.all([
-            Inventory.find(filter)
+            Inventory.find(filter).populate('schedule')
                 .sort(sortOption)
                 .skip(skip)
                 .limit(limit),
@@ -1305,533 +1299,6 @@ const deleteReturn = async (req, res) => {
     }
 };
 
-const getAllPharPermission = async (req, res) => {
-    const id = req.params.id;
-    let { page = 1, limit = 10, name } = req.query;
-
-    page = parseInt(page);
-    limit = parseInt(limit);
-
-    try {
-        const filter = { pharId: id };
-        if (name && name !== 'null') {
-            filter.name = { $regex: name, $options: "i" };
-        }
-
-        const pharmacy = await User.findById(id);
-
-        if (!pharmacy) {
-            return res.status(200).json({
-                message: "Pharmacy not found",
-                success: false
-            });
-        }
-
-        const total = await PharPermission.countDocuments(filter);
-        const permissions = await PharPermission.find(filter)
-            .skip((page - 1) * limit)
-            .limit(limit).lean();
-        const usedPermission = await Promise.all(permissions?.map(async (item) => {
-            const totalUsed = await PharStaff.countDocuments({ permissionId: item?._id }) || 0
-            return {
-                ...item,
-                totalUsed
-            }
-        }))
-
-        return res.status(200).json({
-            message: "Pharmacy permissions fetched successfully",
-            data: usedPermission,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
-            },
-            success: true
-        });
-
-    } catch (err) {
-        console.log(err);
-        return res.status(500).json({
-            message: 'Server Error',
-            success: false
-        });
-    }
-};
-
-const addPharPermission = async (req, res) => {
-    try {
-        const { name, pharId, ...permissions } = req.body;
-        const isExist = await User.findById(pharId);
-        if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
-
-
-        if (!name || !pharId) {
-            return res.status(400).json({
-                success: false,
-                message: "name and pharId are required"
-            });
-        }
-
-        const existing = await PharPermission.findOne({ name, pharId });
-
-        if (existing) {
-            const updated = await PharPermission.findByIdAndUpdate(
-                existing._id,
-                { ...permissions },
-                { new: true }
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: "Permission updated successfully",
-                data: updated
-            });
-        }
-
-        const created = await PharPermission.create({
-            name,
-            pharId,
-            ...permissions
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Permission created successfully",
-            data: created
-        });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-};
-const updatePharPermission = async (req, res) => {
-    try {
-        const { name, permissionId, pharId, ...permissions } = req.body;
-        const isExist = await User.findById(pharId);
-        if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
-        const isPermExist = await PharPermission.findById(permissionId);
-        if (!isPermExist) return res.status(200).json({ message: "Permission not found", success: false })
-
-        if (!name || !pharId) {
-            return res.status(400).json({
-                success: false,
-                message: "name and pharId are required"
-            });
-        }
-        const updated = await PharPermission.findByIdAndUpdate(
-            isPermExist._id,
-            { ...permissions, name },
-            { new: true }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Permission updated successfully",
-            data: updated
-        });
-
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-};
-const deletePharPermission = async (req, res) => {
-    const { permissionId, pharId } = req.body;
-    try {
-        const isLabExist = await User.findById(pharId);
-        if (!isLabExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
-        const isExist = await PharPermission.findById(permissionId);
-        if (!isExist) return res.status(200).json({ message: "Pharmacy permission not found", success: false })
-
-        const delPerm = await PharPermission.findByIdAndDelete(permissionId);
-
-        if (delPerm) {
-            return res.status(200).json({
-                success: true,
-                message: "Permission deleted successfully",
-            });
-        }
-        return res.status(200).json({
-            success: false,
-            message: "Permission not deleted"
-        });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-}
-
-const savePharStaff = async (req, res) => {
-    const { name, address, dob, state, city, pinCode, pharId, empId, gender } = req.body
-    const contactInformation = JSON.parse(req.body.contactInformation)
-    const profileImage = req.files?.['profileImage']?.[0]?.path
-    try {
-        const isExist = await User.findById(pharId);
-        if (!isExist) return res.status(200).json({ message: "Pharmacy  not found", success: false })
-
-        const isStaff = await PharStaff.findById(empId);
-
-        if (profileImage && isStaff) {
-            safeUnlink(isStaff.profileImage)
-        }
-        if (isStaff) {
-            await PharStaff.findByIdAndUpdate(empId, { name, address, dob, state, gender, city, pinCode, contactInformation, pharId, profileImage: profileImage || isStaff.profileImage }, { new: true })
-            return res.status(200).json({
-                success: true,
-                message: "Staff updated",
-                empId
-            });
-        } else {
-            const isContactNumber = await PharStaff.findOne({ 'contactInformation.contactNumber': contactInformation.contactNumber })
-            if (isContactNumber) {
-                safeUnlink(profileImage)
-                return res.status(200).json({ message: "Contact number already taken", success: false })
-            }
-            const isEmail = await PharStaff.findOne({ 'contactInformation.email': contactInformation.email })
-            if (isEmail) {
-                safeUnlink(profileImage)
-                return res.status(200).json({ message: "Email already taken", success: false })
-            }
-            const staf = await PharStaff.create({ name, address, dob, state, gender, city, pinCode, contactInformation, pharId, profileImage });
-            return res.status(200).json({
-                success: true,
-                message: "Staff created",
-                empId: staf._id
-            });
-        }
-
-
-    } catch (error) {
-        if (profileImage && fs.existsSync(profileImage)) {
-            safeUnlink(profileImage)
-        }
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const saveEmpEmployement = async (req, res) => {
-    const { id, empId, pharId, position, joinDate, onLeaveDate, contractStart, contractEnd, salary, note, status } = req.body;
-
-    try {
-        // Check if employee exists
-        let employee = await PharStaff.findById(empId);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
-
-        let data;
-        if (id) {
-            data = await EmpEmployement.findByIdAndUpdate(id, { empId, pharId, position, status, joinDate, onLeaveDate, contractStart, contractEnd, salary, note }, { new: true });
-            if (!data) return res.status(200).json({ success: false, message: "Employment record not found" });
-
-            return res.status(200).json({
-                success: true,
-                message: "Employee employment updated",
-                data
-            });
-        } else {
-            // Create new
-            data = await EmpEmployement.create({ empId, pharId, position, joinDate, status, onLeaveDate, contractStart, contractEnd, salary, note });
-            employee.employmentId = data?._id
-            await employee.save()
-            return res.status(200).json({
-                success: true,
-                message: "Employee employment created",
-                data
-            });
-        }
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const deleteSubEmpProffesional = async (req, res) => {
-    const { id, empId, type } = req.body;
-
-    try {
-        // Check if employee exists
-        const employee = await PharStaff.findById(empId);
-        if (!employee) {
-            return res.status(200).json({ success: false, message: "Employee not found" });
-        }
-
-        // Build pull query based on type
-        let pullQuery = {};
-
-        if (type === "education") {
-            pullQuery = { $pull: { education: { _id: id } } };
-        } else if (type === "cert") {
-            const data = await EmpProfesional.findOne({ empId }).select('pharCert')
-            safeUnlink(data.pharCert.certFile)
-            pullQuery = { $pull: { pharCert: { _id: id } } };
-        } else {
-            return res.status(400).json({ success: false, message: "Invalid type" });
-        }
-
-        const data = await EmpProfesional.findOneAndUpdate(
-            { empId },
-            pullQuery,
-            { new: true }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Sub-document deleted successfully",
-            data
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const saveEmpProfessional = async (req, res) => {
-    const { id, empId, profession, specialization, totalExperience, professionalBio, education } = req.body;
-    const certMeta = JSON.parse(req.body.pharCert || "[]");
-    try {
-        const employee = await PharStaff.findById(empId);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
-        const uploadedFiles = req.files?.certFile || [];
-        const pharCert = certMeta.map((meta, idx) => ({
-            certName: meta.certName,
-            certFile: uploadedFiles[idx] ? uploadedFiles[idx].path : "",
-        }));
-        const isExist = await EmpProfesional.findOne({ empId })
-        let data;
-        if (isExist) {
-            const existing = await EmpProfesional.findById(isExist._id);
-            if (!existing) return res.status(200).json({ success: false, message: "Professional record not found" });
-
-            if (pharCert.length > 0 && existing.pharCert?.length) {
-                existing.pharCert.forEach(cert => safeUnlink(cert.certFile));
-            }
-
-            data = await EmpProfesional.findByIdAndUpdate(
-                isExist._id,
-                {
-                    profession,
-                    specialization,
-                    totalExperience,
-                    professionalBio,
-                    education: JSON.parse(education || "[]"), // assuming education comes as JSON string
-                    pharCert: pharCert.length > 0 ? pharCert : existing.pharCert
-                },
-                { new: true }
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: "Employee professional updated"
-            });
-
-        } else {
-            // Create new record
-            data = await EmpProfesional.create({
-                empId,
-                profession,
-                specialization,
-                totalExperience,
-                professionalBio,
-                education: JSON.parse(education || "[]"),
-                pharCert
-            });
-            employee.proffesionId = data?._id
-            await employee.save()
-            return res.status(200).json({
-                success: true,
-                message: "Employee professional created"
-            });
-        }
-
-    } catch (error) {
-        // if (pharCertFiles.length > 0) {
-        //     pharCertFiles.forEach(file => safeUnlink(file.path));
-        // }
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const saveEmpAccess = async (req, res) => {
-    const { id, empId, userName, email, password, permissionId } = req.body;
-    try {
-        const employee = await PharStaff.findById(empId);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
-
-        const permission = await Permission.findById(permissionId);
-        if (!permission) return res.status(200).json({ success: false, message: "Permission not found" });
-
-        const isExist = await EmpAccess.findOne({ empId: empId });
-        let data;
-        await PharStaff.findByIdAndUpdate(empId, { permissionId }, { new: true })
-        if (isExist) {
-            const alreadyEmail = await EmpAccess.countDocuments({ email })
-            if (alreadyEmail > 1) {
-                return res.status(200).json({
-                    success: true,
-                    message: "Email already exists",
-                });
-            }
-            data = await EmpAccess.findOneAndUpdate({ empId: empId }, { userName, email, password, permissionId }, { new: true });
-            if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
-            return res.status(200).json({
-                success: true,
-                message: "Employee access updated",
-                data
-            });
-        } else {
-            const alreadyEmail = await EmpAccess.findOne({ email })
-            if (alreadyEmail) {
-                return res.status(200).json({
-                    success: true,
-                    message: "Email already exists",
-                });
-            }
-            data = await EmpAccess.create(req.body);
-            employee.accessId = data?._id
-            await employee.save()
-            return res.status(200).json({
-                success: true,
-                message: "Employee access created",
-                data
-            });
-        }
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const pharStaffData = async (req, res) => {
-    const id = req.params.id
-    try {
-        const isExist = await PharStaff.findById(id);
-        if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
-
-        const employment = await EmpEmployement.findOne({ empId: id })
-        const professional = await EmpProfesional.findOne({ empId: id })
-        const empAccess = await EmpAccess.findOne({ empId: id })?.populate('permissionId')
-        return res.status(200).json({
-            success: true,
-            message: "Staff fetched",
-            employee: isExist, employment, professional, empAccess
-
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const pharStaffAction = async (req, res) => {
-    const { empId, status } = req.body
-    try {
-        const isExist = await PharStaff.findById(empId);
-        if (!isExist) return res.status(200).json({ message: "Employee  not found", success: false })
-
-        const employment = await PharStaff.findByIdAndUpdate(empId, { status }, { new: true })
-
-        return res.status(200).json({
-            success: true,
-            message: "Staff status updated"
-
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const pharStaff = async (req, res) => {
-    const id = req.params.id;
-    let { page, limit, name, status } = req.query;
-
-    const pageNumber = parseInt(page) > 0 ? parseInt(page) : 1;
-    const limitNumber = parseInt(limit) > 0 ? parseInt(limit) : 10;
-
-    try {
-        const isExist = await User.findById(id);
-        if (!isExist) {
-            return res.status(200).json({ message: "Pharmacy not found", success: false });
-        }
-
-        const filter = { pharId: id };
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
-        }
-
-
-        const total = await PharStaff.countDocuments(filter);
-        const employee = await PharStaff.find(filter)
-            .populate({ path: "permissionId", select: "name" })
-            .populate({
-                path: "employmentId",
-                select: "position joinDate status",
-                match: status ? { status: status } : {}
-            })
-            .sort({ createdAt: -1 })
-            .skip((pageNumber - 1) * limitNumber)
-            .limit(limitNumber)
-            .lean();
-        const filteredEmployee = status
-            ? employee.filter(emp => emp.employmentId !== null)
-            : employee;
-
-        return res.status(200).json({
-            success: true,
-            message: "Staff fetched",
-            data: filteredEmployee,
-            pagination: {
-                page: pageNumber,
-                limit: limitNumber,
-                total,
-                totalPages: Math.ceil(total / limitNumber)
-            },
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-const deleteStaffData = async (req, res) => {
-    const id = req.params.id;
-
-    try {
-        const employee = await PharStaff.findById(id);
-        if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
-
-        safeUnlink(employee.profileImage);
-
-        // Find related professional data
-        const professional = await EmpProfesional.findOne({ empId: id });
-        if (professional?.pharCert?.length) {
-            professional.pharCert.forEach(cert => safeUnlink(cert.certFile));
-        }
-
-        // Find employment and access records
-        const employment = await EmpEmployement.findOne({ empId: id });
-        const empAccess = await EmpAccess.findOne({ empId: id });
-
-        // Delete all related records
-        await EmpProfesional.deleteMany({ empId: id });
-        await EmpEmployement.deleteMany({ empId: id });
-        await EmpAccess.deleteMany({ empId: id });
-        await PharStaff.findByIdAndDelete(id);
-
-        return res.status(200).json({
-            success: true,
-            message: "Employee and related data deleted successfully"
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
 const pharDashboardData = async (req, res) => {
     const pharId = req.user.id || req.user.userId;
     try {
@@ -1853,8 +1320,9 @@ const pharDashboardData = async (req, res) => {
             }
             return count;
         }, 0);
+        const h1Schedule = await ScheduleMedicines.findOne({ name: "H1" })
 
-        const h1Compliance = await Inventory.countDocuments({ schedule: 'H1', pharId })
+        const h1Compliance = await Inventory.countDocuments({ schedule: h1Schedule?._id, pharId })
         const xCompliance = await Inventory.aggregate([
             {
                 $match: { schedule: 'X' },
@@ -1869,31 +1337,29 @@ const pharDashboardData = async (req, res) => {
         const categoryStock = await Inventory.aggregate([
             {
                 $match: {
-                    pharId: new mongoose.Types.ObjectId(pharId) // ✅ convert
+                    pharId: new mongoose.Types.ObjectId(pharId),
+                    schedule: { $exists: true }
                 }
             },
             {
+                $lookup: {
+                    from: ScheduleMedicines.collection.name, // 🔥 collection name (lowercase + plural)
+                    localField: "schedule",
+                    foreignField: "_id",
+                    as: "scheduleData"
+                }
+            },
+            {
+                $unwind: "$scheduleData"
+            },
+            {
                 $group: {
-                    _id: {
-                        $switch: {
-                            branches: [
-                                { case: { $eq: ["$schedule", "H1"] }, then: "H1" },
-                                { case: { $eq: ["$schedule", "H"] }, then: "H" },
-                                { case: { $eq: ["$schedule", "X"] }, then: "X" },
-                            ],
-                            default: "Other"
-                        }
-                    },
+                    _id: "$scheduleData.name", // ✅ now name instead of ID
                     totalQuantity: { $sum: "$quantity" }
                 }
             }
         ]);
-        const stockMap = {
-            H1: 0,
-            H: 0,
-            X: 0,
-            OTHER: 0
-        };
+        const stockMap = {};
 
         categoryStock.forEach(item => {
             stockMap[item._id] = item.totalQuantity;
@@ -1993,7 +1459,7 @@ const pharDashboardData = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: 'Server Error' });
+        return res.status(200).json({ message: err?.message });
     }
 }
 const sellMedicine = async (req, res) => {
@@ -2171,7 +1637,7 @@ const sellMedicine = async (req, res) => {
         if (id && req.user.type == "hospital") {
             if (req.user.loginUser) {
                 await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `A new sell record was created for patient ${ptData?.name}.` })
-            } else if(hospitalId) {
+            } else if (hospitalId) {
                 await HospitalAudit.create({ hospitalId, note: `A new sell record was created for patient ${ptData?.name}.` })
             }
         }
@@ -2705,7 +2171,7 @@ export const customerReturn = async (req, res) => {
             _id: sellId,
             $or: [{ pharId: id }, { hospitalId: id }]
         }).session(session);
-        const ptData=await User.findById(sell.patientId)
+        const ptData = await User.findById(sell.patientId)
         if (!sell) {
             throw new Error("Sell record not found");
         }
@@ -2792,12 +2258,68 @@ export const customerReturn = async (req, res) => {
         });
     }
 };
+export const getMySchedule = async (req, res) => {
+    const id = new mongoose.Types.ObjectId(req.user.id || req.user.userId);
 
-export { deleteStaffData, pharStaff, pharStaffAction, pharStaffData, saveEmpAccess, saveEmpProfessional, deleteSubEmpProffesional, saveEmpEmployement, savePharStaff }
+    try {
+        const data = await Inventory.aggregate([
+            {
+                $match: {
+                    schedule: { $exists: true, $ne: null },
+                    $or: [
+                        { pharId: id },
+                        { hospitalId: id }
+                    ]
+                }
+            },
+            {
+                $group: {
+                    _id: "$schedule"
+                }
+            },
+            {
+                $lookup: {
+                    from: ScheduleMedicines.collection.name, // Aapke collection ka actual name database mein check karein
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "scheduleDetails"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$scheduleDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: {
+                    "scheduleDetails.createdAt": -1
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    scheduleId: "$_id",
+                    details: "$scheduleDetails"
+                }
+            }
+        ]);
+
+        return res.status(200).json({
+            message: "Unique populated schedules fetched",
+            success: true,
+            count: data.length,
+            data
+        });
+
+    } catch (error) {
+        return res.status(500).json({ message: error.message, success: false });
+    }
+};
 export {
     getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById,
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,
     addSupplier, updatePO, updateSupplier, deleteSupplier, createReturn, listReturns, completeReturn, updateReturn, deletePO, deleteReturn,
-    createPO, receivePO, addPharPermission, updatePharPermission, deletePharPermission, getAllPharPermission, medicineData, pharDashboardData,
+    createPO, receivePO, medicineData, pharDashboardData,
     sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData, patientHospitalAllotment
 }

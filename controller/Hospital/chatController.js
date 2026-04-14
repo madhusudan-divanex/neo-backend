@@ -16,7 +16,7 @@ export const CreateConversation = async (req, res) => {
     }
 
     let conversation = await Conversation.findOne({
-      participants: { $all: [myId, userId] }
+      participants: { $all: [myId, userId] },type:"individual"
     }).populate("participants", "name role profileImage");
 
     if (!conversation) {

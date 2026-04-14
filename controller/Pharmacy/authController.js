@@ -15,8 +15,7 @@ import Rating from '../../models/Rating.js';
 import PharLicense from '../../models/Pharmacy/pharmacyLicense.model.js';
 import mongoose from 'mongoose';
 import safeUnlink, { sendEmailOtp, sendMobileOtp, sendWelcomeEmail } from '../../utils/globalFunction.js';
-import EmpAccess from '../../models/Pharmacy/empAccess.model.js';
-import PharStaff from '../../models/Pharmacy/PharEmpPerson.model.js';
+
 import User from '../../models/Hospital/User.js';
 import Notification from '../../models/Notifications.js';
 import City from '../../models/Hospital/City.js';
@@ -28,7 +27,7 @@ import PaymentInfo from '../../models/PaymentInfo.js';
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
     const logo = req.files?.['logo']?.[0]?.path
-    const category=req.body.category ? JSON.parse(req.body.category) : []
+    const category = req.body.category ? JSON.parse(req.body.category) : []
     try {
         if (pharId) {
             const isExist = await User.findById(pharId)
@@ -51,7 +50,7 @@ const signUpPhar = async (req, res) => {
             // Create user
             const newphar = await Pharmacy.findByIdAndUpdate(isExist.pharId, {
                 name,
-                gender,category,
+                gender, category,
                 email,
                 contactNumber,
                 gstNumber, about, logo
@@ -82,7 +81,7 @@ const signUpPhar = async (req, res) => {
 
             // Create user
             const newphar = await Pharmacy.create({
-                name,category,
+                name, category,
                 gender,
                 email,
                 contactNumber,
@@ -116,53 +115,27 @@ const signUpPhar = async (req, res) => {
 const signInPhar = async (req, res) => {
     const { contactNumber, password, email } = req.body;
     try {
-        const pharPerson = contactNumber ?
-            await PharStaff.findOne({
-                "contactInformation.contactNumber": contactNumber
-            }) : await PharStaff.findOne({
-                "contactInformation.email": email
-            });
-        if (pharPerson) {
-            const access = await EmpAccess.findOne({ empId: pharPerson._id }).populate("permissionId");
-            if (access.password === password) {
-                const code = generateOTP()
-                if (contactNumber) {
-                    await sendMobileOtp(contactNumber, code)
-                } else {
-                    await sendEmailOtp(email, code)
-                }
-                const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-                if (isOtpExist) {
-                    await Otp.findByIdAndDelete(isOtpExist._id)
-                    const otp = await Otp.create({ phone: contactNumber, email, code })
-                } else {
-                    const otp = await Otp.create({ phone: contactNumber, email, code })
-                }
-                return res.status(200).json({ message: "Otp Sent", success: true })
-            }
-            return res.status(200).json({ message: "Invalid credentials", success: false })
+
+        const isExist = contactNumber ? await User.findOne({ contactNumber, role: "pharmacy" }) : await User.findOne({ email, role: "pharmacy" });
+        if (!isExist) return res.status(200).json({ message: 'Phar not Found', success: false });
+        const hashedPassword = isExist.passwordHash
+        const isMatch = await bcrypt.compare(password, hashedPassword);
+        if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
+        const code = generateOTP()
+        if (contactNumber) {
+            await sendMobileOtp(contactNumber, code)
+        } else {
+            await sendEmailOtp(email, code)
         }
-        else {
-            const isExist = contactNumber ? await User.findOne({ contactNumber, role: "pharmacy" }) : await User.findOne({ email, role: "pharmacy" });
-            if (!isExist) return res.status(200).json({ message: 'Phar not Found', success: false });
-            const hashedPassword = isExist.passwordHash
-            const isMatch = await bcrypt.compare(password, hashedPassword);
-            if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
-            const code = generateOTP()
-            if (contactNumber) {
-                await sendMobileOtp(contactNumber, code)
-            } else {
-                await sendEmailOtp(email, code)
-            }
-            const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-            if (isOtpExist) {
-                await Otp.findByIdAndDelete(isOtpExist._id)
-                const otp = await Otp.create({ phone: contactNumber, email, code })
-            } else {
-                const otp = await Otp.create({ phone: contactNumber, email, code })
-            }
-            return res.status(200).json({ message: "Otp Sent", success: true })
+        const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+        if (isOtpExist) {
+            await Otp.findByIdAndDelete(isOtpExist._id)
+            const otp = await Otp.create({ phone: contactNumber, email, code })
+        } else {
+            const otp = await Otp.create({ phone: contactNumber, email, code })
         }
+        return res.status(200).json({ message: "Otp Sent", success: true })
+
 
     } catch (err) {
         console.error(err);
@@ -186,12 +159,8 @@ const verifyOtp = async (req, res) => {
             ? await User.findOne({ contactNumber, role: "pharmacy" })
             : await User.findOne({ email, role: "pharmacy" });
 
-        // Check if staff exists by contactNumber or email
-        const pharmacyStaff = contactNumber
-            ? await PharStaff.findOne({ 'contactInformation.contactNumber': contactNumber })
-            : await PharStaff.findOne({ 'contactInformation.email': email });
 
-        if (!pharmacyOwner && !pharmacyStaff) {
+        if (!pharmacyOwner ) {
             return res.status(200).json({
                 message: 'Pharmacy not found',
                 success: false
@@ -210,7 +179,7 @@ const verifyOtp = async (req, res) => {
         const isOtp = await Otp.findOne(otpQuery);
 
         // Check for test mode (for both contact number and email)
-        const isTestMode =contactNumber == "8290818632" || contactNumber == "9917141332" || email == "test@example.com" || pharmacyOwner?.created_by == "admin";
+        const isTestMode = contactNumber == "8290818632" || contactNumber == "9917141332" || email == "test@example.com" || pharmacyOwner?.created_by == "admin";
 
         if (!isOtp && !isTestMode) {
             return res.status(200).json({
@@ -244,7 +213,7 @@ const verifyOtp = async (req, res) => {
 
         // Handle forgot password flow
         if (type === "forgot-password" && isValid) {
-            const user = pharmacyOwner || await User.findById(pharmacyStaff?.pharId);
+            const user = pharmacyOwner ;
             if (!user) {
                 return res.status(200).json({
                     message: "User not found",
@@ -347,53 +316,6 @@ const verifyOtp = async (req, res) => {
             }
         }
 
-        // Staff login flow
-        if (pharmacyStaff) {
-            const access = await EmpAccess
-                .findOne({ empId: pharmacyStaff._id })
-                .populate("permissionId");
-
-            if (!access) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Invalid credentials"
-                });
-            }
-
-            const user = await User.findById(pharmacyStaff.pharId);
-            if (!user) {
-                return res.status(200).json({
-                    message: "Pharmacy not found",
-                    success: false
-                });
-            }
-
-            const token = jwt.sign(
-                {
-                    user: user._id,
-                    type: "pharmacy",
-                    isOwner: false,
-                    loginUser:pharmacyStaff?._id,
-                    permissionId: access?.permissionId?._id
-                },
-                process.env.JWT_SECRET
-            );
-
-            // Clean up used OTP
-            if (isOtp) {
-                await Otp.findByIdAndDelete(isOtp._id);
-            }
-
-            return res.status(200).json({
-                success: true,
-                isOwner: false,
-                staffId: pharmacyStaff._id,
-                token,
-                userId: user._id,
-                pharmacyId: user.pharId,
-                permissions: access.permissionId
-            });
-        }
 
     } catch (err) {
         console.log(err);
@@ -480,8 +402,8 @@ const resetPassword = async (req, res) => {
     }
 }
 const changePassword = async (req, res) => {
-    const {  newPassword, oldPassword } = req.body;
-    const userId=req.user.userId
+    const { newPassword, oldPassword } = req.body;
+    const userId = req.user.userId
     try {
         const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Invalid email' });
@@ -500,8 +422,8 @@ const changePassword = async (req, res) => {
     }
 }
 const updatePhar = async (req, res) => {
-    const {  email, contactNumber, name, gender, gstNumber, about } = req.body;
-    const userId=req.user.userId
+    const { email, contactNumber, name, gender, gstNumber, about } = req.body;
+    const userId = req.user.userId
     const logo = req.files?.['logo']?.[0]?.path
     try {
         const isExist = await Pharmacy.findById(userId);
@@ -564,7 +486,7 @@ const getProfile = async (req, res) => {
         else if (!license) nextStep = "/create-account-upload";
         return res.status(200).json({
             success: true,
-            data,nextStep
+            data, nextStep
         });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -594,7 +516,7 @@ const getProfileDetail = async (req, res) => {
         const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
         const allowEdit = Boolean(await EditRequest.exists({ pharId: userId, status: "approved" }))
         const notifications = await Notification.countDocuments({ userId }) || 0;
-        const paymentInfo=await PaymentInfo.findOne({userId}).sort({createdAt:-1})
+        const paymentInfo = await PaymentInfo.findOne({ userId }).sort({ createdAt: -1 })
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ pharId: userId })
             .populate("patientId")
@@ -630,19 +552,19 @@ const getProfileDetail = async (req, res) => {
             ratingCounts[r._id] = r.count;
         });
         const unRead = await Notification.countDocuments({ userId })
-        
+
 
 
         // 6️⃣ Return final response
         return res.status(200).json({
             success: true,
             data: data, user,
-            pharPerson,unRead,
+            pharPerson, unRead,
             pharAddress,
             pharImg, customId: user.unique_id,
             pharLicense,
             rating,
-            avgRating,paymentInfo,
+            avgRating, paymentInfo,
             ratingCounts, allowEdit,
             isRequest, notifications
         });
@@ -749,8 +671,8 @@ const deletePhar = async (req, res) => {
     }
 };
 const pharAddress = async (req, res) => {
-    const {  fullAddress, countryId, stateId, cityId, pinCode, lat, long } = req.body;
-    const userId=req.user.userId
+    const { fullAddress, countryId, stateId, cityId, pinCode, lat, long } = req.body;
+    const userId = req.user.userId
     try {
         const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "User not found", success: false })
@@ -791,8 +713,8 @@ const pharAddress = async (req, res) => {
     }
 };
 const pharPerson = async (req, res) => {
-    const {  name, email, contactNumber, gender } = req.body;
-    const userId=req.user.userId
+    const { name, email, contactNumber, gender } = req.body;
+    const userId = req.user.userId
     const photo = req.files?.['photo']?.[0]?.path
     try {
         const user = await User.findById(userId)
@@ -828,8 +750,8 @@ const pharPerson = async (req, res) => {
 };
 const pharLicense = async (req, res) => {
     try {
-        const userId=req.user.userId
-        const {  pharLicenseNumber } = req.body;
+        const userId = req.user.userId
+        const { pharLicenseNumber } = req.body;
 
         // Check user exists
         const user = await User.findById(userId);
@@ -945,7 +867,7 @@ const deleteLicense = async (req, res) => {
     }
 };
 const updateImage = async (req, res) => {
-    const userId=req.user.userId
+    const userId = req.user.userId
     const logo = req.files?.['logo']?.[0]?.path
     try {
         const user = await Pharmacy.findById(userId)
@@ -967,7 +889,7 @@ const updateImage = async (req, res) => {
     }
 };
 const pharImage = async (req, res) => {
-    const userId=req.user.userId
+    const userId = req.user.userId
 
     const thumbnailFile = req.files?.['thumbnail']?.[0]?.path;
     const pharImgFiles = req.files?.['pharImg'] || [];
@@ -1024,8 +946,8 @@ const pharImage = async (req, res) => {
     }
 };
 const editRequest = async (req, res) => {
-    const {  message } = req.body;
-    const pharId=req.user.userId
+    const { message } = req.body;
+    const pharId = req.user.userId
     try {
         const user = await User.findById(pharId)
         if (!user) return res.status(200).json({ message: "Pharmacy not found", success: false })
@@ -1043,8 +965,8 @@ const editRequest = async (req, res) => {
 };
 
 const deletePharImage = async (req, res) => {
-    const {  path, type } = req.body;
-    const pharId=req.user.userId
+    const { path, type } = req.body;
+    const pharId = req.user.userId
     try {
         const user = await Pharmacy.findById(pharId)
         if (!user) return res.status(200).json({ message: "Pharmacy not found", success: false })

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const InventorySchema = new mongoose.Schema({
     pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     medicineName: String,
-    schedule: String,
+    schedule: { type: mongoose.Schema.Types.ObjectId, ref: 'schedule-medicines', index: true },
     batchNumber: String,
     mfgDate: Date,
     expDate: Date,

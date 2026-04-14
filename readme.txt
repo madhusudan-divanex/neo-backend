@@ -35,11 +35,14 @@ All Panel->
     Filters
     Audit Logs
 
-FeedBack Pending->
-    Qr Downlaod
+FeedBack->
+    Qr Print
     Footer Contact Data Dynamic
     Medicine Category Dynamic
     Modal Form 
+Pharmacy->
+    Staff
+    
 
 
 

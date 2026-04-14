@@ -5,11 +5,13 @@ import getUploader from "../config/multerConfig.js";
 import { bookDoctorAppointment, doctorAptPayment, doctorAptVitals, doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
 import {  addPatient, addTimeSlot,   deleteTimeSlot, doctorDashboard,   getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, getTimeSlots,     sendReminder, updateDaySlot, updateTimeSlot,  } from "../controller/Doctor/doctorController.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
+import { ChatList } from "../controller/Hospital/chatController.js";
 const doctor=express.Router()
 const uploader = getUploader('doctor');
 
 
 doctor.post('',signUpDoctor)
+doctor.get("/conversations", authMiddleware,checkPermission('doctor',"chat"), ChatList);
 doctor.get('/all-doctors',getDoctors)
 doctor.get('',authMiddleware,getProfile)
 doctor.get('/patient',authMiddleware,getPatientPending)

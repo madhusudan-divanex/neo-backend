@@ -21,6 +21,8 @@ import { assignNH12 } from "../../utils/nh12.js"
 import HospitalCategory from "../../models/HospitalCategory.js"
 import PharmacyCategory from "../../models/PharmacyCategory.js"
 import PatientService from "../../models/LandingPage.js/PatientService.js"
+import ScheduleMedicines from "../../models/Admin/ScheduleMedicines.js"
+import Queries from "../../models/Admin/Queries.js"
 export const addSpecialty = async (req, res) => {
     const icon = req?.file?.path
     const { name } = req.body
@@ -602,3 +604,99 @@ export const addHospitalByAdmin = async (req, res) => {
         });
     }
 };
+export const addScheduleMedicines = async (req, res) => {
+    const { name } = req.body
+    try {
+        const isExist = await ScheduleMedicines.findOne({ name })
+        if (isExist) {
+            return res.status(200).json({ message: "Name already exists", success: false })
+        }
+        const data = await ScheduleMedicines.create({ name })
+        if (data) {
+            return res.status(200).json({ message: "Schedule Medicine created", success: true })
+        }
+        return res.status(200).json({ message: "Schedule Medicine not created", success: false })
+    } catch (error) {
+        console.log(error)
+        return res.status(200).json({ message: "Server Error", success: false })
+    }
+}
+export const getScheduleMedicines = async (req, res) => {
+    const {name}=req.query
+    try {
+        let filter={}
+        if(name){
+            filter.name={ $regex: name, $options: "i" }
+        }
+        const isExist = await ScheduleMedicines.find(filter) || []
+        return res.status(200).json({ message: "Schedule Medicine fetched", data: isExist, success: true })
+
+    } catch (error) {
+        return res.status(200).json({ message: "Server Error", success: false })
+    }
+}
+export const updateScheduleMedicines = async (req, res) => {
+    const { name, spId } = req.body
+    try {
+        const isExist = await ScheduleMedicines.findOne({ name, _id: { $ne: spId } })
+        if (isExist) {
+            return res.status(200).json({ message: "Name already exists", success: false })
+        }
+        const data = await ScheduleMedicines.findByIdAndUpdate(spId, { name }, { new: true })
+        if (data) {
+            return res.status(200).json({ message: "Schedule Medicine updated", success: true })
+        }
+        return res.status(200).json({ message: "Schedule Medicine not updated", success: false })
+    } catch (error) {
+        console.log(error)
+        return res.status(200).json({ message: "Server Error", success: false })
+    }
+}
+export const getContactQuery = async (req, res) => {
+    const { panel, page = 1, limit = 10 } = req.query;
+
+    try {
+        let filter = {};
+
+        if (panel) {
+            filter.panel = panel;
+        }
+
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const skip = (pageNumber - 1) * limitNumber;
+
+        const total = await Queries.countDocuments(filter);
+
+        const data = await Queries.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNumber);
+
+        return res.status(200).json({
+            message: "Queries fetched",
+            data,
+            success: true,
+            pagination: {
+                total,
+                page: pageNumber,
+                limit: limitNumber,
+                totalPages: Math.ceil(total / limitNumber)
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({ message: "Server Error", success: false });
+    }
+};
+export const deleteContactQuery =async(req,res)=>{
+    try {
+        const data=await Queries.findByIdAndDelete(req.params.id)
+        if(data){
+            return res.status(200).json({ message: "Query deleted", success: true })
+        }
+        return res.status(404).json({ message: "Query not found", success: false })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}

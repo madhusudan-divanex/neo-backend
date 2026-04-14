@@ -6,10 +6,11 @@ import {  getLabAppointment, getLabAppointmentData, getPatientLabReport, labDash
 import {  addPatient, addTest, collectSample,  deleteTest,  getLabInvoice, getTest, getTestData, getTestReport,  labTestAction,   saveLabInvoice,  saveReport,   updateTest } from "../controller/Laboratory/laboratoryContoller.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
 import { updateDaySlot ,addTimeSlot, getTimeSlots} from "../controller/Doctor/doctorController.js";
+import { ChatList } from "../controller/Hospital/chatController.js";
 const lab=express.Router()
 const uploader = getUploader('lab');
 
-
+lab.get("/conversations", authMiddleware,checkPermission('lab',"chat"), ChatList);
 lab.post('',uploader.fields([{ name: 'logo' }]),signUpLab)
 lab.get('',getLabs)
 lab.get('/:id',authMiddleware,getProfile)
@@ -79,7 +80,7 @@ lab.get('/patient-lab-report/:labId/:patientId',authMiddleware,getPatientLabRepo
 lab.post('/time-slot',authMiddleware,addTimeSlot)
 lab.get('/time-slot/:userId',getTimeSlots)
 lab.put('/day-slot',authMiddleware,updateDaySlot)
-lab.post('/payment',authMiddleware,saveLabInvoice)
+lab.post('/payment',authMiddleware,checkPermission("lab","billing"),saveLabInvoice)
 lab.get('/payment/:id',authMiddleware,getLabInvoice)
 
 

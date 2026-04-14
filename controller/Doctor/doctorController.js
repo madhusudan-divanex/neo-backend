@@ -17,6 +17,7 @@ import Country from "../../models/Hospital/Country.js"
 import { assignNH12 } from "../../utils/nh12.js"
 import Department from "../../models/Department.js"
 import StaffEmployement from "../../models/Staff/StaffEmployement.js"
+import Staff from "../../models/Staff/Staff.js"
 const doctorDashboard = async (req, res) => {
   const id = req.params.id
   try {
@@ -38,7 +39,7 @@ const doctorDashboard = async (req, res) => {
     const pendingRequest = 0
     const uniquePatientIds = await DoctorAppointment.distinct('patientId', { doctorId: id })
     const totalPatient = uniquePatientIds.length
-    const totalStaff = await DoctorStaff.countDocuments({ doctorId: id })
+    const totalStaff = await Staff.countDocuments({ userId: id })
     const totalDoctors = await StaffEmployement.countDocuments({ organizationId: id, role: "doctor" })
     const totalDepartments = await Department.countDocuments({ userId: id })
     const appointmentRequest = await DoctorAppointment.find({ doctorId: id, status: 'pending' })
@@ -59,6 +60,7 @@ const doctorDashboard = async (req, res) => {
     const cardData = { pendingApt, completeApt, cancelApt, totalApt, todayApt, pendingRequest, totalDepartments, approveApt, totalDoctors, totalPatient, totalStaff }
     return res.status(200).json({ success: true, cardData, appointmentRequest, pendingAppointment })
   } catch (error) {
+    console.log(error)
     return res.status(500).json({ message: "Internal server errror" })
   }
 }

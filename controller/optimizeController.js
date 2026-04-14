@@ -1,4 +1,5 @@
 import PatientBanner from "../models/Admin/PatientBanner.js";
+import Queries from "../models/Admin/Queries.js";
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import City from "../models/Hospital/City.js";
 import HospitalAddress from "../models/Hospital/HospitalAddress.js";
@@ -208,4 +209,15 @@ const getHospitalDoctor=async(req,res)=>{
         return res.status(500).json({message:error?.message,success:false})
     }
 }
-export { getPatientDashboard,getLabAptData ,getHospitalDoctor}
+const saveFrotnendQuery=async(req,res)=>{
+    try {
+        const data=await Queries.create(req.body)
+        if(data){
+            return res.status(200).json({message:"Message sent",success:true})
+        }
+        return res.status(200).json({message:"Message not sent",success:false})
+    } catch (error) {
+        return res.status(500).json({message:error?.message,success:false})
+    }
+}
+export { getPatientDashboard,getLabAptData ,getHospitalDoctor,saveFrotnendQuery}

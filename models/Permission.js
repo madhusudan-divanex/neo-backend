@@ -110,7 +110,7 @@ const permissionSchema = new Schema(
       testRequest: { type: Boolean, default: false },
       addTest: { type: Boolean, default: false },
       editTest: { type: Boolean, default: false },
-      viewTest: { type: Boolean, default: false },
+      billing: { type: Boolean, default: false },
 
       viewReport: { type: Boolean, default: false },
       addReport: { type: Boolean, default: false },

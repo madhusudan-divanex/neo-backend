@@ -114,7 +114,7 @@ const signInDoctor = async (req, res) => {
         if (!isMatch) return res.status(200).json({ message: 'Invalid credentials', success: false });
         const code = generateOTP()
         if (contactNumber && contactNumber!=="7375046291") {
-            await sendMobileOtp(contactNumber, code)
+            // await sendMobileOtp(contactNumber, code)
         }
         if (email) {
             await sendEmailOtp(email, code)

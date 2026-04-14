@@ -208,7 +208,7 @@ export const getStaffById = async (req, res) => {
       return res.status(200).json({ success: true, staffData, employment: isEmployement, user })
     } else {
       const staffData = await DoctorAbout.findOne({ userId: user._id })
-      const isEmployement = await StaffEmployement.findOne({ userId: user._id, organizationId })
+      const isEmployement = await StaffEmployement.findOne({ userId: user._id, organizationId }).populate('permissionId')
       return res.status(200).json({ success: true, staffData, employment: isEmployement, user })
     }
 
@@ -383,7 +383,7 @@ export const staffLogin = async (req, res) => {
     if (isMatch) {
       const code = generateOTP()
       if (contactNumber) {
-        await sendMobileOtp(contactNumber, code)
+        // await sendMobileOtp(contactNumber, code)
       } else {
         await sendEmailOtp(email, code)
       }

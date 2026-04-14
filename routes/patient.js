@@ -7,10 +7,11 @@ import {  favoriteController,  getMyRating, getNearByDoctor, getPatientFavorite,
 
 import { sendPush } from "../utils/sendPush.js";
 import { getPatientFooterCategory } from "../controller/Admin/LandingPage.controller.js";
+import { ChatList } from "../controller/Hospital/chatController.js";
 const patient=express.Router()
 const uploader = getUploader('patient');
 
-
+patient.get("/conversations", authMiddleware, ChatList);
 patient.post('',signUpPatient)
 patient.get('/near-by-doctor',getNearByDoctor)
 patient.get('/top-users',getTopUsers)
@@ -62,7 +63,6 @@ patient.get('/my-rating/:id',authMiddleware,getMyRating)
 patient.get('/prescriptions/:id',authMiddleware,getPatientPrescriptions)
 patient.get('/appointment-test-detail/:id',authMiddleware,getPrescriptionLabDetail)
 patient.post('/profile-action',authMiddleware,profileAction)
-
 
 
 patient.post("/test-push", async (req, res) => {

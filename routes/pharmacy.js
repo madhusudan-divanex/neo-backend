@@ -2,14 +2,16 @@ import {  changePassword, deletePhar, getProfile, getProfileDetail, resendOtp, s
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { addInventry, addPharPermission, addSupplier,deleteStaffData, deleteSubEmpProffesional, changeRequestStatus, completeReturn, createPO, createReturn, deletePharPermission, deletePO, deleteReturn, deleteSupplier, saveEmpAccess, saveEmpEmployement,saveEmpProfessional,getAllMedicineRequestsForAdmin, getAllPharPermission, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, pharStaff, pharStaffAction, pharStaffData, receivePO, savePharStaff, sendMedicineRequest, updatePharPermission, updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData, addPatient, getPrescriptionMedicine, getAuditLog, getEODSale, customerReturn } from "../controller/Pharmacy/pharmacyController.js";
+import { addInventry,  addSupplier, changeRequestStatus, completeReturn, createPO, createReturn,  deletePO, deleteReturn, deleteSupplier,  getAllMedicineRequestsForAdmin,  getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns,    receivePO,  sendMedicineRequest,  updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData, addPatient, getPrescriptionMedicine, getAuditLog, getEODSale, customerReturn, getMySchedule } from "../controller/Pharmacy/pharmacyController.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
+import { ChatList } from "../controller/Hospital/chatController.js";
 
 const pharmacy=express.Router()
 const uploader = getUploader('phar');
 
 pharmacy.get('/audit-log',authMiddleware,getAuditLog)
 pharmacy.get('/eod-sell',authMiddleware,getEODSale)
+pharmacy.get("/conversations", authMiddleware,checkPermission('pharmacy',"chat"), ChatList);
 pharmacy.post('',uploader.fields([{ name: 'logo' }]),signUpPhar)
 pharmacy.get('',getPharmacy)
 pharmacy.get('/:id',authMiddleware,getProfile)
@@ -46,33 +48,21 @@ pharmacy.post('/update-image',uploader.fields([{ name: 'logo', maxCount: 1 }
 
 pharmacy.post('/image',uploader.fields([{ name: 'thumbnail' },{ name: 'pharImg' }]),authMiddleware,pharImage)
 
-pharmacy.post('/permission',authMiddleware,addPharPermission)
-pharmacy.put('/permission',authMiddleware,updatePharPermission)
-pharmacy.get('/permission/:id',authMiddleware,getAllPharPermission)
-pharmacy.delete('/permission',authMiddleware,deletePharPermission)
+
 
 
 // pharmacy.get('/appointment/:id',authMiddleware,getPharAppointment)
 // pharmacy.get('/appointment-data/:id',authMiddleware,getPharAppointmentData)
 
 
-pharmacy.post('/staff',uploader.fields([{ name: 'profileImage' }]),authMiddleware,savePharStaff)
-pharmacy.post('/professional',uploader.fields([{ name: 'certFile' }]),authMiddleware,saveEmpProfessional)
-pharmacy.post('/employment',authMiddleware,saveEmpEmployement)
-pharmacy.post('/sub-professional',authMiddleware,deleteSubEmpProffesional)
 
-pharmacy.post('/access',authMiddleware,saveEmpAccess)
-pharmacy.get('/staff/:id',authMiddleware,pharStaff)
-pharmacy.post('/staff-action',authMiddleware,pharStaffAction)
-pharmacy.get('/staff-data/:id',authMiddleware,pharStaffData)
-pharmacy.delete('/staff/:id',authMiddleware,deleteStaffData)
 pharmacy.get('/dashboard/:id',authMiddleware,pharDashboardData)
 
 pharmacy.post('/delete-image',authMiddleware,deletePharImage)
 
 pharmacy.post('/inventory', authMiddleware,checkPermission("pharmacy","addInventory") ,addInventry);
-pharmacy.get('/inventory/:id', authMiddleware,checkPermission("pharmacy","listInventory") , inventoryList);
-pharmacy.get('/inventory-data/:id', authMiddleware,checkPermission("pharmacy","viewInventory") , inventoryGetById);
+pharmacy.get('/inventory/:id', authMiddleware, inventoryList);
+pharmacy.get('/inventory-data/:id', authMiddleware , inventoryGetById);
 pharmacy.put('/inventory', authMiddleware,checkPermission("pharmacy","editInventory") , inventoryUpdate);
 pharmacy.delete('/inventory/:id', authMiddleware,checkPermission("pharmacy","deleteInventory"), inventoryDelete);
 pharmacy.get('/medicine-data/:name/:pharId', authMiddleware, medicineData);
@@ -84,13 +74,13 @@ pharmacy.get('/medicine-request/all', authMiddleware, getAllMedicineRequestsForA
 pharmacy.patch('/medicine-request/:id/status', authMiddleware, changeRequestStatus);
 
 pharmacy.post("/supplier", authMiddleware,checkPermission('pharmacy',"addSupplier"), addSupplier);
-pharmacy.get("/supplier/:id", authMiddleware,checkPermission('pharmacy',"listSupplier"), getSupplier);
+pharmacy.get("/supplier/:id", authMiddleware, getSupplier);
 pharmacy.get("/supplier/:id", authMiddleware, getSupplierById);
 pharmacy.put("/supplier", authMiddleware,checkPermission('pharmacy',"editSupplier"), updateSupplier);
 pharmacy.delete("/supplier/:id", authMiddleware,checkPermission('pharmacy',"deleteSupplier"), deleteSupplier);
 
 pharmacy.post("/return", authMiddleware,checkPermission('pharmacy',"addReturn"), createReturn);
-pharmacy.get("/return/:id", authMiddleware,checkPermission('pharmacy',"listReturn"), listReturns);
+pharmacy.get("/return/:id", authMiddleware, listReturns);
 pharmacy.get("/return-data/:id", authMiddleware, getReturnById);
 pharmacy.post("/return/:id/complete", authMiddleware, completeReturn);
 pharmacy.put("/return", authMiddleware, updateReturn);
@@ -110,5 +100,7 @@ pharmacy.delete('/sell/:id',authMiddleware,deleteSellData)
 pharmacy.get('/patient-prescription/:id',authMiddleware,getPatientPrescriptionData)
 pharmacy.post('/add-patient',authMiddleware,addPatient)
 pharmacy.post('/prescription-medicine',authMiddleware,getPrescriptionMedicine)
+pharmacy.get('/my-schedule/:id',authMiddleware,getMySchedule)
 pharmacy.post("/customer-return", authMiddleware,checkPermission('pharmacy',"addReturn"), customerReturn);
+
 export default pharmacy

@@ -1,5 +1,5 @@
 import express from 'express'
-import { addDoctorByAdmin, addHospitalByAdmin, addHospitalCategory, addLabByAdmin, addPatientBanner, addPatientByAdmin, addPharmacyByAdmin, addPharmacyCategory, addSpecialty, addTestCategory,  deleteHospitalCategory,  deletePatientBanner, deletePharmacyCategory, deleteSpecialty, deleteTestCategory, getCmsData, getHospitalCategory, getPatientBanner, getPharmacyCategory, getServices, getSpecialty, getTestCategory, updateHospitalCategory, updatePatientBanner, updatePharmacyCategory, updateSpecialty, updateTestCategory } from '../controller/Admin/adminController.js'
+import { addDoctorByAdmin, addHospitalByAdmin, addHospitalCategory, addLabByAdmin, addPatientBanner, addPatientByAdmin, addPharmacyByAdmin, addPharmacyCategory, addScheduleMedicines, addSpecialty, addTestCategory,  deleteContactQuery,  deleteHospitalCategory,  deletePatientBanner, deletePharmacyCategory, deleteSpecialty, deleteTestCategory, getCmsData, getContactQuery, getHospitalCategory, getPatientBanner, getPharmacyCategory, getScheduleMedicines, getServices, getSpecialty, getTestCategory, updateHospitalCategory, updatePatientBanner, updatePharmacyCategory, updateScheduleMedicines, updateSpecialty, updateTestCategory } from '../controller/Admin/adminController.js'
 import getUploader from '../config/multerConfig.js'
 import { getAdminDashboard } from '../controller/Admin/dashboard.controller.js'
 import adminAuth from '../middleware/adminAuth.js'
@@ -40,4 +40,10 @@ admin.post('/add-pharmacy',adminAuth,addPharmacyByAdmin)
 admin.post('/add-laboratory',adminAuth,addLabByAdmin)
 admin.post('/add-hospital',adminAuth,addHospitalByAdmin)
 admin.get('/dashboard', adminAuth, getAdminDashboard)
+
+admin.post('/schedule-medicines',adminAuth,addScheduleMedicines)
+admin.put('/schedule-medicines',adminAuth,updateScheduleMedicines)
+admin.get('/schedule-medicines',getScheduleMedicines)
+admin.get('/contact-query',adminAuth,getContactQuery)
+admin.delete('/contact-query/:id',adminAuth,deleteContactQuery)
 export default admin
