@@ -705,7 +705,7 @@ export const saveDoctorProfessionalDetails = async (req, res) => {
 
 export const doctorEmploymentDetails = async (req, res) => {
   try {
-    const { doctorId, joinDate, position, onLeaveDate, contractStart, contractEnd, salary, note, fees, reportingTo, employmentType, department, status } = req.body;
+    const { doctorId, joinDate, role, onLeaveDate, contractStart, contractEnd, salary, note, fees, reportingTo, employmentType, department, status } = req.body;
     if (!doctorId) {
       return res.status(400).json({
         success: false,
@@ -722,15 +722,15 @@ export const doctorEmploymentDetails = async (req, res) => {
     // }
     const empPayload = {
       userId: doctorId,
-      position: position,
+      role,
       joinDate,
       contractStart,
       contractEnd,
       salary,
       note,
       fees,
-      employmentType, status,
-      department, hospitalId: req.user._id
+      employmentType, status,userRole:"doctor",
+      department, organizationId: req.user._id
     };
     await StaffEmployement.findOneAndUpdate(
       { userId: doctorId },

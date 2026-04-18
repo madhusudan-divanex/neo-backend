@@ -1062,6 +1062,10 @@ const getDoctorAppointmentData = async (req, res) => {
                     path: 'labTest.labTests',
                     select: 'shortName price'
                 })
+                .populate({
+                    path: 'labTest.department',
+                    select: 'departmentName'
+                })
                 .populate('prescriptionId').lean();
         } else {
 
@@ -1075,6 +1079,10 @@ const getDoctorAppointmentData = async (req, res) => {
                 .populate({
                     path: 'labTest.labTests',
                     select: 'shortName price'
+                })
+                .populate({
+                    path: 'labTest.department',
+                    select: 'departmentName'
                 })
                 .populate('prescriptionId').lean();
         }

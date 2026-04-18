@@ -101,7 +101,6 @@ export const createIPDHeader = async (req, res) => {
             userId: doctorExists?._id,
             headerId: savedHeader._id
         });
-console.log(staffData)
         // Push staff payment
         paymentDoc.ipdPayment.push({
             role: "staff",
@@ -112,6 +111,8 @@ console.log(staffData)
 
         // Save payment doc
         await paymentDoc.save();
+        allotmentExists.paymentId = paymentDoc._id;
+        await allotmentExists.save();
         return res.status(201).json({
             success: true,
             message: "IPD Header created successfully",

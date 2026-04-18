@@ -1,4 +1,4 @@
-import {  changePassword, deleteLab,  getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword, deleteLabImage, sendReport, getLabs, getLabDetail, forgotPassword,  } from "../controller/Laboratory/authController.js"
+import {  changePassword, deleteLab,  getProfile, getProfileDetail, resendOtp, signInLab, signUpLab, updateLab, verifyOtp, labLicense,  labAddress,  updateImage, editRequest, labImage, labPerson, resetPassword, deleteLabImage, sendReport, getLabs, getLabDetail, forgotPassword, getLabList, getLabDeptTest,  } from "../controller/Laboratory/authController.js"
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
@@ -13,6 +13,8 @@ const uploader = getUploader('lab');
 lab.get("/conversations", authMiddleware,checkPermission('lab',"chat"), ChatList);
 lab.post('',uploader.fields([{ name: 'logo' }]),signUpLab)
 lab.get('',getLabs)
+lab.get('/list',getLabList)
+lab.get('/department-test/:id',getLabDeptTest)
 lab.get('/:id',authMiddleware,getProfile)
 lab.get('/detail/:id',authMiddleware,getProfileDetail)
 lab.get('/data/:id',getLabDetail)

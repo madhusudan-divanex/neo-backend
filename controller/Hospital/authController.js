@@ -276,7 +276,7 @@ export const register = async (req, res) => {
 
 // ================= LOGIN =================
 export const login = async (req, res) => {
-  const { contactNumber, password, email } = req.body;
+  const { contactNumber, password, email, withOtp } = req.body;
   try {
     const hospital = contactNumber ? await User.findOne({ contactNumber, role: "hospital" }) : await User.findOne({ email, role: "hospital" });
     if (!hospital)
@@ -285,23 +285,68 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, hospital.passwordHash);
     if (!match)
       return res.status(400).json({ message: "Invalid password" });
-    const code = generateOTP()
-    if (contactNumber) {
-      await sendMobileOtp(contactNumber, code)
-    } else {
-      await sendEmailOtp(email, code)
-    }
-    const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-    if (isOtpExist) {
-      await Otp.findByIdAndDelete(isOtpExist._id)
-      const otp = await Otp.create({ phone: contactNumber, email, code })
-    } else {
-      const otp = await Otp.create({ phone: contactNumber, email, code })
-    }
+    if (withOtp) {
+      const code = generateOTP()
+      if (contactNumber) {
+        await sendMobileOtp(contactNumber, code)
+      } else {
+        await sendEmailOtp(email, code)
+      }
+      const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+      if (isOtpExist) {
+        await Otp.findByIdAndDelete(isOtpExist._id)
+        const otp = await Otp.create({ phone: contactNumber, email, code })
+      } else {
+        const otp = await Otp.create({ phone: contactNumber, email, code })
+      }
 
-    return res.status(200).json({
-      message: "Otp sent", success: true
-    });
+      return res.status(200).json({
+        message: "Otp sent", success: true
+      });
+    } else {
+      const token = jwt.sign(
+        {
+          id: hospital._id,
+          role: hospital.role,
+          isOwner: true,
+          type: "hospital",
+          created_by_id: hospital.created_by_id
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "1y" }
+      );
+      const [images, address, person, license] = await Promise.all([
+        HospitalImages.findOne({ hospitalId: hospital.hospitalId }),
+        HospitalAddress.findOne({ hospitalId: hospital.hospitalId }),
+        HospitalContact.findOne({ hospitalId: hospital.hospitalId }),
+        HospitalCertificate.findOne({ hospitalId: hospital.hospitalId })
+      ])
+      let nextStep = null;
+
+      if (!images) {
+        nextStep = "/create-account-image";
+      } else if (!address) {
+        nextStep = "/create-account-address";
+      } else if (!person) {
+        nextStep = "/create-account-person";
+      } else if (!license) {
+        nextStep = "/create-account-upload";
+      }
+      return res.status(200).json({
+        message: "Login successful",
+        token,
+        success: true,
+        nextStep,
+        user: {
+          id: hospital._id,
+          name: hospital.name,
+          email: hospital.email,
+          contactNumber: hospital.contactNumber,
+          role: hospital.role,
+          created_by_id: hospital.created_by_id
+        }
+      });
+    }
   } catch (err) {
     console.log(err)
     return res.status(500).json({ message: "Server error" });

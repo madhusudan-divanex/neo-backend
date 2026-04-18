@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import sendEmail from '../../utils/sendMail.js'
 import Otp from '../../models/Otp.js';
 import Doctor from '../../models/Doctor/doctor.model.js';
-import Login from '../../models/Doctor/login.model.js';
+import Login from '../../models/login.js';
 import DoctorKyc from '../../models/Doctor/kyc.model.js';
 import fs from 'fs'
 import DoctorAbout from '../../models/Doctor/addressAbout.model.js';
@@ -103,41 +103,96 @@ const signUpDoctor = async (req, res) => {
 };
 
 const signInDoctor = async (req, res) => {
-    const { contactNumber, password, email } = req.body;
+    const { contactNumber, password, email, withOtp } = req.body;
     try {
 
         const isExist = contactNumber ? await User.findOne({ contactNumber, role: "doctor" }) : await User.findOne({ email, role: "doctor" })
         if (!isExist) return res.status(200).json({ message: 'Doctor not Found', success: false });
-        const hashedPassword =isExist.passwordHash;
-        const phone =  isExist.contactNumber 
+        const hashedPassword = isExist.passwordHash;
+        const phone = isExist.contactNumber
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid credentials', success: false });
-        const code = generateOTP()
-        if (contactNumber && contactNumber!=="7375046291") {
-            // await sendMobileOtp(contactNumber, code)
-        }
-        if (email) {
-            await sendEmailOtp(email, code)
-        }
-        const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-        if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        } else {
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        }
-        if (isExist) {
-            const isLogin = await Login.findOne({ userId: isExist._id })
-            if (isLogin) {
-                await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-                return res.status(200).json({ message: "Otp Sent", code, userId: isExist._id, isNew: false, success: true })
-            } else {
-                await Login.create({ userId: isExist._id })
-                return res.status(200).json({ message: "Otp Sent", code, isNew: true, userId: isExist._id, success: true })
+        if (withOtp) {
+            const code = generateOTP()
+            if (contactNumber && contactNumber !== "7375046291") {
+                await sendMobileOtp(contactNumber, code)
             }
-        } else {
+            if (email) {
+                await sendEmailOtp(email, code)
+            }
+            const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+            if (isOtpExist) {
+                await Otp.findByIdAndDelete(isOtpExist._id)
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            } else {
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            }
+            if (isExist) {
+                const isLogin = await Login.findOne({ userId: isExist._id })
+                if (isLogin) {
+                    await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
+                    return res.status(200).json({ message: "Otp Sent", code, userId: isExist._id, isNew: false, success: true })
+                } else {
+                    await Login.create({ userId: isExist._id })
+                    return res.status(200).json({ message: "Otp Sent", code, isNew: true, userId: isExist._id, success: true })
+                }
+            } else {
 
-            return res.status(200).json({ message: "Otp Sent", code, userId: isEmployee._id, isNew: false, success: true })
+                return res.status(200).json({ message: "Otp Sent", code, userId: isEmployee._id, isNew: false, success: true })
+            }
+        }else{
+            const userId=isExist._id;
+            const [
+                kyc,
+                education,
+                medicalLicense,
+                address,
+            ] = await Promise.all([
+                DoctorKyc.findOne({ userId }),
+                DoctorEduWork.findOne({ userId }),
+                MedicalLicense.findOne({ userId }),
+                DoctorAbout.findOne({ userId }),
+            ]);
+            let nextStep = null;
+
+            if (!kyc) {
+                nextStep = "/kyc";
+            } else if (!education) {
+                nextStep = "/education-work";
+            } else if (!medicalLicense) {
+                nextStep = "/medical-license";
+            } else if (!address) {
+                nextStep = "/address-about";
+            }
+
+            // Check if this is a new login
+            let isNew = true;
+            const isLogin = await Login.findOne({ userId });
+            if (isLogin) {
+                isNew = false;
+            }
+
+            const token = jwt.sign(
+                {
+                    user: isExist._id,
+                    isOwner: true,
+                    type: 'doctor'
+                },
+                process.env.JWT_SECRET,
+                // { expiresIn: isRemember ? "30d" : "1d" }
+            );
+            return res.status(200).json({
+                message: "Verify Success",
+                nextStep,
+                isNew,
+                isOwner: true,
+                token,
+                doctorId: isExist?.doctorId,
+                userId,
+                user: isExist,
+                success: true
+            });
+
         }
 
 
@@ -219,15 +274,15 @@ const verifyOtp = async (req, res) => {
         let employee;
 
         if (contactNumber) {
-           
-                doctor = await User.findOne({ contactNumber: contactNumber, role: "doctor" });
-            
+
+            doctor = await User.findOne({ contactNumber: contactNumber, role: "doctor" });
+
         } else if (email) {
-                doctor = await User.findOne({ email: email, role: "doctor" });
-            
+            doctor = await User.findOne({ email: email, role: "doctor" });
+
         }
 
-       if (doctor) {
+        if (doctor) {
             user = await User.findById(doctor._id);
             // Handle forgot password flow
             if (type === "forgot-password" && isValid) {
@@ -1124,7 +1179,7 @@ const getDoctors = async (req, res) => {
         // }
         // const users = await userQuery.lean();
         const users = await User.find(filter).select('name email contactNumber doctorId')
-            .populate('doctorId','profileImage').sort({ createdAt: -1 })
+            .populate('doctorId', 'profileImage').sort({ createdAt: -1 })
             .limit(limit)
             .skip((page - 1) * limit)
             .lean();

@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import sendEmail from '../../utils/sendMail.js'
 import Otp from '../../models/Otp.js';
 import Patient from '../../models/Patient/patient.model.js';
-import Login from '../../models/Patient/login.model.js';
+import Login from '../../models/login.js';
 import PatientKyc from '../../models/Patient/kyc.model.js';
 import fs from 'fs'
 import PatientDemographic from '../../models/Patient/demographic.model.js';
@@ -75,34 +75,88 @@ const signUpPatient = async (req, res) => {
     }
 }
 const signInPatient = async (req, res) => {
-    const { contactNumber, password, email } = req.body;
+    const { contactNumber, password, email, withOtp } = req.body;
     try {
         const isExist = contactNumber ? await User.findOne({ contactNumber, role: "patient" }) : await User.findOne({ email, role: "patient" });
         if (!isExist) return res.status(200).json({ message: 'Patient not Found', success: false });
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid credentials', success: false });
-        const code = generateOTP()
-        if (contactNumber && contactNumber!=="7375046291") {
-            await sendMobileOtp(contactNumber, code)
-        } if (email) {
-            await sendEmailOtp(email, code)
-        }
-        const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-        if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        } else {
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        }
+        if (withOtp) {
+            const code = generateOTP()
+            if (contactNumber && contactNumber !== "7375046291") {
+                await sendMobileOtp(contactNumber, code)
+            } if (email) {
+                await sendEmailOtp(email, code)
+            }
+            const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+            if (isOtpExist) {
+                await Otp.findByIdAndDelete(isOtpExist._id)
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            } else {
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            }
 
-        const isLogin = await Login.findOne({ userId: isExist._id })
-        if (isLogin) {
-            await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
-            return res.status(200).json({ message: "Code Sent", code, userId: isExist._id, isNew: false, success: true })
+            const isLogin = await Login.findOne({ userId: isExist._id })
+            if (isLogin) {
+                await Login.findByIdAndUpdate(isLogin._id, {}, { new: true })
+                return res.status(200).json({ message: "Code Sent", code, userId: isExist._id, isNew: false, success: true })
+            } else {
+                await Login.create({ userId: isExist._id })
+                return res.status(200).json({ message: "Code Sent", code, isNew: true, userId: isExist._id, success: true })
+            }
         } else {
-            await Login.create({ userId: isExist._id })
-            return res.status(200).json({ message: "Code Sent", code, isNew: true, userId: isExist._id, success: true })
+            const userId=isExist._id;
+            const [
+                kyc,
+                personal,
+                history,
+                familyHistory,
+                prescription
+            ] = await Promise.all([
+                PatientKyc.findOne({ userId }),
+                PatientDemographic.findOne({ userId }),
+                MedicalHistory.findOne({ userId }),
+                MedicalHistory.findOne({
+                    userId,
+                    familyHistory: { $ne: null }
+                }),
+                PatientPrescriptions.findOne({ userId })
+            ]);
+
+            let nextStep = null;
+
+            if (!kyc) {
+                nextStep = "/kyc";
+            } else if (!personal) {
+                nextStep = "/personal-info";
+            } else if (!history) {
+                nextStep = "/medical-history";
+            } else if (!familyHistory) {
+                nextStep = "/family-medical-history";
+            }
+
+            // Check if this is a new login
+            let isNew = true;
+            const isLogin = await Login.findOne({ userId });
+            if (isLogin) {
+                isNew = false;
+            }
+
+            // Generate JWT token
+            const token = jwt.sign(
+                { user: isExist._id },
+                process.env.JWT_SECRET,
+                { expiresIn: "1y" }
+            );
+            return res.status(200).json({
+                message: "Verify Success",
+                nextStep,
+                token,
+                userId,
+                user: isExist,
+                success: true
+            });
         }
     } catch (err) {
         console.error(err);
@@ -130,7 +184,7 @@ const verifyOtp = async (req, res) => {
         const dummyUser = contactNumber ? await User.findOne({ contactNumber, created_by: "admin" }) : await User.findOne({ email, created_by: "admin" })
 
         // Hardcoded bypass for specific contact number
-        if (!isOtp && contactNumber !== "9917141332" && contactNumber!=="7375046291" && email !== "test@example.com" && !dummyUser) {
+        if (!isOtp && contactNumber !== "9917141332" && contactNumber !== "7375046291" && email !== "test@example.com" && !dummyUser) {
             return res.status(200).json({ message: "Code not exist", success: false });
         }
 
@@ -139,7 +193,7 @@ const verifyOtp = async (req, res) => {
             const otpExpiryTime = new Date(isOtp.updatedAt);
             otpExpiryTime.setMinutes(otpExpiryTime.getMinutes() + 10);
 
-            if (new Date() > otpExpiryTime && contactNumber !== "9917141332" && contactNumber!=="7375046291" && email !== "test@example.com") {
+            if (new Date() > otpExpiryTime && contactNumber !== "9917141332" && contactNumber !== "7375046291" && email !== "test@example.com") {
                 return res.status(200).json({ message: "OTP Expired", success: false });
             }
         }
@@ -353,7 +407,7 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
     const { password } = req.body;
-    
+
     const userId = req.user.userId
     try {
 
@@ -373,8 +427,8 @@ const resetPassword = async (req, res) => {
     }
 }
 const changePassword = async (req, res) => {
-    const {  newPassword, oldPassword } = req.body;
-    const userId=req.user.userId
+    const { newPassword, oldPassword } = req.body;
+    const userId = req.user.userId
     try {
         const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'User not found' });
@@ -460,9 +514,9 @@ const getCustomProfile = async (req, res) => {
     try {
         let user;
         if (userId?.length == 12) {
-            user = await User.findOne({ nh12: userId ,role:'patient'}).select('-passwordHash').lean();
+            user = await User.findOne({ nh12: userId, role: 'patient' }).select('-passwordHash').lean();
         } else if (userId?.length < 24) {
-            user = await User.findOne({ unique_id: userId,role:"patient" }).select('-passwordHash').lean();
+            user = await User.findOne({ unique_id: userId, role: "patient" }).select('-passwordHash').lean();
         } else {
             user = await User.findById(userId).select('-passwordHash').lean();
         }
@@ -969,8 +1023,8 @@ const updateImage = async (req, res) => {
     }
 };
 const editRequest = async (req, res) => {
-    const {  message } = req.body;
-    const patientId=req.user.userId
+    const { message } = req.body;
+    const patientId = req.user.userId
     try {
         const user = await User.findById(patientId)
         if (!user) return res.status(200).json({ message: "Patient not found", success: false })

@@ -55,6 +55,7 @@ import {
 } from "../../controller/Hospital/Bed/bedAllotment.controller.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import { checkPermission } from "../../middleware/permissionCheck.js";
+import { createTransfer } from "../../controller/Hospital/profileController.js";
 
 const router = express.Router();
 
@@ -105,4 +106,5 @@ router.get('/test-reports/:appointmentId',authMiddleware,getTestReportForBedPati
 router.get("/hospital", auth, getHospitalBed);
 router.post("/department-transfer", auth, departmentTransfer);
 router.get("/department-transfer/:id", auth, getDepartmentTransfer);
+router.post("/hospital-transfer", auth, createTransfer);
 export default router;

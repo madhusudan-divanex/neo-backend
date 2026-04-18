@@ -140,4 +140,5 @@ router.post('/doctor-appointment-payment',auth,checkPermission("billing","doctor
 router.post('/add-patient-vitals',auth,doctorAptVitals)
 router.post('/sell-medicine',authMiddleware,checkPermission('pharmacy',"sellMedicine"),uploader.fields([{ name: 'prescriptionFile' }]),sellMedicine)
 
+router.get('/department/:id',auth,profile.getHospitalDepartments)
 export default router;

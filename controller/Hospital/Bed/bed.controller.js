@@ -235,10 +235,10 @@ export const getAllotmentHistory = async (req, res) => {
         populate: { path: "patientId", select: "contactNumber profileImage" }
       })
       .populate("primaryDoctorId", "name nh12 unique_id")
-      .populate("dischargeId", "dischargeDate")
+      .populate("dischargeId", "createdAt")
       .populate({
         path: "paymentId",
-        select: "status payments services",
+        select: "status payments services ipdPayment bedCharges",
         match: paymentFilter
       })
       .populate({
@@ -389,7 +389,8 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
 export const getAllotmentPayment = async (req, res) => {
   const { id } = req.params
   try {
-    const isExist = await HospitalPayment.findOne({ allotmentId: id }).populate("ipdPayment.userId", "name").populate("bedCharges.bedId", "bedName")
+    const isExist = await HospitalPayment.findOne({ allotmentId: id })
+    .populate("ipdPayment.userId", "name role").populate("bedCharges.bedId", "bedName")
     if (isExist) {
       return res.status(200).json({ message: "Payment found", data: isExist, success: true })
     }

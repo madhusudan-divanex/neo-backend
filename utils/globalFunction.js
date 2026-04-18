@@ -575,7 +575,18 @@ export const sendWelcomeEmail = async (userId) => {
     console.error("❌ Email error:", error.message);
   }
 };
+export const validateUsers = async (patientId, doctorId, hospitalId) => {
+  const patient = await User.findById(patientId);
+  if (!patient) throw new Error("Patient not found");
 
+  const doctor = await User.findById(doctorId);
+  if (!doctor) throw new Error("Doctor not found");
+
+  if (hospitalId) {
+    const hospital = await User.findById(hospitalId);
+    if (!hospital) throw new Error("Hospital not found");
+  }
+};
 export {
   updateInventoryStock, checkStockAvailability, capitalizeFirst, fetchFromGemini, doctorPrompt, fileToBase64, labFollowUpPrompt,
   buildPrompt, askQuestionRateLimiter, sendEmailOtp, sendMobileOtp, generateOTP, buildFollowUpPrompt, parseGeminiJSON, pharmacyFollowUpPrompt

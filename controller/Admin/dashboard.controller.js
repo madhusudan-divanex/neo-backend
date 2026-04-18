@@ -1,5 +1,5 @@
 import Doctor from '../../models/Doctor/doctor.model.js'
-import DoctorLogin from '../../models/Doctor/login.model.js'
+import Login from '../../models/login.js'
 import Patient from '../../models/Patient/patient.model.js'
 import DoctorAppointment from '../../models/DoctorAppointment.js'
 import LabAppointment from '../../models/LabAppointment.js'
@@ -22,18 +22,18 @@ export const getAdminDashboard = async (req, res) => {
       totalDoctorAppts, totalLabAppts,
       newDoctorsThisMonth, newPatientsThisMonth
     ] = await Promise.all([
-      DoctorLogin.countDocuments(),
+      Login.countDocuments(),
       Patient.countDocuments(),
       Laboratory.countDocuments(),
       Pharmacy.countDocuments(),
       Hospital.countDocuments(),
-      DoctorLogin.countDocuments({ status: 'pending' }),
+      Doctor.countDocuments({ status: 'pending' }),
       Laboratory.countDocuments({ status: 'pending' }),
       Pharmacy.countDocuments({ status: 'pending' }),
       Hospital.countDocuments({ status: 'pending' }),
       DoctorAppointment.countDocuments(),
       LabAppointment.countDocuments(),
-      DoctorLogin.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      Login.countDocuments({ createdAt: { $gte: startOfMonth } }),
       Patient.countDocuments({ createdAt: { $gte: startOfMonth } }),
     ])
 
@@ -47,14 +47,14 @@ export const getAdminDashboard = async (req, res) => {
     }))
 
     // Doctor gender distribution
-    const genderStats = await DoctorLogin.aggregate([
+    const genderStats = await Login.aggregate([
       { $lookup: { from: 'doctors', localField: '_id', foreignField: 'userId', as: 'profile' } },
       { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } },
       { $group: { _id: '$profile.gender', count: { $sum: 1 } } }
     ])
 
     // Recent registrations
-    const recentDoctors = await DoctorLogin.find().sort({ createdAt: -1 }).limit(5).select('name email status createdAt')
+    const recentDoctors = await Login.find().sort({ createdAt: -1 }).limit(5).select('name email status createdAt')
     const recentPatients = await Patient.find().sort({ createdAt: -1 }).limit(5).select('name email contactNumber createdAt')
 
     // Appointment status breakdown

@@ -303,16 +303,16 @@ export const updateStaffEmployement = async (req, res) => {
 };
 export const getStaffList = async (req, res) => {
   const id = req.user.id || req.user.userId;
-  const { name, limit = 10, page = 1, status,userRole } = req.query;
+  const { name, limit = 10, page = 1, status, userRole } = req.query;
 
   try {
-    let filter = { organizationId: id,userRole:"staff" };
+    let filter = { organizationId: id, userRole: "staff" };
 
     if (status) {
       filter.status = status;
     }
-    if(userRole){
-      filter.userRole=userRole
+    if (userRole) {
+      filter.userRole = userRole
     }
 
     const limitInt = parseInt(limit);
@@ -368,35 +368,74 @@ export const staffAction = async (req, res) => {
   }
 }
 export const staffLogin = async (req, res) => {
-  const { panelId, email, contactNumber, password } = req.body
+  const { panelId, email, contactNumber, password, withOtp } = req.body
   try {
     const panelData = await User.findOne({ nh12: panelId })
     if (!panelData) {
       return res.status(404).json({ message: "User not found " })
     }
-    const isStaff = await StaffEmployement.findOne({ $or: [{ email }, { contactNumber }], organizationId:panelData._id ,status:"active"})
+    const isStaff = await StaffEmployement.findOne({ $or: [{ email }, { contactNumber }], organizationId: panelData._id, status: "active" })
     if (!isStaff) {
       return res.status(404).json({ message: "Staff not found " })
     }
-    const staffUser=await User.findById(isStaff.userId)
+    const staffUser = await User.findById(isStaff.userId)
     const isMatch = await bcrypt.compare(password, isStaff.password);
     if (isMatch) {
-      const code = generateOTP()
-      if (contactNumber) {
-        // await sendMobileOtp(contactNumber, code)
+      if (withOtp) {
+        const code = generateOTP()
+        if (contactNumber) {
+          await sendMobileOtp(contactNumber, code)
+        } else {
+          await sendEmailOtp(email, code)
+        }
+        const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+        if (isOtpExist) {
+          await Otp.findByIdAndDelete(isOtpExist._id)
+          const otp = await Otp.create({ phone: contactNumber, email, code })
+        } else {
+          const otp = await Otp.create({ phone: contactNumber, email, code })
+        }
+        return res.status(200).json({
+          message: "Otp sent", success: true, staffId: staffUser?._id
+        });
       } else {
-        await sendEmailOtp(email, code)
+        const token = jwt.sign(
+          {
+            id: panelData._id,
+            created_by_id: panelData._id,
+            isOwner: false,
+            loginUser: staffUser?._id,
+            type: panelData?.role,
+            permissionId: isStaff.permissionId,
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "1y" }
+        );
+        if (panelData.role == "hospital") {
+          return res.status(200).json({
+            message: "Login successful",
+            token,
+            success: true,
+            staffId:staffUser?._id,
+            user: {
+              id: panelData._id,
+              name: panelData.name,
+              email: panelData.email,
+              contactNumber: panelData.contactNumber,
+              role: panelData.role,
+              created_by_id: panelData.created_by_id
+            }
+          });
+        } else {
+          return res.status(200).json({
+            message: "Login successful",
+            token,
+            success: true,
+            staffId:staffUser?._id,
+            userId: panelData?._id
+          })
+        }
       }
-      const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-      if (isOtpExist) {
-        await Otp.findByIdAndDelete(isOtpExist._id)
-        const otp = await Otp.create({ phone: contactNumber, email, code })
-      } else {
-        const otp = await Otp.create({ phone: contactNumber, email, code })
-      }
-      return res.status(200).json({
-        message: "Otp sent", success: true, staffId: staffUser?._id
-      });
 
     } else {
       return res.status(404).json({ message: "Invalid credentials " })
@@ -490,7 +529,6 @@ export const verifyOtp = async (req, res) => {
           staffId,
           userId: panelData?._id
         })
-
       }
     } else {
       return res.status(200).json({

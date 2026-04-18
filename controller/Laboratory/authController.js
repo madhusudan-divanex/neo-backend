@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sendEmail from '../../utils/sendMail.js'
 import Otp from '../../models/Otp.js';
-import Login from '../../models/Laboratory/login.model.js';
+import Login from '../../models/login.js';
 import fs from 'fs'
 import EditRequest from '../../models/EditRequest.js';
 import LabAddress from '../../models/Laboratory/labAddress.model.js';
@@ -30,11 +30,12 @@ import HospitalBasic from '../../models/Hospital/HospitalBasic.js';
 import Country from '../../models/Hospital/Country.js';
 import { assignNH12 } from '../../utils/nh12.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
+import Department from '../../models/Department.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
     const logo = req.files?.['logo']?.[0]?.path
-    const category=req.body.category ? JSON.parse(req.body.category) : []
+    const category = req.body.category ? JSON.parse(req.body.category) : []
     try {
         if (labId) {
             const isExist = await User.findById(labId)
@@ -55,7 +56,7 @@ const signUpLab = async (req, res) => {
             // Create user
             const newLab = await Laboratory.findByIdAndUpdate(isExist.labId, {
                 name,
-                gender,category,
+                gender, category,
                 email,
                 contactNumber,
                 gstNumber, about, logo
@@ -82,7 +83,7 @@ const signUpLab = async (req, res) => {
             const newLab = await Laboratory.create({
                 name,
                 gender,
-                email,category,
+                email, category,
                 contactNumber,
                 password: hashedPassword,
                 gstNumber, about, logo,
@@ -113,30 +114,87 @@ const signUpLab = async (req, res) => {
     }
 }
 const signInLab = async (req, res) => {
-    const { contactNumber, password, email } = req.body;
+    const { contactNumber, password, email, withOtp } = req.body;
     try {
-       
+
 
         const isExist = contactNumber ? await User.findOne({ contactNumber, role: "lab" }) : await User.findOne({ email, role: "lab" });
         if (!isExist) return res.status(200).json({ message: 'Lab not Found', success: false });
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
-        const code = generateOTP()
-        if (contactNumber) {
-            await sendMobileOtp(contactNumber, code)
+        if (withOtp) {
+            const code = generateOTP()
+            if (contactNumber) {
+                await sendMobileOtp(contactNumber, code)
+            } else {
+                await sendEmailOtp(email, code)
+            }
+            const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+            if (isOtpExist) {
+                await Otp.findByIdAndDelete(isOtpExist._id)
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            } else {
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            }
+            return res.status(200).json({ message: "Otp Sent", success: true })
         } else {
-            await sendEmailOtp(email, code)
-        }
-        const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-        if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        } else {
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        }
-        return res.status(200).json({ message: "Otp Sent", success: true })
+            const [
+                image,
+                address,
+                person,
+                license,
+            ] = await Promise.all([
+                LabImage.findOne({ userId: isExist._id }),
+                LabAddress.findOne({ userId: isExist._id }),
+                LabPerson.findOne({ userId: isExist._id }),
+                LabLicense.findOne({ userId: isExist._id }),
+            ]);
 
+            let nextStep = null;
+
+            if (!image) {
+                nextStep = "/create-account-image";
+            } else if (!address) {
+                nextStep = "/create-account-address";
+            } else if (!person) {
+                nextStep = "/create-account-person";
+            } else if (!license) {
+                nextStep = "/create-account-upload";
+            }
+            const user = isExist;
+            const isLogin = await Login.findOne({ userId: user._id });
+
+            const token = jwt.sign(
+                { user: user._id, type: "lab", isOwner: true },
+                process.env.JWT_SECRET
+            );
+            if (isLogin) {
+                await Login.findByIdAndUpdate(isLogin._id, {}, { new: true });
+                return res.status(200).json({
+                    message: "Login success",
+                    user: user,
+                    nextStep,
+                    isOwner: true,
+                    userId: user._id,
+                    token,
+                    isNew: false,
+                    success: true
+                });
+            } else {
+                await Login.create({ userId: user._id });
+                return res.status(200).json({
+                    message: "Login success",
+                    user: user,
+                    nextStep,
+                    isNew: true,
+                    isOwner: true,
+                    token,
+                    userId: user._id,
+                    success: true
+                });
+            }
+        }
 
     } catch (err) {
         console.error(err);
@@ -1089,8 +1147,102 @@ const getLabs = async (req, res) => {
         });
     }
 };
+const getLabList = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const type = req.query.type;
+        const search = req.query.search;
 
+        /* ================= USER FILTER ================= */
+        const userFilter = { labId: { $exists: true, $ne: null } };
 
+        if (type) {
+            userFilter.role = type; // lab OR hospital
+        } else {
+            userFilter.role = { $in: ['lab', 'hospital'] };
+        }
+
+        if (search) {
+            userFilter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { nh12: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        /* ================= USERS (PAGINATED & MIXED) ================= */
+        let users = await User.find(userFilter)
+            .select('name labId')
+            .populate('labId','logo')
+            .limit(limit)
+            .skip((page - 1) * limit)
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const total = await User.countDocuments(userFilter);
+        return res.status(200).json({
+            success: true,
+            data: users,
+            pagination: {
+                total,
+                totalPage: Math.ceil(total / limit),
+                currentPage: page
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+const getLabDeptTest = async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Lab not found",
+      });
+    }
+
+    // 1️⃣ Departments
+    const labDepartments = await Department.find({ userId,type:'LAB' });
+
+    // 2️⃣ Tests
+    const labTests = await Test.find({
+      $or: [
+        { labId: userId },
+        { hospitalId: userId },
+      ],
+      status: "active",
+    }).select("price shortName department");
+
+    // 3️⃣ Map tests to departments
+    const formattedData = labDepartments.map((dept) => ({
+      _id: dept._id,
+      name: dept.departmentName,
+      tests: labTests.filter(
+        (test) => test.department?.toString() === dept._id.toString()
+      ),
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedData,
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
 const getLabDetail = async (req, res) => {
     const userId = req.params.id;
 
@@ -1172,5 +1324,5 @@ const paginateArray = (array, page, limit) => {
 export {
     signInLab, updateImage, labLicense, deleteLicense, getProfileDetail, signUpLab, resetPassword, editRequest,
     labPerson, labAddress, forgotPassword, verifyOtp, resendOtp, getProfile, updateLab, changePassword, deleteLab,
-    labImage, deleteLabImage, sendReport, getLabs, getLabDetail
+    labImage, deleteLabImage, sendReport, getLabs, getLabDetail,getLabList,getLabDeptTest
 }

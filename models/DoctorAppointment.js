@@ -37,6 +37,10 @@ const requestSchema = new Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         },
+        department: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Department',
+        },
         labTests: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Test'

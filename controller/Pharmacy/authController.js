@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sendEmail from '../../utils/sendMail.js'
 import Otp from '../../models/Otp.js';
-import Login from '../../models/Pharmacy/login.model.js';
+import Login from '../../models/login.js';
 import fs from 'fs'
 import EditRequest from '../../models/EditRequest.js';
 import PharAddress from '../../models/Pharmacy/pharmacyAddress.model.js';
@@ -113,7 +113,7 @@ const signUpPhar = async (req, res) => {
     }
 }
 const signInPhar = async (req, res) => {
-    const { contactNumber, password, email } = req.body;
+    const { contactNumber, password, email, withOtp } = req.body;
     try {
 
         const isExist = contactNumber ? await User.findOne({ contactNumber, role: "pharmacy" }) : await User.findOne({ email, role: "pharmacy" });
@@ -121,21 +121,71 @@ const signInPhar = async (req, res) => {
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
-        const code = generateOTP()
-        if (contactNumber) {
-            await sendMobileOtp(contactNumber, code)
+        if (withOtp) {
+            const code = generateOTP()
+            if (contactNumber) {
+                await sendMobileOtp(contactNumber, code)
+            } else {
+                await sendEmailOtp(email, code)
+            }
+            const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+            if (isOtpExist) {
+                await Otp.findByIdAndDelete(isOtpExist._id)
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            } else {
+                const otp = await Otp.create({ phone: contactNumber, email, code })
+            }
+            return res.status(200).json({ message: "Otp Sent", success: true })
         } else {
-            await sendEmailOtp(email, code)
-        }
-        const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
-        if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist._id)
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        } else {
-            const otp = await Otp.create({ phone: contactNumber, email, code })
-        }
-        return res.status(200).json({ message: "Otp Sent", success: true })
+            const user=isExist
+            const [image, address, person, license] = await Promise.all([
+                PharImage.findOne({ userId: user._id }),
+                PharAddress.findOne({ userId: user._id }),
+                PharPerson.findOne({ userId: user._id }),
+                PharLicense.findOne({ userId: user._id }),
+            ]);
 
+            let nextStep = null;
+            if (!image) nextStep = "/create-account-image";
+            else if (!address) nextStep = "/create-account-address";
+            else if (!person) nextStep = "/create-account-person";
+            else if (!license) nextStep = "/create-account-upload";
+
+            let isLogin = await Login.findOne({ userId: user._id });
+            const token = jwt.sign(
+                {
+                    user: user._id,
+                    type: "pharmacy",
+                    isOwner: true
+                },
+                process.env.JWT_SECRET
+            );
+            if (isLogin) {
+                await Login.findByIdAndUpdate(isLogin._id, {}, { new: true });
+                return res.status(200).json({
+                    message: "Login success",
+                    nextStep,
+                    user,
+                    isOwner: true,
+                    userId: user._id, // Fixed: use user._id instead of pharmacyOwner.userId
+                    token,
+                    isNew: false,
+                    success: true
+                });
+            } else {
+                await Login.create({ userId: user._id });
+                return res.status(200).json({
+                    message: "Login success",
+                    nextStep,
+                    user,
+                    isOwner: true,
+                    userId: user._id, // Fixed: use user._id instead of pharmacyOwner.userId
+                    token,
+                    isNew: true,
+                    success: true
+                });
+            }
+        }
 
     } catch (err) {
         console.error(err);
@@ -160,7 +210,7 @@ const verifyOtp = async (req, res) => {
             : await User.findOne({ email, role: "pharmacy" });
 
 
-        if (!pharmacyOwner ) {
+        if (!pharmacyOwner) {
             return res.status(200).json({
                 message: 'Pharmacy not found',
                 success: false
@@ -213,7 +263,7 @@ const verifyOtp = async (req, res) => {
 
         // Handle forgot password flow
         if (type === "forgot-password" && isValid) {
-            const user = pharmacyOwner ;
+            const user = pharmacyOwner;
             if (!user) {
                 return res.status(200).json({
                     message: "User not found",

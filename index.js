@@ -66,6 +66,7 @@ import optimizeApi from './routes/optimize.js'
 import { sendWelcomeEmail } from './utils/globalFunction.js'
 import staff from './routes/staff.js'
 import department from './routes/departmentRoutes.js'
+import certificate from './routes/certificate.js'
 dotenv.config()
 const app = express()
 app.use(cors())
@@ -546,6 +547,7 @@ app.use('/admin', admin)
 app.use("/api/neo", optimizeApi);
 app.use("/api/staff", staff);
 app.use("/api/department", department);
+app.use('/api/certificate',certificate)
 
 app.use('/user/:id', async (req, res) => {
     const userId = req.params.id

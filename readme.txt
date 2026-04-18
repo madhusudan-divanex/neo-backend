@@ -37,10 +37,9 @@ All Panel->
 
 FeedBack->
     Qr Print
-    Footer Contact Data Dynamic
-    Medicine Category Dynamic
-    Modal Form 
-Pharmacy->
+Admin->
+    Card Generate
+Lab->
     Staff
     
 
@@ -297,11 +296,17 @@ Lab test
 Permission
 
 
-
+Api->
+    Hospital Transfer
+    Birth certificate
+    Medical certificate
+    Filter certificate
+    Death certificate
 
 Hospital->
-    CRUD Bed Prescription 
-    Discharge Paitent
+    Hospital Transfer
+
+FeedBack
 
 https://hospitals.neohealthcard.com
     phone:8386990249

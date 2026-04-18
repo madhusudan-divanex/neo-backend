@@ -5,6 +5,6 @@ const loginSchema=new Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 },{timestamps:true})
 
-const Login=mongoose.model('Phar-Login',loginSchema)
+const Login=mongoose.model('Login',loginSchema)
 
 export default Login

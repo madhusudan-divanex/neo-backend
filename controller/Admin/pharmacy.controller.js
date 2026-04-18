@@ -5,7 +5,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sendEmail from '../../utils/sendMail.js'
 import Otp from '../../models/Otp.js';
-import Login from '../../models/Pharmacy/login.model.js';
 import fs from 'fs'
 import EditRequest from '../../models/EditRequest.js';
 import PharAddress from '../../models/Pharmacy/pharmacyAddress.model.js';

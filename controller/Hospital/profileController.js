@@ -25,6 +25,7 @@ import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
 import Department from "../../models/Department.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
+import HospitalTransfer from "../../models/Hospital/HospitalTransfer.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -348,7 +349,7 @@ export const hospitalDashboard = async (req, res) => {
     const uniquePatient = await PatientDepartment.distinct('patientId', { hospitalId });
     const totalPatients = uniquePatient.length;
     const totalDepartments = await Department.countDocuments({userId: hospitalId });
-    const totalStaffs = await Staff.countDocuments({ userId:hospitalId });
+    const totalStaffs = await StaffEmployement.countDocuments({ organizationId:hospitalId });
     const bookedBed = await BedAllotment.countDocuments({ hospitalId, status: 'Active' });
     const departments = await Department.aggregate([
       {
@@ -883,6 +884,72 @@ export const addHospitalService=async(req,res)=>{
         return res.status(200).json({message:"Services update",success:true})
       }
       return res.status(404).json({message:"User not found",success:false})
+  } catch (error) {
+    return res.status(500).json({message:error?.message})
+  }
+}
+export const createTransfer = async (req, res) => {
+  const hospitalId=req.user.id || req.user.userId
+  const { toHospital, patientId, reason ,departmentFrom,departmentTo,status,transferDate,receivingDoctor,fromAllotment} = req.body;
+  if(!toHospital || !patientId ||  !departmentFrom || !departmentTo  || !receivingDoctor){
+    return res.status(400).json({message:"All fields are required",success:false})
+  }
+  try {
+    const isStaffUser=await User.findOne({nh12:receivingDoctor,role:"doctor"})
+    if(!isStaffUser){
+      return res.status(404).json({message:"Receiving doctor not found",success:false})
+    }
+    const isHospital=await User.findOne({nh12:toHospital,role:"hospital"})
+    if(!isHospital){
+      return res.status(404).json({message:"Receiving hospital not found",success:false})
+    }
+    const isStaff=await StaffEmployement.findOne({organizationId:isHospital._id,userId:isStaffUser._id,status:"active"})
+    if(!isStaff){
+      return res.status(404).json({message:"Receiving doctor is not working in receiving hospital",success:false})
+    }
+    const isDepartment=await Department.findOne({_id:departmentTo,userId:isHospital._id})
+    if(!isDepartment){
+      return res.status(404).json({message:"Receiving department not found in receiving hospital",success:false})
+    }
+    const isAllotment=await BedAllotment.findById(fromAllotment)
+    if(!isAllotment){
+      return res.status(404).json({message:"Allotment not found",success:false})
+    }
+    let documentShared = {dischargeSummary:null,labReports:null,prescriptions:null}
+    if(req.body.documentShared?.dischargeSummary){
+      documentShared.dischargeSummary=isAllotment.dischargeId
+    }
+    if(req.body.documentShared?.labReports){
+      documentShared.labReports=isAllotment.reportIds
+    }
+    if(req.body.documentShared?.prescriptions){
+      documentShared.prescriptions=isAllotment.prescriptionId
+    }
+    const transfer = new HospitalTransfer({...req.body, documentShared,
+      toHospital:isHospital._id,fromHospital:hospitalId,receivingDoctor:isStaffUser._id});
+    const savedTransfer = await transfer.save();
+    res.status(201).json({
+      success: true,
+      data: savedTransfer,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error creating transfer",
+      error: error.message,
+    });
+  }
+};
+export const getHospitalDepartments=async(req,res)=>{
+  const hospitalId=req.params.id
+  try {
+    const isHospital=await User.findOne({nh12:hospitalId,role:"hospital"})
+    if(!isHospital){
+      return res.status(404).json({message:"Hospital not found",success:false})
+    }
+    const departments=await Department.find({userId:isHospital._id,
+      $or:[{type:"IPD"},{type:"OPD"}]}).select('departmentName').sort({createdAt:-1})
+    res.status(200).json({message:"Departments fetched",success:true,data:departments})
   } catch (error) {
     return res.status(500).json({message:error?.message})
   }
