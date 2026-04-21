@@ -18,6 +18,10 @@ const permissionSchema = new Schema(
       required: true,
       index: true
     },
+    staffEmp:[{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "StaffEmployement",
+    }],
 
     // ================== DOCTOR ==================
     doctor: {

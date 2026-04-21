@@ -23,7 +23,8 @@ import {
   createChatSessionController,
   getChatSessionsController,
   getUserDataController,
-  addOrUpatePaymentInfo
+  addOrUpatePaymentInfo,
+  assignPermission
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
@@ -43,6 +44,7 @@ router.delete("/delete-notification/:id", auth, deleteOneNotification);
 
 router.post('/permission',authMiddleware,addPermission)
 router.put('/permission',authMiddleware,updatePermission)
+router.put('/assign-permission',authMiddleware,assignPermission)
 router.get('/permission/:id',authMiddleware,getAllPermission)
 router.delete('/permission',authMiddleware,deletePermission)
 

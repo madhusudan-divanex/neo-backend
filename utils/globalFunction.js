@@ -576,10 +576,10 @@ export const sendWelcomeEmail = async (userId) => {
   }
 };
 export const validateUsers = async (patientId, doctorId, hospitalId) => {
-  const patient = await User.findById(patientId);
+  const patient = await User.findOne({nh12:patientId,role:"patient"});
   if (!patient) throw new Error("Patient not found");
 
-  const doctor = await User.findById(doctorId);
+  const doctor = await User.findOne({nh12:doctorId,role:'doctor'});
   if (!doctor) throw new Error("Doctor not found");
 
   if (hospitalId) {

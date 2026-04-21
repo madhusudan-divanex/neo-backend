@@ -17,6 +17,7 @@ import HospitalContact from "../../models/Hospital/HospitalContact.js";
 import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
 import HospitalImage from "../../models/Hospital/HospitalImage.js";
 import PaymentInfo from "../../models/PaymentInfo.js";
+import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -94,7 +95,7 @@ export const GetDoctor = async (req, res) => {
   try {
     const { unique_id } = req.params;
 
-    const user = await User.findOne({ nh12:unique_id, role: 'doctor' });
+    const user = await User.findOne({ nh12: unique_id, role: 'doctor' });
 
     if (!user) {
       return res.status(404).json({
@@ -301,6 +302,7 @@ export const getAllPermission = async (req, res) => {
       _id: perm._id,
       name: perm.name,
       type: perm.type,
+      staffEmp:perm.staffEmp,
       ownerId: perm.ownerId,
       permissions: perm[type] || {}, // only the section for the user's type
       createdAt: perm.createdAt,
@@ -390,9 +392,11 @@ export const updatePermission = async (req, res) => {
       return res.status(200).json({ success: false, message: "Only owner allowed" });
     }
 
-    const { permissionId, name, ...permissions } = req.body;
+    const { permissionId, staffEmp = [], name, ...permissions } = req.body;
+
     const ownerId = req.user.userId || req.user.id;
     const type = req.user.type;
+
     if (!permissionId || !name) {
       return res.status(400).json({
         success: false,
@@ -413,9 +417,44 @@ export const updatePermission = async (req, res) => {
       });
     }
 
+    const oldStaff = permission.staffEmp.map(id => id.toString());
+    const newStaff = staffEmp.map(id => id.toString());
+
+    const removedStaff = oldStaff.filter(id => !newStaff.includes(id));
+    const addedStaff = newStaff.filter(id => !oldStaff.includes(id));
+
+    // 🔥 Handle newly added staff
+    if (addedStaff.length > 0) {
+      // Remove from other permissions
+      await Permission.updateMany(
+        {
+          _id: { $ne: permissionId },
+          staffEmp: { $in: addedStaff }
+        },
+        {
+          $pull: { staffEmp: { $in: addedStaff } }
+        }
+      );
+
+      // Assign new permission
+      await StaffEmployement.updateMany(
+        { _id: { $in: addedStaff } },
+        { permissionId: permissionId }
+      );
+    }
+
+    // ❌ Handle removed staff
+    if (removedStaff.length > 0) {
+      await StaffEmployement.updateMany(
+        { _id: { $in: removedStaff } },
+        { $unset: { permissionId: "" } }
+      );
+    }
+
+    // ✏️ Update permission doc
     const updated = await Permission.findByIdAndUpdate(
       permissionId,
-      { name, ...permissions },
+      { name, staffEmp, ...permissions },
       { new: true }
     );
 
@@ -433,7 +472,92 @@ export const updatePermission = async (req, res) => {
     });
   }
 };
+export const assignPermission = async (req, res) => {
+  try {
+    if (!req.user.isOwner) {
+      return res.status(200).json({ success: false, message: "Only owner allowed" });
+    }
 
+    const { permissionId, staffEmp = [], } = req.body;
+
+    const ownerId = req.user.userId || req.user.id;
+    const type = req.user.type;
+
+    if (!permissionId) {
+      return res.status(400).json({
+        success: false,
+        message: "permissionId and name are required"
+      });
+    }
+
+    const permission = await Permission.findOne({
+      _id: permissionId,
+      ownerId,
+      type
+    });
+
+    if (!permission) {
+      return res.status(404).json({
+        success: false,
+        message: "Permission not found"
+      });
+    }
+
+    const oldStaff = permission.staffEmp.map(id => id.toString());
+    const newStaff = staffEmp.map(id => id.toString());
+
+    const removedStaff = oldStaff.filter(id => !newStaff.includes(id));
+    const addedStaff = newStaff.filter(id => !oldStaff.includes(id));
+
+    // 🔥 Handle newly added staff
+    if (addedStaff.length > 0) {
+      // Remove from other permissions
+      await Permission.updateMany(
+        {
+          _id: { $ne: permissionId },
+          staffEmp: { $in: addedStaff }
+        },
+        {
+          $pull: { staffEmp: { $in: addedStaff } }
+        }
+      );
+
+      // Assign new permission
+      await StaffEmployement.updateMany(
+        { _id: { $in: addedStaff } },
+        { permissionId: permissionId }
+      );
+    }
+
+    // ❌ Handle removed staff
+    if (removedStaff.length > 0) {
+      await StaffEmployement.updateMany(
+        { _id: { $in: removedStaff } },
+        { $unset: { permissionId: "" } }
+      );
+    }
+
+    // ✏️ Update permission doc
+    const updated = await Permission.findByIdAndUpdate(
+      permissionId,
+      {  staffEmp,  },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Permission assign successfully",
+      data: updated[type]
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
 export const deletePermission = async (req, res) => {
   try {
     if (!req.user.isOwner) {
@@ -485,26 +609,26 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     if (user.role == "hospital") {
-      const [images, address, person, license] = await Promise.all([
-        HospitalImage.findOne({ hospitalId: user.hospitalId }),
-        HospitalAddress.findOne({ hospitalId: user.hospitalId }),
-        HospitalContact.findOne({ hospitalId: user.hospitalId }),
-        HospitalCertificate.findOne({ hospitalId: user.hospitalId })
-      ])
-      let nextStep = null;
+      // const [images, address, person, license] = await Promise.all([
+      //   HospitalImage.findOne({ hospitalId: user.hospitalId }),
+      //   HospitalAddress.findOne({ hospitalId: user.hospitalId }),
+      //   HospitalContact.findOne({ hospitalId: user.hospitalId }),
+      //   HospitalCertificate.findOne({ hospitalId: user.hospitalId })
+      // ])
+      // let nextStep = null;
 
-      if (!images) {
-        nextStep = "/create-account-image";
-      } else if (!address) {
-        nextStep = "/create-account-address";
-      } else if (!person) {
-        nextStep = "/create-account-person";
-      } else if (!license) {
-        nextStep = "/create-account-upload";
-      }
+      // if (!images) {
+      //   nextStep = "/create-account-image";
+      // } else if (!address) {
+      //   nextStep = "/create-account-address";
+      // } else if (!person) {
+      //   nextStep = "/create-account-person";
+      // } else if (!license) {
+      //   nextStep = "/create-account-upload";
+      // }
       return res.status(200).json({
         success: true,
-        data: user, nextStep
+        data: user,
       });
     }
     return res.status(200).json({

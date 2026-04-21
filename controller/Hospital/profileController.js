@@ -26,6 +26,7 @@ import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
 import Department from "../../models/Department.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 import HospitalTransfer from "../../models/Hospital/HospitalTransfer.js";
+import HospitalImage from "../../models/Hospital/HospitalImage.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -217,7 +218,7 @@ export const sendEditRequest = async (req, res) => {
 
     const reqDoc = await EditRequest.create({
       hospitalId,
-      message: note,type:"hospital"
+      message: note, type: "hospital"
     });
 
     res.json({
@@ -304,7 +305,7 @@ export const getHospitals = async (req, res) => {
 
     // 4️⃣ Merge everything
     const finalData = users.map(user => ({
-      ...user,logo:user.logoFileId? `api/file/${user?.logoFileId}`:null,
+      ...user, logo: user.logoFileId ? `api/file/${user?.logoFileId}` : null,
       address: addressMap[user._id.toString()] || null,
       avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
       totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
@@ -344,12 +345,12 @@ export const hospitalDashboard = async (req, res) => {
     // Pending Appointments
     const pendingAppointments = await DoctorAppointment.countDocuments({ hospitalId, status: 'pending' });
 
-    const totalDoctors = await StaffEmployement.countDocuments({organizationId: hospitalId });
+    const totalDoctors = await StaffEmployement.countDocuments({ organizationId: hospitalId });
     const totalAppointment = await DoctorAppointment.countDocuments({ hospitalId });
     const uniquePatient = await PatientDepartment.distinct('patientId', { hospitalId });
     const totalPatients = uniquePatient.length;
-    const totalDepartments = await Department.countDocuments({userId: hospitalId });
-    const totalStaffs = await StaffEmployement.countDocuments({ organizationId:hospitalId });
+    const totalDepartments = await Department.countDocuments({ userId: hospitalId });
+    const totalStaffs = await StaffEmployement.countDocuments({ organizationId: hospitalId });
     const bookedBed = await BedAllotment.countDocuments({ hospitalId, status: 'Active' });
     const departments = await Department.aggregate([
       {
@@ -380,10 +381,31 @@ export const hospitalDashboard = async (req, res) => {
         }
       }
     ]);
+    const [images, address, person, license] = await Promise.all([
+      HospitalImage.findOne({ hospitalId: req.user.created_by_id }),
+      HospitalAddress.findOne({ hospitalId: req.user.created_by_id }),
+      HospitalContact.findOne({ hospitalId: req.user.created_by_id }),
+      HospitalCertificate.findOne({ hospitalId: req.user.created_by_id })
+    ])
+    let nextStep = null;
+    let profileComplete = 100
 
+    if (!images) {
+      profileComplete -= 80
+      nextStep = "/create-account-image";
+    } else if (!address) {
+      profileComplete -= 60
+      nextStep = "/create-account-address";
+    } else if (!person) {
+      profileComplete -= 40
+      nextStep = "/create-account-person";
+    } else if (!license) {
+      profileComplete -= 20
+      nextStep = "/create-account-upload";
+    }
 
     return res.status(200).json({
-      success: true, departments,
+      success: true, departments, nextStep,profileComplete,
       data: {
         totalAppointments,
         completedAppointments, bookedBed,
@@ -551,7 +573,7 @@ export const getHospitalDoctorList = async (req, res) => {
 
     const [staff, total] = await Promise.all([
       User.find(query)
-        .populate('doctorId','profileImage')
+        .populate('doctorId', 'profileImage')
         .select("name email contactNumber")
         .sort({ createdAt: -1 })
         .skip(Number(skip))
@@ -561,8 +583,8 @@ export const getHospitalDoctorList = async (req, res) => {
 
     const userIds = staff.map(user => user._id);
 
-    const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } }).select('fullAddress hospitalName userId specialty').populate('specialty','name');
-   
+    const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } }).select('fullAddress hospitalName userId specialty').populate('specialty', 'name');
+
     const doctorEmp = await StaffEmployement.find({ userId: { $in: userIds } });
 
 
@@ -836,97 +858,99 @@ export const getProfileDetail = async (req, res) => {
   }
 };
 export const getAuditLog = async (req, res) => {
-    try {
-        const hospitalId = req.user.id;
-
-        // Get page & limit from query (defaults)
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-
-        const skip = (page - 1) * limit;
-
-        // Fetch paginated data
-        const audit = await HospitalAudit
-            .find({ hospitalId }).populate('actionUser')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        // Total count for frontend pagination
-        const total = await HospitalAudit.countDocuments({ hospitalId });
-
-        res.status(200).json({
-            message: 'Audit fetched successfully',
-            data: audit,
-            success:true,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit)
-            }
-        });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-export const addHospitalService=async(req,res)=>{
-  const hospitalId=req.user.id || req.user.userId
-  const {services}=req.body
   try {
-      const isUser=await User.findById(hospitalId)
-      if(!isUser){
-        return res.status(404).json({message:"User not found",success:false})
+    const hospitalId = req.user.id;
+
+    // Get page & limit from query (defaults)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    // Fetch paginated data
+    const audit = await HospitalAudit
+      .find({ hospitalId }).populate('actionUser')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Total count for frontend pagination
+    const total = await HospitalAudit.countDocuments({ hospitalId });
+
+    res.status(200).json({
+      message: 'Audit fetched successfully',
+      data: audit,
+      success: true,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
       }
-      const data=await HospitalBasic.findByIdAndUpdate(isUser.hospitalId,{services},{new:true})
-      if(data){
-        return res.status(200).json({message:"Services update",success:true})
-      }
-      return res.status(404).json({message:"User not found",success:false})
+    });
+
   } catch (error) {
-    return res.status(500).json({message:error?.message})
+    res.status(500).json({ error: error.message });
+  }
+};
+export const addHospitalService = async (req, res) => {
+  const hospitalId = req.user.id || req.user.userId
+  const { services } = req.body
+  try {
+    const isUser = await User.findById(hospitalId)
+    if (!isUser) {
+      return res.status(404).json({ message: "User not found", success: false })
+    }
+    const data = await HospitalBasic.findByIdAndUpdate(isUser.hospitalId, { services }, { new: true })
+    if (data) {
+      return res.status(200).json({ message: "Services update", success: true })
+    }
+    return res.status(404).json({ message: "User not found", success: false })
+  } catch (error) {
+    return res.status(500).json({ message: error?.message })
   }
 }
 export const createTransfer = async (req, res) => {
-  const hospitalId=req.user.id || req.user.userId
-  const { toHospital, patientId, reason ,departmentFrom,departmentTo,status,transferDate,receivingDoctor,fromAllotment} = req.body;
-  if(!toHospital || !patientId ||  !departmentFrom || !departmentTo  || !receivingDoctor){
-    return res.status(400).json({message:"All fields are required",success:false})
+  const hospitalId = req.user.id || req.user.userId
+  const { toHospital, patientId, reason, departmentFrom, departmentTo, status, transferDate, receivingDoctor, fromAllotment } = req.body;
+  if (!toHospital || !patientId || !departmentFrom || !departmentTo || !receivingDoctor) {
+    return res.status(400).json({ message: "All fields are required", success: false })
   }
   try {
-    const isStaffUser=await User.findOne({nh12:receivingDoctor,role:"doctor"})
-    if(!isStaffUser){
-      return res.status(404).json({message:"Receiving doctor not found",success:false})
+    const isStaffUser = await User.findOne({ nh12: receivingDoctor, role: "doctor" })
+    if (!isStaffUser) {
+      return res.status(404).json({ message: "Receiving doctor not found", success: false })
     }
-    const isHospital=await User.findOne({nh12:toHospital,role:"hospital"})
-    if(!isHospital){
-      return res.status(404).json({message:"Receiving hospital not found",success:false})
+    const isHospital = await User.findOne({ nh12: toHospital, role: "hospital" })
+    if (!isHospital) {
+      return res.status(404).json({ message: "Receiving hospital not found", success: false })
     }
-    const isStaff=await StaffEmployement.findOne({organizationId:isHospital._id,userId:isStaffUser._id,status:"active"})
-    if(!isStaff){
-      return res.status(404).json({message:"Receiving doctor is not working in receiving hospital",success:false})
+    const isStaff = await StaffEmployement.findOne({ organizationId: isHospital._id, userId: isStaffUser._id, status: "active" })
+    if (!isStaff) {
+      return res.status(404).json({ message: "Receiving doctor is not working in receiving hospital", success: false })
     }
-    const isDepartment=await Department.findOne({_id:departmentTo,userId:isHospital._id})
-    if(!isDepartment){
-      return res.status(404).json({message:"Receiving department not found in receiving hospital",success:false})
+    const isDepartment = await Department.findOne({ _id: departmentTo, userId: isHospital._id })
+    if (!isDepartment) {
+      return res.status(404).json({ message: "Receiving department not found in receiving hospital", success: false })
     }
-    const isAllotment=await BedAllotment.findById(fromAllotment)
-    if(!isAllotment){
-      return res.status(404).json({message:"Allotment not found",success:false})
+    const isAllotment = await BedAllotment.findById(fromAllotment)
+    if (!isAllotment) {
+      return res.status(404).json({ message: "Allotment not found", success: false })
     }
-    let documentShared = {dischargeSummary:null,labReports:null,prescriptions:null}
-    if(req.body.documentShared?.dischargeSummary){
-      documentShared.dischargeSummary=isAllotment.dischargeId
+    let documentShared = { dischargeSummary: null, labReports: null, prescriptions: null }
+    if (req.body.documentShared?.dischargeSummary) {
+      documentShared.dischargeSummary = isAllotment.dischargeId
     }
-    if(req.body.documentShared?.labReports){
-      documentShared.labReports=isAllotment.reportIds
+    if (req.body.documentShared?.labReports) {
+      documentShared.labReports = isAllotment.reportIds
     }
-    if(req.body.documentShared?.prescriptions){
-      documentShared.prescriptions=isAllotment.prescriptionId
+    if (req.body.documentShared?.prescriptions) {
+      documentShared.prescriptions = isAllotment.prescriptionId
     }
-    const transfer = new HospitalTransfer({...req.body, documentShared,
-      toHospital:isHospital._id,fromHospital:hospitalId,receivingDoctor:isStaffUser._id});
+    const transfer = new HospitalTransfer({
+      ...req.body, documentShared,
+      toHospital: isHospital._id, fromHospital: hospitalId, receivingDoctor: isStaffUser._id
+    });
     const savedTransfer = await transfer.save();
     res.status(201).json({
       success: true,
@@ -940,17 +964,19 @@ export const createTransfer = async (req, res) => {
     });
   }
 };
-export const getHospitalDepartments=async(req,res)=>{
-  const hospitalId=req.params.id
+export const getHospitalDepartments = async (req, res) => {
+  const hospitalId = req.params.id
   try {
-    const isHospital=await User.findOne({nh12:hospitalId,role:"hospital"})
-    if(!isHospital){
-      return res.status(404).json({message:"Hospital not found",success:false})
+    const isHospital = await User.findOne({ nh12: hospitalId, role: "hospital" })
+    if (!isHospital) {
+      return res.status(404).json({ message: "Hospital not found", success: false })
     }
-    const departments=await Department.find({userId:isHospital._id,
-      $or:[{type:"IPD"},{type:"OPD"}]}).select('departmentName').sort({createdAt:-1})
-    res.status(200).json({message:"Departments fetched",success:true,data:departments})
+    const departments = await Department.find({
+      userId: isHospital._id,
+      $or: [{ type: "IPD" }, { type: "OPD" }]
+    }).select('departmentName').sort({ createdAt: -1 })
+    res.status(200).json({ message: "Departments fetched", success: true, data: departments })
   } catch (error) {
-    return res.status(500).json({message:error?.message})
+    return res.status(500).json({ message: error?.message })
   }
 }

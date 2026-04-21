@@ -268,7 +268,7 @@ export const register = async (req, res) => {
       process.env.JWT_SECRET
     );
 
-    res.json({ token, user });
+    res.json({ token, user ,success:true});
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -315,28 +315,28 @@ export const login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "1y" }
       );
-      const [images, address, person, license] = await Promise.all([
-        HospitalImages.findOne({ hospitalId: hospital.hospitalId }),
-        HospitalAddress.findOne({ hospitalId: hospital.hospitalId }),
-        HospitalContact.findOne({ hospitalId: hospital.hospitalId }),
-        HospitalCertificate.findOne({ hospitalId: hospital.hospitalId })
-      ])
-      let nextStep = null;
+      // const [images, address, person, license] = await Promise.all([
+      //   HospitalImages.findOne({ hospitalId: hospital.hospitalId }),
+      //   HospitalAddress.findOne({ hospitalId: hospital.hospitalId }),
+      //   HospitalContact.findOne({ hospitalId: hospital.hospitalId }),
+      //   HospitalCertificate.findOne({ hospitalId: hospital.hospitalId })
+      // ])
+      // let nextStep = null;
 
-      if (!images) {
-        nextStep = "/create-account-image";
-      } else if (!address) {
-        nextStep = "/create-account-address";
-      } else if (!person) {
-        nextStep = "/create-account-person";
-      } else if (!license) {
-        nextStep = "/create-account-upload";
-      }
+      // if (!images) {
+      //   nextStep = "/create-account-image";
+      // } else if (!address) {
+      //   nextStep = "/create-account-address";
+      // } else if (!person) {
+      //   nextStep = "/create-account-person";
+      // } else if (!license) {
+      //   nextStep = "/create-account-upload";
+      // }
       return res.status(200).json({
         message: "Login successful",
         token,
         success: true,
-        nextStep,
+        // nextStep,
         user: {
           id: hospital._id,
           name: hospital.name,

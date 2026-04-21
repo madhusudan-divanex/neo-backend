@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { generateCustomId } from "../../controller/certificateController.js";
 
 const certSchema=new Schema({
     patientId:{
@@ -28,14 +29,7 @@ certSchema.pre("save", async function (next) {
   if (this.customId) return next();
 
   try {
-    while (true) {
-      const id = Math.floor(100000 + Math.random() * 900000).toString();
-      const exists = await this.constructor.findOne({ customId: id });
-      if (!exists) {
-        this.customId = id;
-        break;
-      }
-    }
+    this.customId = await generateCustomId("birth");
     next();
   } catch (err) {
     next(err);

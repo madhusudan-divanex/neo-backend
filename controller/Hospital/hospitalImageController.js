@@ -26,6 +26,7 @@ export const uploadImages = async (req, res) => {
         thumbnail.originalname,
         thumbnail.mimetype
       );
+      console.log(req.user)
 
       const img = await HospitalImage.create({
         hospitalId: req.user.created_by_id,

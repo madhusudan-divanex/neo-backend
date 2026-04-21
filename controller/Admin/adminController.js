@@ -585,7 +585,8 @@ export const addHospitalByAdmin = async (req, res) => {
         if (hospital) {
             const rawPassword = contactNumber.slice(-4) + "@123";
             const passwordHash = await bcrypt.hash(rawPassword, 10);
-            const pt = await User.create({ name, pharId: hospital._id, contactNumber, email, role: 'hospital', created_by: "admin", passwordHash })
+            const pt = await User.create({ name, pharId: hospital._id, contactNumber, email, role: 'hospital',
+                 created_by: "admin",created_by_id:hospital?._id, passwordHash ,hospitalId:hospital?._id})
             await HospitalAddress.create({ hospitalId: hospital._id, contact, fullAddress, pinCode, country, state, city })
             await HospitalBasic.findByIdAndUpdate(hospital._id, { userId: pt._id }, { new: true })
             const countryData = await Country.findById(country)

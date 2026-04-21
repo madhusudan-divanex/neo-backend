@@ -271,6 +271,24 @@ export const createStaffEmployement = async (req, res) => {
     });
   }
 };
+export const getStaffEmployement = async (req, res) => {
+  try {
+    const userId = req.user && (req.user.id || req.user.userId);
+    const userData = await User.findById(userId)
+    if (!userData) {
+      return res.status(404).json({ message: "Requesting user not found" });
+    }
+    const data = await StaffEmployement.find({ status: { $ne: "inactive" }, organizationId: userId }).select('role userId').populate('userId','name').sort({createdAt:-1})
+
+    return res.status(200).json({ message: "Employement fetched", data, success: true })
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 export const updateStaffEmployement = async (req, res) => {
   try {
     const userId = req.user && (req.user.id || req.user.userId);
@@ -374,10 +392,17 @@ export const staffLogin = async (req, res) => {
     if (!panelData) {
       return res.status(404).json({ message: "User not found " })
     }
-    const isStaff = await StaffEmployement.findOne({ $or: [{ email }, { contactNumber }], organizationId: panelData._id, status: "active" })
+    const isStaff = await StaffEmployement.findOne({
+      $or: [
+        ...(email ? [{ email }] : []),
+        ...(contactNumber ? [{ contactNumber }] : [])
+      ],
+      organizationId: panelData._id, status: "active"
+    })
     if (!isStaff) {
       return res.status(404).json({ message: "Staff not found " })
     }
+    console.log(isStaff, email, contactNumber)
     const staffUser = await User.findById(isStaff.userId)
     const isMatch = await bcrypt.compare(password, isStaff.password);
     if (isMatch) {
@@ -416,7 +441,7 @@ export const staffLogin = async (req, res) => {
             message: "Login successful",
             token,
             success: true,
-            staffId:staffUser?._id,
+            staffId: staffUser?._id,
             user: {
               id: panelData._id,
               name: panelData.name,
@@ -431,7 +456,7 @@ export const staffLogin = async (req, res) => {
             message: "Login successful",
             token,
             success: true,
-            staffId:staffUser?._id,
+            staffId: staffUser?._id,
             userId: panelData?._id
           })
         }

@@ -1,11 +1,14 @@
 import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
 import DoctorAppointment from "../../models/DoctorAppointment.js";
+import Country from "../../models/Hospital/Country.js";
+import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
 import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import User from "../../models/Hospital/User.js";
 import LabAppointment from "../../models/LabAppointment.js";
 import Laboratory from "../../models/Laboratory/laboratory.model.js";
 import TestReport from "../../models/testReport.js";
 import { saveToGrid } from "../../services/gridfsService.js";
+import { assignNH12 } from "../../utils/nh12.js";
 
 // ================= SAVE BASIC DETAILS =================
 export const saveBasic = async (req, res) => {
@@ -40,6 +43,11 @@ export const saveBasic = async (req, res) => {
     await hospital.save();
     if (hospital) {
       const baseUrl = `api/file/`;
+      if(req.body.country){
+        await HospitalAddress.findOneAndUpdate({hospitalId:hospital?._id},{country:req.body.country},{new:true,upsert:true})
+        const countryData=await Country.findById(req.body.country)
+        await assignNH12(userId,countryData?.phonecode)
+      }
       await User.findByIdAndUpdate(userId, { name: basic.hospitalName, email: basic.email, contactNumber: basic.mobileNo }, { new: true })
       await Laboratory.findOneAndUpdate({ userId: userId }, {
         name: basic.hospitalName,
@@ -50,9 +58,19 @@ export const saveBasic = async (req, res) => {
         logo: basic.logoFieldId ? baseUrl + basic.logoFieldId : null,
       }, { new: true })
     }
-
-    res.json({ message: "Basic details saved", hospital,success:true });
+    const hospitalUser=await User.findOne({hospitalId:hospital?._id})
+    res.json({ message: "Basic details saved", hospital,success:true ,
+      user: {
+          id: hospitalUser._id,
+          name: hospitalUser.name,
+          email: hospitalUser.email,
+          contactNumber: hospitalUser.contactNumber,
+          role: hospitalUser.role,
+          created_by_id: hospitalUser.created_by_id
+        }
+    });
   } catch (err) {
+    console.log(err)
     res.status(500).json({ message: "Server error" });
   }
 };
