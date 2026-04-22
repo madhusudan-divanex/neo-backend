@@ -18,6 +18,12 @@ import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
 import HospitalImage from "../../models/Hospital/HospitalImage.js";
 import PaymentInfo from "../../models/PaymentInfo.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
+import DoctorAptPayment from "../../models/DoctoAptPayment.js";
+import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
+import PatientDemographic from "../../models/Patient/demographic.model.js";
+import Patient from "../../models/Patient/patient.model.js";
+import Prescriptions from "../../models/Prescriptions.js";
+import BedAllotment from "../../models/Hospital/BedAllotment.js";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -302,7 +308,7 @@ export const getAllPermission = async (req, res) => {
       _id: perm._id,
       name: perm.name,
       type: perm.type,
-      staffEmp:perm.staffEmp,
+      staffEmp: perm.staffEmp,
       ownerId: perm.ownerId,
       permissions: perm[type] || {}, // only the section for the user's type
       createdAt: perm.createdAt,
@@ -540,7 +546,7 @@ export const assignPermission = async (req, res) => {
     // ✏️ Update permission doc
     const updated = await Permission.findByIdAndUpdate(
       permissionId,
-      {  staffEmp,  },
+      { staffEmp, },
       { new: true }
     );
 
@@ -1098,3 +1104,142 @@ export const addOrUpatePaymentInfo = async (req, res) => {
     });
   }
 };
+export const doctorAppointmentInvoice = async (req, res) => {
+  const id = req.params.id
+  try {
+    const isPayment = await DoctorAptPayment.findById(id)
+    if (!isPayment) {
+      return res.status(404).json({ message: "Payment data not found", success: false })
+    }
+    const aptData = await DoctorAppointment.findById(isPayment.appointmentId).populate('doctorId patientId hospitalId', 'name email contactNumber nh12')
+    const patientDemo = await PatientDemographic.findOne({ userId: aptData?.patientId?._id }).select('dob bloodGroup age gender address').lean()
+    const ptBasic = await Patient.findOne({ userId: aptData?.patientId?._id })
+    const patientData = {
+      ...patientDemo, name: aptData?.patientId?.name, email: aptData?.patientId?.email, nh12: aptData?.patientId?.nh12,
+      contactNumber: aptData?.patientId?.contactNumber, gender: ptBasic?.gender
+    }
+    if (aptData?.hospitalId) {
+      const hospital = await User.findById(aptData?.hospitalId)
+      let address = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name')
+      const doctorAbout = await DoctorAbout.findOne({ userId: aptData?.doctorId }).select('specialty').populate('specialty', 'name')
+      const dataToSend = {
+        fees: aptData.fees,
+        paymentMethod: isPayment.paymentMethod,
+        transactionId: isPayment.customId,
+        totalAmount: isPayment.totalAmount,
+        subTotal: isPayment.subTotal,
+        discountValue: isPayment.discountValue,
+        discountType: isPayment.discountType,
+        doctorName: aptData?.doctorId?.name,
+        doctorNh12: aptData?.doctorId?.nh12,
+        specialization: doctorAbout?.specialty?.name,
+        bookedOn: aptData?.createdAt,
+        appointmentDate: aptData?.date,
+        orgName: aptData?.hospitalId?.name,
+        orgAddress: `${address?.fullAddress} ,${address?.city?.name}, ${address?.state?.name}, ${address?.country?.name}, ${address?.pinCode}`,
+        orgEmail: aptData?.hospitalId?.email,
+        orgContactNumber: aptData?.hospitalId?.contactNumber,
+        paymentStatus: aptData?.paymentStatus,
+        bookingId: aptData?.customId,
+        status: aptData?.status
+      }
+
+      return res.status(200).json({ success: true, ptData: patientData, data: dataToSend })
+    } else {
+      const hospital = await User.findById(aptData?.hospitalId)
+      let address = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name')
+      const doctorAbout = await DoctorAbout.findOne({ userId: aptData?.doctorId }).select('specialty').populate('specialty', 'name')
+      const dataToSend = {
+        fees: aptData.fees,
+        paymentMethod: isPayment.paymentMethod,
+        transactionId: isPayment.customId,
+        totalAmount: isPayment.totalAmount,
+        subTotal: isPayment.subTotal,
+        discountValue: isPayment.discountValue,
+        discountType: isPayment.discountType,
+        doctorName: aptData?.doctorId?.name,
+        doctorNh12: aptData?.doctorId?.nh12,
+        specialization: doctorAbout?.specialty?.name,
+        bookedOn: aptData?.createdAt,
+        appointmentDate: aptData?.date,
+        orgName: aptData?.doctorId?.name,
+        orgAddress: `${address?.fullAddress} ,${address?.city?.name}, ${address?.state?.name}, ${address?.country?.name}, ${address?.pinCode}`,
+        orgEmail: aptData?.doctorId?.email,
+        orgContactNumber: aptData?.doctorId?.contactNumber,
+        paymentStatus: aptData?.paymentStatus,
+        bookingId: aptData?.customId,
+        status: aptData?.status
+      }
+
+      return res.status(200).json({ success: true, ptData: patientData, data: dataToSend })
+    }
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error?.message })
+  }
+}
+export const prescriptionPdf = async (req, res) => {
+  const id = req.params.id
+  try {
+    const isPres = await Prescriptions.findById(id)
+    if (!isPres) {
+      return res.status(404).json({ message: "Prescription data not found", success: false })
+    }
+    const aptData =isPres?.appointmentId? await DoctorAppointment.findById(isPres.appointmentId).populate('doctorId patientId hospitalId', 'name email contactNumber nh12')
+    : await BedAllotment.findById(isPres.allotmentId).populate('primaryDoctorId patientId hospitalId', 'name email contactNumber nh12')
+    const patientDemo = await PatientDemographic.findOne({ userId: aptData?.patientId?._id }).select('dob bloodGroup age gender address').lean()
+    const ptBasic = await Patient.findOne({ userId: aptData?.patientId?._id })
+    const patientData = {
+      ...patientDemo, name: aptData?.patientId?.name, email: aptData?.patientId?.email, nh12: aptData?.patientId?.nh12,
+      contactNumber: aptData?.patientId?.contactNumber, gender: ptBasic?.gender
+    }
+    if (aptData?.hospitalId || aptData?.allotmentId) {
+      const hospital = await User.findById(aptData?.hospitalId)
+      let address = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name')
+      const doctorId=aptData?.doctorId || aptData?.primaryDoctorId
+      const doctorAbout = await DoctorAbout.findOne({ userId: doctorId  }).select('specialty').populate('specialty', 'name')
+      const dataToSend = {
+        doctorName: doctorId?.name,
+        doctorNh12: doctorId?.nh12,
+        specialization: doctorAbout?.specialty?.name,
+        bookedOn: aptData?.createdAt,
+        appointmentDate: aptData?.date,
+        orgName: aptData?.hospitalId?.name,
+        orgNh12:aptData?.hospitalId?.nh12,
+        orgAddress: `${address?.fullAddress} ,${address?.city?.name}, ${address?.state?.name}, ${address?.country?.name}, ${address?.pinCode}`,
+        orgEmail: aptData?.hospitalId?.email,
+        orgContactNumber: aptData?.hospitalId?.contactNumber,
+        paymentStatus: aptData?.paymentStatus,
+        bookingId: aptData?.customId,
+        status: aptData?.status
+      }
+
+      return res.status(200).json({ success: true,prescription:isPres, ptData: patientData, data: dataToSend })
+    } else {
+      const hospital = await User.findById(aptData?.hospitalId)
+      let address = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name')
+      const doctorAbout = await DoctorAbout.findOne({ userId: aptData?.doctorId }).select('specialty').populate('specialty', 'name')
+      const dataToSend = {
+        doctorName: aptData?.doctorId?.name,
+        doctorNh12: aptData?.doctorId?.nh12,
+        specialization: doctorAbout?.specialty?.name,
+        bookedOn: aptData?.createdAt,
+        appointmentDate: aptData?.date,
+        orgName: aptData?.doctorId?.name,
+        orgNh12:aptData?.doctorId?.nh12,
+        orgAddress: `${address?.fullAddress} ,${address?.city?.name}, ${address?.state?.name}, ${address?.country?.name}, ${address?.pinCode}`,
+        orgEmail: aptData?.doctorId?.email,
+        orgContactNumber: aptData?.doctorId?.contactNumber,
+        paymentStatus: aptData?.paymentStatus,
+        bookingId: aptData?.customId,
+        status: aptData?.status
+      }
+
+      return res.status(200).json({ success: true,prescription:isPres, ptData: patientData, data: dataToSend })
+    }
+
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({ success: false, message: error?.message })
+  }
+}

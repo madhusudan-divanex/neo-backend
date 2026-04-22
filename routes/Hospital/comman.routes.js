@@ -24,7 +24,9 @@ import {
   getChatSessionsController,
   getUserDataController,
   addOrUpatePaymentInfo,
-  assignPermission
+  assignPermission,
+  doctorAppointmentInvoice,
+  prescriptionPdf
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
@@ -64,4 +66,6 @@ router.get("/ask/question",authMiddleware,getAskQuestionController)
 router.get("/general/question",authMiddleware,getGeneralQuestionController)
 router.get("/user-data/:nh12",authMiddleware,getUserDataController)
 router.post("/payment-info",authMiddleware,uploader.single('qr'),addOrUpatePaymentInfo)
+router.get("/doctor-appointment-payment/:id",doctorAppointmentInvoice)
+router.get("/prescription/:id",prescriptionPdf)
 export default router;

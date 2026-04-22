@@ -641,7 +641,7 @@ const allotmentPrescription = async (req, res) => {
     const isAllotment = await BedAllotment.findById(allotmentId);
     if (!isAllotment) return res.status(200).json({ message: 'Appointment not exist' });
 
-    const add = await Prescriptions.create({ patientId, doctorId, medications, diagnosis, status, notes, allotmentId, reVisit, })
+    const add = await Prescriptions.create({ patientId,hospitalId:isAllotment.hospitalId, doctorId, medications, diagnosis, status, notes, allotmentId, reVisit,type:"allotment" })
     if (add) {
       await BedAllotment.findByIdAndUpdate(isAllotment._id, { prescriptionId: add._id }, { new: true })
       return res.status(200).json({ message: "Presctiption add successfully", success: true })

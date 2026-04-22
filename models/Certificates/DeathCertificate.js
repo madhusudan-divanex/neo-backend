@@ -5,8 +5,7 @@ import { generateCustomId } from "../../controller/certificateController.js";
 const certSchema=new Schema({
     patientId:{
         type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true
+        ref: "User"
     },
     doctorId:{
         type: Schema.Types.ObjectId,
@@ -22,9 +21,16 @@ const certSchema=new Schema({
     ageAtDeath: {type: Number, required: true},
     placeOfDeath: {type: String, required: true},
     nextOfKin: {name:String,relation:String},
-    dateOfDeath: {type: Date, required: true},
+    dateOfDeath: {type: String, required: true},
+    timeOfDeath: {type: String, required: true},
     causeOfDeath: {type: String, required: true},
-    attendingDoctor: {type: String, required: true},
+    mannerOfDeath: {type: String},
+    contributingCause: {type: String, },
+    type:{
+      type:String,
+      enum:['doctor','hospital']
+    },
+    customId:String,
 },{timestamps:true})
 certSchema.pre("save", async function (next) {
   if (this.customId) return next();
