@@ -87,7 +87,9 @@ export const admitPatient = async (req, res) => {
     }
     const user = await User.findOne({ _id: patientId, role: "patient" })
     if (!user) return res.status(404).message({ success: false, message: "Patient not found" })
-    const department = await Department.findOne({ _id: departmentId, userId:hospitalId })
+    const isAlready = await PatientDepartment.findOne({ patientId: patientId,hospitalId, status: "Active" }).populate('departmentId')
+    if (isAlready) return res.status(200).json({ success: false, message: `Patient already active in ${isAlready?.departmentId?.type}` })
+    const department = await Department.findOne({ _id: departmentId, userId: hospitalId })
     if (!department) return res.status(404).message({ success: false, message: "Department not found" })
 
     const data = await PatientDepartment.create({ patientId, departmentId, hospitalId, status: "Active" })
@@ -117,7 +119,7 @@ export const listPatients = async (req, res) => {
     const hospitalId = req.user._id || req.user.id;
     const deptType = req.query.deptType
     const status = req.query.status?.trim(); // could be "Active", "Inactive", etc.
-    let { page = 1, limit = 10, search = "", unique = "", } = req.query;
+    let { page = 1, limit = 10, search = "", unique = "" } = req.query;
 
     page = Math.max(Number(page), 1);
     limit = Number(limit);
@@ -150,6 +152,7 @@ export const listPatients = async (req, res) => {
         }
       ];
     }
+
 
 
     const pipeline = [
@@ -254,7 +257,18 @@ export const listPatients = async (req, res) => {
       {
         $project: {
           passwordHash: 0,
-          "patientUser.passwordHash": 0
+          fcmToken: 0,
+          walletBalance: 0,
+          lastSeen: 0,
+          isOnline: 0,
+          createdAt: 0,
+          role: 0,
+          created_by: 0,
+          "patientUser.password": 0,
+          "patientUser.name": 0,
+          "patientUser.email": 0,
+          "patientUser.createdAt": 0,
+          "patientUser.updatedAt": 0,
         }
       },
 
@@ -294,7 +308,35 @@ export const listPatients = async (req, res) => {
     });
   }
 };
+export const ipdPatientsList = async (req, res) => {
+  const hospitalId = req.user._id || req.user.id;
 
+  try {
+    const ptList = await PatientDepartment.find({
+      hospitalId,
+      status: "Active"
+    }).populate({
+      path: "departmentId",
+      match: { type: { $in: ["IPD", "EMERGENCY"] } },
+      select: "departmentName type"
+    })
+      .populate('patientId', 'name contactNumber nh12');
+
+    // filter out non-IPD (where departmentId became null)
+    const filtered = ptList.filter(p => p.departmentId !== null);
+
+    return res.status(200).json({
+      success: true,
+      data: filtered
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message,
+      success: false
+    });
+  }
+};
 
 export const getPatientById = async (req, res) => {
   try {
@@ -330,13 +372,17 @@ export const getPatientById = async (req, res) => {
 export const updatePatient = async (req, res) => {
   const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact, patientId } = req.body
   try {
-    const hospitalId = req.user._id || req.user.id;;
+    const hospitalId = req.user._id || req.user.id;
     const patient = await User.findByIdAndUpdate(patientId, { name, email }, { new: true })
     if (!patient) {
       return res.status(404).json({
         success: false,
         message: "Patient not found"
       });
+    }
+    const isAlready=await PatientDepartment.findOne({patientId:patient?._id,departmentId:{$ne:department},hospitalId,status:"Active"}).populate('departmentId','type')
+    if(status=="Active" && isAlready){
+      return res.status(200).json({message:`Patient already active in ${isAlready?.departmentId?.type}`,success:false})
     }
     const departmentActive = await Department.findById(department)
     if (departmentActive && !departmentActive?.status) {

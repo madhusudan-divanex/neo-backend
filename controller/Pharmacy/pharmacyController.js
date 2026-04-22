@@ -1909,11 +1909,11 @@ const patientHospitalAllotment = async (req, res) => {
         const allotments = await BedAllotment.find({ patientId, hospitalId })
             .populate({ path: "patientId", select: "name email unique_id", populate: { path: "patientId", select: "contactNumber profileImage" } })
             .populate("dischargeId", "createdAt").populate("primaryDoctorId", "unique_id name")
+            .populate('departmentId','departmentName')
             .populate({
                 path: "bedId",
                 populate: [
                     { path: "floorId", select: "floorName" },
-                    { path: "departmentId", select: "departmentName" },
                     { path: "roomId", select: "roomName" }
                 ]
             }).sort({ createdAt: -1 });

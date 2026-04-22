@@ -28,7 +28,7 @@ const departmentSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["OPD", "IPD","EMERGENCY","LAB"],
+      enum: ["OPD", "IPD", "EMERGENCY", "LAB"],
     },
 
     headOfDepartment: {
@@ -37,6 +37,16 @@ const departmentSchema = new mongoose.Schema(
     },
 
     employees: [DepartmentEmployeeSchema],
+    otherData: {
+      floorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "HospitalFloor",
+      },
+      roomId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "HospitalRoom",
+      },
+    },
 
     status: {
       type: Boolean,

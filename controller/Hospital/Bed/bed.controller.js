@@ -16,16 +16,17 @@ import HospitalBasic from "../../../models/Hospital/HospitalBasic.js";
 import HospitalAddress from "../../../models/Hospital/HospitalAddress.js";
 import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../../models/Staff/StaffEmployement.js";
+import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
 /* ======================================================
    ADD BED
 ====================================================== */
 export const addBed = async (req, res) => {
   try {
     const hospitalId = req.user.id;
-    const { floorId, departmentId, roomId, bedName, perDayFees } = req.body;
+    const { floorId, departmentId, roomId, bedName, perDayFees,doctorNh12 } = req.body;
 
     // ✅ Validation
-    if (!floorId || !departmentId || !roomId || !bedName || !perDayFees) {
+    if (!floorId || !departmentId || !roomId || !bedName || !perDayFees || !doctorNh12) {
       return res.status(400).json({
         success: false,
         message: "All fields are required"
@@ -46,11 +47,19 @@ export const addBed = async (req, res) => {
         message: "Bed already exists in this room"
       });
     }
+    const isDoctor=await User.findOne({nh12:doctorNh12 ,role:"doctor"})
+    if(!isDoctor){
+      return res.status(404).json({message:"Doctor not found",success:false})
+    }
+    const isStaffEmp=await StaffEmployement.findOne({organizationId:hospitalId,userId:isDoctor?._id,status:"active"})
+    if(!isStaffEmp){
+      return res.status(404).json({message:"Doctor is not staff of this hospital",success:false})
+    }
 
     const bed = await HospitalBed.create({
       hospitalId,
       floorId,
-      departmentId,
+      departmentId,doctorId:isDoctor?._id,
       roomId,
       bedName: bedName.trim(),
       pricePerDay: perDayFees
@@ -83,7 +92,7 @@ export const getBedById = async (req, res) => {
     const bed = await HospitalBed.findOne({
       _id: req.params.id,
       hospitalId: req.user.id
-    });
+    }).populate('doctorId','nh12');
 
     if (!bed) {
       return res.status(404).json({
@@ -107,7 +116,15 @@ export const getBedById = async (req, res) => {
 ====================================================== */
 export const updateBed = async (req, res) => {
   try {
-    const { floorId, departmentId, roomId, bedName, perDayFees, underMaintenance } = req.body;
+    const { floorId, departmentId, roomId, bedName, perDayFees, underMaintenance,doctorNh12 } = req.body;
+     const isDoctor=await User.findOne({nh12:doctorNh12 ,role:"doctor"})
+    if(!isDoctor){
+      return res.status(404).json({message:"Doctor not found",success:false})
+    }
+    const isStaffEmp=await StaffEmployement.findOne({organizationId:req.user.id,userId:isDoctor?._id,status:"active"})
+    if(!isStaffEmp){
+      return res.status(404).json({message:"Doctor is not staff of this hospital",success:false})
+    }
 
     const bed = await HospitalBed.findOneAndUpdate(
       {
@@ -116,7 +133,7 @@ export const updateBed = async (req, res) => {
       },
       {
         floorId,
-        departmentId,
+        departmentId,doctorId:isDoctor?._id,
         roomId, underMaintenance,
         bedName: bedName?.trim(),
         pricePerDay: perDayFees
@@ -240,7 +257,7 @@ export const getAllotmentHistory = async (req, res) => {
         path: "paymentId",
         select: "status payments services ipdPayment bedCharges",
         match: paymentFilter
-      })
+      }).populate('departmentId','departmentName')
       .populate({
         path: "bedId",
         populate: [
@@ -251,7 +268,6 @@ export const getAllotmentHistory = async (req, res) => {
               ? { _id: { $in: floors.map(f => new mongoose.Types.ObjectId(f)) } }
               : {}
           },
-          { path: "departmentId", select: "departmentName" },
           { path: "roomId", select: "roomName" }
         ]
       })
@@ -559,7 +575,10 @@ export const addOrUpdateDischargePatient = async (req, res) => {
 
       await discharge.save();
       const bedAllotment = await BedAllotment.findByIdAndUpdate(allotmentId, { dischargeId: discharge._id, status: "Discharged" }, { new: true })
+      console.log("bed",bedAllotment)
       if (bedAllotment) {
+        const ptdept=await PatientDepartment.findByIdAndUpdate(bedAllotment?.patientDepartment,{status:"Inactive"},{new:true})
+        console.log("ptdep",ptdept)
         await HospitalBed.findByIdAndUpdate(bedAllotment?.bedId, { status: "Available" }, { new: true })
       }
       if (req?.user?.loginUser && hospitalId) {

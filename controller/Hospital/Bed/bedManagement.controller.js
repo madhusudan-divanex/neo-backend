@@ -53,6 +53,7 @@ export const bedManagementList = async (req, res) => {
           _id: room._id,
           roomName: room.roomName,
           department: room.departmentId?.departmentName || "",
+          departmentId:room?.departmentId?._id || "",
           beds: bedData
         });
       }

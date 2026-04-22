@@ -35,6 +35,11 @@ const HospitalBedSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
     underMaintenance:{type:Boolean,default:false},
 
     status: {

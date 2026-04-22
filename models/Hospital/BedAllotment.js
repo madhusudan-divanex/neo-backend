@@ -38,6 +38,11 @@ const BedAllotmentSchema = new mongoose.Schema(
       ref: "HospitalBed",
       required: true
     },
+    departmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      required: true
+    },
 
     primaryDoctorId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -63,6 +68,10 @@ const BedAllotmentSchema = new mongoose.Schema(
 
     expectedDischargeDate: {
       type: Date
+    },
+    patientDepartment:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PatientDepartment'
     },
 
     admissionReason: String,

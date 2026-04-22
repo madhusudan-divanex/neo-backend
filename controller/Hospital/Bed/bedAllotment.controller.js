@@ -27,7 +27,7 @@ export const addAllotment = async (req, res) => {
       allotmentDate,
       expectedDischargeDate,
       reason,
-      note
+      note,patientDepartment
     } = allotmentDetails;
 
     /* ---------- VALIDATION ---------- */
@@ -92,8 +92,9 @@ export const addAllotment = async (req, res) => {
       hospitalId,
       patientId,
       bedId: bed._id,
+      departmentId,
       primaryDoctorId: doctorId,
-      allotmentDate,
+      allotmentDate,patientDepartment,
       expectedDischargeDate,
       admissionReason: reason,
       note,
@@ -176,11 +177,11 @@ export const getAllotmentById = async (req, res) => {
     const allotment = await BedAllotment.findById(req.params.id)
       .populate("patientId", "name email unique_id nh12")
       .populate("primaryDoctorId", "name unique_id nh12").populate('labAppointment')
+      .populate('departmentId','departmentName')
       .populate({
         path: "bedId",
         populate: [
           { path: "floorId", select: "floorName" },
-          { path: "departmentId", select: "departmentName" },
           { path: "roomId", select: "roomName" }
         ]
       })
