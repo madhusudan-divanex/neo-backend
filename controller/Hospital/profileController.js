@@ -391,21 +391,27 @@ export const hospitalDashboard = async (req, res) => {
     let profileComplete = 100
 
     if (!images) {
-      profileComplete -= 80
-      nextStep = "/create-account-image";
-    } else if (!address) {
-      profileComplete -= 60
-      nextStep = "/create-account-address";
-    } else if (!person) {
-      profileComplete -= 40
-      nextStep = "/create-account-person";
-    } else if (!license) {
-      profileComplete -= 20
-      nextStep = "/create-account-upload";
+      profileComplete -= 20;
+      if (!nextStep) nextStep = "/create-account-image";
+    }
+
+    if (!address) {
+      profileComplete -= 20;
+      if (!nextStep) nextStep = "/create-account-address";
+    }
+
+    if (!person) {
+      profileComplete -= 20;
+      if (!nextStep) nextStep = "/create-account-person";
+    }
+
+    if (!license) {
+      profileComplete -= 20;
+      if (!nextStep) nextStep = "/create-account-upload";
     }
 
     return res.status(200).json({
-      success: true, departments, nextStep,profileComplete,
+      success: true, departments, nextStep, profileComplete,
       data: {
         totalAppointments,
         completedAppointments, bookedBed,

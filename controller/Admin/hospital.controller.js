@@ -201,11 +201,14 @@ export const deleteHospital = async (req, res) => {
 
 export const getHospitals = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 10, search = "" ,status} = req.query;
 
     const query = {
-      hospitalName: { $regex: search, $options: "i" }
+      hospitalName: { $regex: search, $options: "i" },      
     };
+    if(status && status!=="all"){
+      query.kycStatus=status
+    } 
 
     // 1️⃣ Hospitals
     const hospitals = await HospitalBasic.find(query).populate("userId","nh12")
@@ -222,16 +225,26 @@ export const getHospitals = async (req, res) => {
       hospitalId: { $in: hospitalIds }
     }).lean();
 
+     const address = await HospitalAddress.find({
+      hospitalId: { $in: hospitalIds }
+    }).select('fullAddress hospitalId').lean();
+
     // 4️⃣ Map contacts by hospitalId
     const contactMap = {};
     contacts.forEach(c => {
       contactMap[c.hospitalId.toString()] = c;
     });
 
+    const addresMap = {};
+    address.forEach(c => {
+      addresMap[c.hospitalId.toString()] = c;
+    });
+
     // 5️⃣ Merge contact into hospital
     const finalData = hospitals.map(h => ({
       ...h,
-      contact: contactMap[h._id.toString()] || null
+      contact: contactMap[h._id.toString()] || null,
+      address: addresMap[h?._id?.toString()] || null,
     }));
 
     const total = await HospitalBasic.countDocuments(query);
@@ -245,6 +258,7 @@ export const getHospitals = async (req, res) => {
     });
 
   } catch (err) {
+    console.log(err)
     res.status(500).json({
       success: false,
       message: err.message

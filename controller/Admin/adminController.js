@@ -566,7 +566,7 @@ export const addLabByAdmin = async (req, res) => {
     }
 };
 export const addHospitalByAdmin = async (req, res) => {
-    const { name, gstNumber, contactNumber, about, email, licenseId, establishedYear, fullAddress, country, state, city, pinCode, status, contact } = req.body
+    const { name, gstNumber, contactNumber, about, email, licenseId, establishedYear,category, fullAddress, country, state, city, pinCode, status, contact } = req.body
 
     try {
         const isExist = await User.findOne({ contactNumber }) || await User.findOne({ email })
@@ -581,7 +581,7 @@ export const addHospitalByAdmin = async (req, res) => {
         }
 
         // ✅ CREATE PATIENT
-        const hospital = await HospitalBasic.create({ hospitalName: name, licenseId, establishedYear, gstNumber, about, mobileNo: contactNumber, email });
+        const hospital = await HospitalBasic.create({ hospitalName: name,category, licenseId, establishedYear, gstNumber, about, mobileNo: contactNumber, email });
         if (hospital) {
             const rawPassword = contactNumber.slice(-4) + "@123";
             const passwordHash = await bcrypt.hash(rawPassword, 10);

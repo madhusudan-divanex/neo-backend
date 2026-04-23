@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     profileImage: { type: String}  ,
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
     
-    status: { type: String,enum:['pending','approved','rejected'], default: 'pending' }      
+    status: { type: String,enum:['pending','approved','rejected','block'], default: 'pending' }      
 
 }, { timestamps: true });
 

@@ -28,25 +28,25 @@ export const getDoctorDetail = async (req, res) => {
     const kyc = await DoctorKyc.findOne({ userId: id }).sort({ createdAt: -1 })
     const medicalLicense = await MedicalLicense.findOne({ userId: id }).sort({ createdAt: -1 })
     const eduWork = await DoctorEduWork.findOne({ userId: id }).sort({ createdAt: -1 })
-    
 
 
 
-           
+
+
 
     //  Response
     return res.json({
       success: true,
       data: {
-              ...doctor,
-              email: user?.email || null,
-              contactNumber: user?.contactNumber || null,
-              user: user || null,
-              about: about || null,
-              kyc: kyc || null,
-              medicalLicense: medicalLicense || null,
-              eduWork: eduWork || null
-            }
+        ...doctor,
+        email: user?.email || null,
+        contactNumber: user?.contactNumber || null,
+        user: user || null,
+        about: about || null,
+        kyc: kyc || null,
+        medicalLicense: medicalLicense || null,
+        eduWork: eduWork || null
+      }
     });
 
   } catch (err) {
@@ -85,6 +85,24 @@ export const getDoctors = async (req, res) => {
         }
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "doctor-abouts",               // users collection
+          localField: "userId",
+          foreignField: "userId",
+          as: "about"
+        }
+      },
+      { $unwind: { path: "$about", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "specialities", // 👈 collection name check kar lena
+          localField: "about.specialty",
+          foreignField: "_id",
+          as: "specialty"
+        }
+      },
+      { $unwind: { path: "$specialty", preserveNullAndEmptyArrays: true } },
       { $sort: { createdAt: -1 } },
       { $skip: skip },
       { $limit: limit },
@@ -97,6 +115,8 @@ export const getDoctors = async (req, res) => {
           status: 1,
           profileImage: 1,
           createdAt: 1,
+          "about.hospitalName": 1,
+          "specialty.name": 1,
           "user._id": 1,
           "user.nh12": 1
         }
@@ -124,7 +144,7 @@ export const toggleDoctorStatus = async (req, res) => {
     const { doctorId } = req.params; // 👈 this is USER ID
 
     // ✅ doctor ko USER ID se find karo
-    const doctor = await Doctor.findOne({ _id:doctorId });
+    const doctor = await Doctor.findOne({ _id: doctorId });
 
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
@@ -136,19 +156,19 @@ export const toggleDoctorStatus = async (req, res) => {
 
     // 🔔 push only when approved
     if (doctor.status === "approved") {
-    //   const user = await User.findById(id);
+      //   const user = await User.findById(id);
 
-    //   if (user?.fcmToken) {
-    //     await sendPush({
-    //       token: user.fcmToken,
-    //       title: "🎉 Doctor Approved",
-    //       body: "Your profile has been approved by admin",
-    //       data: {
-    //         type: "doctor_approved",
-    //         doctorId: doctor._id.toString()
-    //       }
-    //     });
-    //   }
+      //   if (user?.fcmToken) {
+      //     await sendPush({
+      //       token: user.fcmToken,
+      //       title: "🎉 Doctor Approved",
+      //       body: "Your profile has been approved by admin",
+      //       data: {
+      //         type: "doctor_approved",
+      //         doctorId: doctor._id.toString()
+      //       }
+      //     });
+      //   }
     }
 
     res.json({

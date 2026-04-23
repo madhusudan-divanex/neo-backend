@@ -20,83 +20,83 @@ import City from '../../models/Hospital/City.js';
 export const getPharmaciesDetail = async (req, res) => {
   const userId = req.params.id;
 
-    try {
-        // Find user
-        const user = await User.findById(userId).select("-password");
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "Pharmacy not found"
-            });
-        }
-        const data = await Pharmacy.findById(user.pharId)
-
-        // Fetch latest related documents
-        const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
-        const pharAddress = await PharAddress.findOne({ userId }).populate('stateId')
-            .populate('countryId')
-            .populate('cityId').sort({ createdAt: -1 });
-        const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
-        const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
-        const allowEdit = Boolean(await EditRequest.exists({ pharId: userId, status: "approved" }))
-        const notifications = await Notification.countDocuments({ userId }) || 0;
-
-        // Fetch ratings
-        const rating = await Rating.find({ pharId: userId })
-            .populate("patientId")
-            .sort({ createdAt: -1 });
-
-        // Calculate average rating
-        const avgStats = await Rating.aggregate([
-            { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: null,
-                    avgRating: { $avg: "$star" },
-                    total: { $sum: 1 }
-                }
-            }
-        ]);
-
-        const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
-
-        // Count star ratings
-        const ratingStats = await Rating.aggregate([
-            { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: "$star",
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
-
-        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        ratingStats.forEach(r => {
-            ratingCounts[r._id] = r.count;
-        });
-
-        // Return final response
-        return res.status(200).json({
-            success: true,
-            user: data,
-            pharPerson,
-            pharAddress,
-            pharImg, customId: user.unique_id,
-            pharLicense,
-            rating,
-            avgRating,
-            ratingCounts, allowEdit,
-            isRequest, notifications
-        });
-
-    } catch (err) {
-        return res.status(500).json({
-            success: false,
-            message: err.message
-        });
+  try {
+    // Find user
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Pharmacy not found"
+      });
     }
+    const data = await Pharmacy.findById(user.pharId)
+
+    // Fetch latest related documents
+    const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
+    const pharAddress = await PharAddress.findOne({ userId }).populate('stateId')
+      .populate('countryId')
+      .populate('cityId').sort({ createdAt: -1 });
+    const pharImg = await PharImage.findOne({ userId }).sort({ createdAt: -1 });
+    const pharLicense = await PharLicense.findOne({ userId }).sort({ createdAt: -1 });
+    const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
+    const allowEdit = Boolean(await EditRequest.exists({ pharId: userId, status: "approved" }))
+    const notifications = await Notification.countDocuments({ userId }) || 0;
+
+    // Fetch ratings
+    const rating = await Rating.find({ pharId: userId })
+      .populate("patientId")
+      .sort({ createdAt: -1 });
+
+    // Calculate average rating
+    const avgStats = await Rating.aggregate([
+      { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$star" },
+          total: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
+
+    // Count star ratings
+    const ratingStats = await Rating.aggregate([
+      { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: "$star",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    ratingStats.forEach(r => {
+      ratingCounts[r._id] = r.count;
+    });
+
+    // Return final response
+    return res.status(200).json({
+      success: true,
+      user: data,
+      pharPerson,
+      pharAddress,
+      pharImg, customId: user.unique_id,
+      pharLicense,
+      rating,
+      avgRating,
+      ratingCounts, allowEdit,
+      isRequest, notifications
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 }
 
 /* ================= LIST ================= */
@@ -119,20 +119,35 @@ export const getPharmacies = async (req, res) => {
     // ✅ search filter FIX
     if (search) {
       query.name = { $regex: search, $options: "i" };
-      // ya better:
-      // query.name = new RegExp(search, "i");
     }
 
-    const pharmacies = await Pharmacy.find(query).populate("userId","nh12")
+    const pharmacies = await Pharmacy.find(query).populate("userId", "nh12")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
+    const pharIds = pharmacies?.map(item => item?.userId?._id)
+    const contactPerson = await PharPerson.find({ userId: { $in: pharIds } })
+    const pharAddr = await PharAddress.find({ userId: { $in: pharIds } }).select('fullAddress userId')
+    const pharmaciesWithContact = pharmacies.map(pharmacy => {
+      const contact = contactPerson.find(
+        person => person?.userId?.toString() === pharmacy?.userId._id.toString()
+      );
+      const address = pharAddr.find(
+        item => item?.userId?.toString() === pharmacy?.userId._id.toString()
+      );
+
+      return {
+        ...pharmacy.toObject(),
+        contactPerson: contact,
+        address
+      };
+    });
 
     const total = await Pharmacy.countDocuments(query);
 
     res.json({
       success: true,
-      data: pharmacies,
+      data: pharmaciesWithContact,
       totalPages: Math.ceil(total / limit),
     });
 
@@ -155,23 +170,23 @@ export const togglePharmacyStatus = async (req, res) => {
       pharmacy.status === "verify"
         ? "pending"
         : pharmacy.status === "pending"
-        ? "verify"
-        : "pending";
+          ? "verify"
+          : "pending";
 
     await pharmacy.save();
 
     // 🔔 Push only on approved
     if (pharmacy.status === "approved") {
-    //   const user = await User.findOne({ email: pharmacy.email });
+      //   const user = await User.findOne({ email: pharmacy.email });
 
-    //   if (user?.fcmToken) {
-    //     await sendPush({
-    //       token: user.fcmToken,
-    //       title: "🎉 Pharmacy Approved",
-    //       body: "Your pharmacy has been approved by admin",
-    //       data: { type: "pharmacy_approved" }
-    //     });
-    //   }
+      //   if (user?.fcmToken) {
+      //     await sendPush({
+      //       token: user.fcmToken,
+      //       title: "🎉 Pharmacy Approved",
+      //       body: "Your pharmacy has been approved by admin",
+      //       data: { type: "pharmacy_approved" }
+      //     });
+      //   }
     }
 
     res.json({ success: true, status: pharmacy.status });

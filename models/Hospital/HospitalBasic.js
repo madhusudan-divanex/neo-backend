@@ -16,7 +16,7 @@ const Schema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true }, 
     kycStatus: {
       type: String,
-      enum: ["draft", "pending", "in_review", "approved", "rejected"],
+      enum: ["draft", "pending", "in_review", "approved", "rejected","block"],
       default: "draft"
     }
   },

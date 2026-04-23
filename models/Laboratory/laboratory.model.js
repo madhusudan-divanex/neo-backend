@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     role:{type:String,default:'parent'},
     allowEdit:{type:Boolean,default:false},
     category:[{ type: mongoose.Schema.Types.ObjectId, ref: 'test-category',index:true }],
-    status: { type: String, default: 'pending' }  ,
+    status: { type: String, enum:["pending","block","approved","rejected"],default: 'pending' }  ,
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' ,index:true},      
 
 }, { timestamps: true });

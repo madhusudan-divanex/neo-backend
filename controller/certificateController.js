@@ -605,7 +605,7 @@ export const getCertificateDataByCertId = async (req, res) => {
         const hospitalBasic = await HospitalBasic.findById(hospital.hospitalId).lean()
         const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name').lean()
         const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('specialty').populate('specialty', 'name')
-        dataToSend.organization = hospital
+        dataToSend.organization = {...hospital,logo:hospitalBasic?.logoFileId?`api/file/${hospitalBasic?.logoFileId}`:null}
         dataToSend.nh12 = hospital.nh12;
         dataToSend.address = hospitalAddress
         dataToSend.license = hospitalBasic?.licenseId
@@ -633,7 +633,7 @@ export const getCertificateDataByCertId = async (req, res) => {
         const hospitalBasic = await HospitalBasic.findById(hospital.hospitalId).lean()
         const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name').lean()
         const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('specialty').populate('specialty', 'name')
-        dataToSend.organization = hospital
+        dataToSend.organization = {...hospital,logo:hospitalBasic?.logoFileId?`api/file/${hospitalBasic?.logoFileId}`:null}
         dataToSend.nh12 = hospital.nh12;
         dataToSend.address = hospitalAddress
         dataToSend.license = hospitalBasic?.licenseId
@@ -661,7 +661,7 @@ export const getCertificateDataByCertId = async (req, res) => {
         const hospitalBasic = await HospitalBasic.findById(hospital.hospitalId).lean()
         const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name').lean()
         const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('specialty').populate('specialty', 'name')
-        dataToSend.organization = hospital
+        dataToSend.organization = {...hospital,logo:hospitalBasic?.logoFileId?`api/file/${hospitalBasic?.logoFileId}`:null}
         dataToSend.nh12 = hospital.nh12;
         dataToSend.address = hospitalAddress
         dataToSend.license = hospitalBasic?.licenseId
@@ -689,7 +689,7 @@ export const getCertificateDataByCertId = async (req, res) => {
         const hospitalBasic = await HospitalBasic.findById(hospital.hospitalId).lean()
         const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name').lean()
         const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('specialty').populate('specialty', 'name')
-        dataToSend.organization = hospital
+        dataToSend.organization = {...hospital,logo:hospitalBasic?.logoFileId?`api/file/${hospitalBasic?.logoFileId}`:null}
         dataToSend.nh12 = hospital.nh12;
         dataToSend.address = hospitalAddress
         dataToSend.license = hospitalBasic?.licenseId
