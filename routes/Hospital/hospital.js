@@ -141,4 +141,5 @@ router.post('/add-patient-vitals',auth,doctorAptVitals)
 router.post('/sell-medicine',authMiddleware,checkPermission('pharmacy',"sellMedicine"),uploader.fields([{ name: 'prescriptionFile' }]),sellMedicine)
 
 router.get('/department/:id',auth,profile.getHospitalDepartments)
+router.get('/ipd-patient',auth,profile.IpdPatientsList)
 export default router;

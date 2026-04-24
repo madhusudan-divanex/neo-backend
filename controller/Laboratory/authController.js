@@ -95,7 +95,7 @@ const signUpLab = async (req, res) => {
                 newLab.userId = userData?._id
                 await newLab.save()
                 const token = jwt.sign(
-                    { user: newLab._id },
+                    { user: userData._id },
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );
@@ -123,6 +123,8 @@ const signInLab = async (req, res) => {
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
+        // const isLab = await Laboratory.findById(isExist.labId);
+        // if (isLab.status !== "approved") return res.status(200).json({ message: `Your profile was ${isLab.status}`, success: false });
         if (withOtp) {
             const code = generateOTP()
             if (contactNumber) {
@@ -1173,7 +1175,7 @@ const getLabList = async (req, res) => {
         /* ================= USERS (PAGINATED & MIXED) ================= */
         let users = await User.find(userFilter)
             .select('name labId')
-            .populate('labId','logo')
+            .populate('labId', 'logo')
             .limit(limit)
             .skip((page - 1) * limit)
             .sort({ createdAt: -1 })
@@ -1199,49 +1201,49 @@ const getLabList = async (req, res) => {
     }
 };
 const getLabDeptTest = async (req, res) => {
-  const userId = req.params.id;
+    const userId = req.params.id;
 
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Lab not found",
-      });
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Lab not found",
+            });
+        }
+
+        // 1️⃣ Departments
+        const labDepartments = await Department.find({ userId, type: 'LAB' });
+
+        // 2️⃣ Tests
+        const labTests = await Test.find({
+            $or: [
+                { labId: userId },
+                { hospitalId: userId },
+            ],
+            status: "active",
+        }).select("price shortName department");
+
+        // 3️⃣ Map tests to departments
+        const formattedData = labDepartments.map((dept) => ({
+            _id: dept._id,
+            name: dept.departmentName,
+            tests: labTests.filter(
+                (test) => test.department?.toString() === dept._id.toString()
+            ),
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: formattedData,
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message,
+        });
     }
-
-    // 1️⃣ Departments
-    const labDepartments = await Department.find({ userId,type:'LAB' });
-
-    // 2️⃣ Tests
-    const labTests = await Test.find({
-      $or: [
-        { labId: userId },
-        { hospitalId: userId },
-      ],
-      status: "active",
-    }).select("price shortName department");
-
-    // 3️⃣ Map tests to departments
-    const formattedData = labDepartments.map((dept) => ({
-      _id: dept._id,
-      name: dept.departmentName,
-      tests: labTests.filter(
-        (test) => test.department?.toString() === dept._id.toString()
-      ),
-    }));
-
-    return res.status(200).json({
-      success: true,
-      data: formattedData,
-    });
-
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
 };
 const getLabDetail = async (req, res) => {
     const userId = req.params.id;
@@ -1324,5 +1326,5 @@ const paginateArray = (array, page, limit) => {
 export {
     signInLab, updateImage, labLicense, deleteLicense, getProfileDetail, signUpLab, resetPassword, editRequest,
     labPerson, labAddress, forgotPassword, verifyOtp, resendOtp, getProfile, updateLab, changePassword, deleteLab,
-    labImage, deleteLabImage, sendReport, getLabs, getLabDetail,getLabList,getLabDeptTest
+    labImage, deleteLabImage, sendReport, getLabs, getLabDetail, getLabList, getLabDeptTest
 }

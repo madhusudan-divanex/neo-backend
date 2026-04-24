@@ -1,8 +1,12 @@
+import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
+import Doctor from "../../models/Doctor/doctor.model.js";
 import EditRequest from "../../models/EditRequest.js";
 import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
 import HospitalContact from "../../models/Hospital/HospitalContact.js";
 import LabPerson from "../../models/Laboratory/contactPerson.model.js";
 import LabAddress from "../../models/Laboratory/labAddress.model.js";
+import PatientDemographic from "../../models/Patient/demographic.model.js";
+import Patient from "../../models/Patient/patient.model.js";
 import PharPerson from "../../models/Pharmacy/contactPerson.model.js";
 import Inventory from "../../models/Pharmacy/inventory.model.js";
 import MedicineRequest from "../../models/Pharmacy/medicineRequest.model.js";
@@ -31,110 +35,331 @@ export const getEditRequests = async (req, res) => {
     if (type == "hospital") {
       const requests = await EditRequest.find(filter)
         .sort({ createdAt: -1 })
-        .skip(skip).limit(limit)
-        .populate({ path: "hospitalId", match: match, select: "name contactNumber email hospitalId" }).lean()
-      const hospitalIds = requests.map(item => item?.hospitalId?.hospitalId)
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "hospitalId",
+          match: match,
+          select: "name contactNumber email hospitalId"
+        })
+        .lean();
+
+      // ✅ remove null populated docs
+      const filteredRequests = requests.filter(r => r.hospitalId);
+
+      // ✅ correct ID extraction
+      const hospitalIds = filteredRequests
+        .map(item => item?.hospitalId?.hospitalId)
+        .filter(Boolean);
+
       const contacts = await HospitalContact.find({
         hospitalId: { $in: hospitalIds }
       }).lean();
 
-      const address = await HospitalAddress.find({
+      const addresses = await HospitalAddress.find({
         hospitalId: { $in: hospitalIds }
-      }).select('fullAddress hospitalId').lean();
+      }).select("fullAddress hospitalId").lean();
 
-      // 4️⃣ Map contacts by hospitalId
+      // ✅ map creation (O(n))
       const contactMap = {};
       contacts.forEach(c => {
-        contactMap[c.hospitalId.toString()] = c;
+        if (c?.hospitalId) {
+          contactMap[c.hospitalId.toString()] = c;
+        }
       });
 
-      const addresMap = {};
-      address.forEach(c => {
-        addresMap[c.hospitalId.toString()] = c;
+      const addressMap = {};
+      addresses.forEach(a => {
+        if (a?.hospitalId) {
+          addressMap[a.hospitalId.toString()] = a;
+        }
       });
 
-      // 5️⃣ Merge contact into hospital
-      const finalData = requests.map(h => ({
-        ...h,
-        contact: contactMap[h?.hospitalId?.hospitalId.toString()] || null,
-        address: addresMap[h?.hospitalId?.hospitalId?.toString()] || null,
-      }));
+      // ✅ safe merge
+      const finalData = filteredRequests.map(h => {
+        const key = h?.hospitalId?.hospitalId?.toString();
+
+        return {
+          ...h,
+          contact: key ? contactMap[key] || null : null,
+          address: key ? addressMap[key] || null : null
+        };
+      });
+
       const total = await EditRequest.countDocuments(filter);
-      return res.json({ success: true, data: finalData, totalPages: Math.ceil(total / limit), total });
 
+      return res.json({
+        success: true,
+        data: finalData,
+        totalPages: Math.ceil(total / limit),
+        total
+      });
     } else if (type == "lab") {
       const requests = await EditRequest.find(filter)
         .sort({ createdAt: -1 })
-        .skip(skip).limit(limit)
-        .populate({ path: "labId", match: match, select: "name contactNumber email" }).lean()
-      const labIds = requests.map(item => item?.labId?._id)
-      const contactPerson = await LabPerson.find({ userId: { $in: labIds } })
-      const labAddr = await LabAddress.find({ userId: { $in: labIds } }).select('fullAddress userId')
-      const labWithContact = requests.map(lab => {
-        const contact = contactPerson.find(
-          person => person?.userId?.toString() === lab?.labId._id.toString()
-        );
-        const address = labAddr.find(
-          item => item?.userId?.toString() === lab?.labId._id.toString()
-        );
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "labId",
+          match: match,
+          select: "name contactNumber email"
+        })
+        .lean();
+
+      // ✅ filter out failed populate
+      const filteredRequests = requests.filter(r => r.labId);
+
+      // ✅ clean ID list
+      const labIds = filteredRequests
+        .map(item => item?.labId?._id)
+        .filter(Boolean);
+
+      const contactPersons = await LabPerson.find({
+        userId: { $in: labIds }
+      }).lean();
+
+      const labAddresses = await LabAddress.find({
+        userId: { $in: labIds }
+      }).select("fullAddress userId").lean();
+
+      // ✅ convert to maps (O(n))
+      const contactMap = {};
+      contactPersons.forEach(p => {
+        if (p?.userId) {
+          contactMap[p.userId.toString()] = p;
+        }
+      });
+
+      const addressMap = {};
+      labAddresses.forEach(a => {
+        if (a?.userId) {
+          addressMap[a.userId.toString()] = a;
+        }
+      });
+
+      // ✅ safe merge
+      const labWithContact = filteredRequests.map(lab => {
+        const key = lab?.labId?._id?.toString();
 
         return {
           ...lab,
-          contact: contact,
-          address
+          contact: key ? contactMap[key] || null : null,
+          address: key ? addressMap[key] || null : null
         };
       });
+
       const total = await EditRequest.countDocuments(filter);
+
       res.json({
         success: true,
         data: labWithContact,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
+        total
       });
-
-    }else if (type == "pharmacy") {
+    } else if (type == "pharmacy") {
       const requests = await EditRequest.find(filter)
         .sort({ createdAt: -1 })
-        .skip(skip).limit(limit)
-        .populate({ path: "pharId", match: match, select: "name contactNumber email" }).lean()
-      const pharIds = requests.map(item => item?.pharId?._id)
-      const contactPerson = await PharPerson.find({ userId: { $in: pharIds } })
-      const pharAddr = await PharAddress.find({ userId: { $in: pharIds } }).select('fullAddress userId')
-      const pharWithContact = requests.map(phar => {
-        const contact = contactPerson.find(
-          person => person?.userId?.toString() === phar?.pharId._id.toString()
-        );
-        const address = pharAddr.find(
-          item => item?.userId?.toString() === phar?.pharId._id.toString()
-        );
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "pharId",
+          match: match,
+          select: "name contactNumber email"
+        })
+        .lean();
+
+      // ✅ filter out null populated docs
+      const filteredRequests = requests.filter(r => r.pharId);
+
+      // ✅ clean ID list
+      const pharIds = filteredRequests
+        .map(item => item?.pharId?._id)
+        .filter(Boolean);
+
+      const contactPersons = await PharPerson.find({
+        userId: { $in: pharIds }
+      }).lean();
+
+      const pharAddresses = await PharAddress.find({
+        userId: { $in: pharIds }
+      }).select("fullAddress userId").lean();
+
+      // ✅ map creation (O(n))
+      const contactMap = {};
+      contactPersons.forEach(p => {
+        if (p?.userId) {
+          contactMap[p.userId.toString()] = p;
+        }
+      });
+
+      const addressMap = {};
+      pharAddresses.forEach(a => {
+        if (a?.userId) {
+          addressMap[a.userId.toString()] = a;
+        }
+      });
+
+      // ✅ safe merge
+      const pharWithContact = filteredRequests.map(phar => {
+        const key = phar?.pharId?._id?.toString();
 
         return {
           ...phar,
-          contact: contact,
-          address
+          contact: key ? contactMap[key] || null : null,
+          address: key ? addressMap[key] || null : null
         };
       });
+
       const total = await EditRequest.countDocuments(filter);
+
       res.json({
         success: true,
         data: pharWithContact,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
+        total
+      });
+    } else if (type == "doctor") {
+      const requests = await EditRequest.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "doctorId",
+          match: match,
+          select: "name contactNumber email"
+        })
+        .lean();
+
+      // ✅ filter null populated docs
+      const filteredRequests = requests.filter(r => r.doctorId);
+
+      // ✅ clean IDs
+      const doctorIds = filteredRequests
+        .map(item => item?.doctorId?._id)
+        .filter(Boolean);
+
+      const dtData = await Doctor.find({
+        userId: { $in: doctorIds }
+      })
+        .select("profileImage dob userId")
+        .lean();
+
+      const aboutDoctor = await DoctorAbout.find({
+        userId: { $in: doctorIds }
+      })
+        .select("hospitalName specialty userId")
+        .populate("specialty", "name")
+        .lean(); // ✅ important
+
+      // ✅ convert to maps (O(n))
+      const doctorDataMap = {};
+      dtData.forEach(d => {
+        if (d?.userId) {
+          doctorDataMap[d.userId.toString()] = d;
+        }
       });
 
+      const aboutMap = {};
+      aboutDoctor.forEach(a => {
+        if (a?.userId) {
+          aboutMap[a.userId.toString()] = a;
+        }
+      });
+
+      // ✅ safe merge
+      const doctorWithContact = filteredRequests.map(doc => {
+        const key = doc?.doctorId?._id?.toString();
+
+        const doctorData = key ? doctorDataMap[key] : null;
+        const about = key ? aboutMap[key] : null;
+
+        return {
+          ...doc,
+          about: about || null,
+          profileImage: doctorData?.profileImage || null,
+          dob: doctorData?.dob || null
+        };
+      });
+
+      const total = await EditRequest.countDocuments(filter);
+
+      res.json({
+        success: true,
+        data: doctorWithContact,
+        totalPages: Math.ceil(total / limit),
+        total
+      });
+    } else if (type == "patient") {
+      const requests = await EditRequest.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "patientId",
+          match: match,
+          select: "name contactNumber email"
+        })
+        .lean();
+
+      // ✅ filter null populated docs
+      const filteredRequests = requests.filter(r => r.patientId);
+
+      // ✅ clean IDs
+      const patientIds = filteredRequests
+        .map(item => item?.patientId?._id)
+        .filter(Boolean);
+
+      const ptData = await Patient.find({
+        userId: { $in: patientIds }
+      })
+        .select("profileImage userId")
+        .lean(); // ✅ important
+
+      const aboutPatient = await PatientDemographic.find({
+        userId: { $in: patientIds }
+      })
+        .select("dob userId")
+        .lean(); // ✅ important
+
+      // ✅ convert to maps (O(n))
+      const profileMap = {};
+      ptData.forEach(p => {
+        if (p?.userId) {
+          profileMap[p.userId.toString()] = p;
+        }
+      });
+
+      const aboutMap = {};
+      aboutPatient.forEach(a => {
+        if (a?.userId) {
+          aboutMap[a.userId.toString()] = a;
+        }
+      });
+
+      // ✅ safe merge
+      const patientWithContact = filteredRequests.map(p => {
+        const key = p?.patientId?._id?.toString();
+
+        const profile = key ? profileMap[key] : null;
+        const about = key ? aboutMap[key] : null;
+
+        return {
+          ...p,
+          profileImage: profile?.profileImage || null,
+          about: about || null
+        };
+      });
+
+      const total = await EditRequest.countDocuments(filter);
+
+      res.json({
+        success: true,
+        data: patientWithContact,
+        totalPages: Math.ceil(total / limit),
+        total
+      });
     }
 
-    const [requests, total] = await Promise.all([
-      EditRequest.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip).limit(limit)
-        .populate("doctorId", "name contactNumber email profileImage")
-        .populate("patientId", "name contactNumber email profileImage")
-        .populate("labId", "name contactNumber email")
-        .populate("pharId", "name contactNumber email")
-        .populate("hospitalId", "name contactNumber email hospitalId"),
-      EditRequest.countDocuments(filter),
-    ]);
-
-    res.json({ success: true, data: requests, totalPages: Math.ceil(total / limit), total });
   } catch (err) {
     console.log(err)
     res.status(500).json({ success: false, message: "Failed to load requests" });

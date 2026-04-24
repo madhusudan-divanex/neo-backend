@@ -4,6 +4,7 @@ import HospitalPatient from "../../../models/Hospital/HospitalPatient.js";
 import HospitalDoctor from "../../../models/Hospital/HospitalDoctor.js";
 import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import User from "../../../models/Hospital/User.js";
+import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
 
 /* =====================================================
    ADD BED ALLOTMENT
@@ -106,6 +107,7 @@ export const addAllotment = async (req, res) => {
     if (perDayFees !== undefined) {
       bed.pricePerDay = perDayFees;
     }
+    await PatientDepartment.findOneAndUpdate({patientId,hospitalId},{allotmentId:allotment?._id},{new:true})
     await bed.save();
     if (req?.user?.loginUser && hospitalId) {
       await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Added an allotment for patient ${isPatient?.name}.` })

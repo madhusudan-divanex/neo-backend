@@ -986,3 +986,212 @@ export const getHospitalDepartments = async (req, res) => {
     return res.status(500).json({ message: error?.message })
   }
 }
+export const IpdPatientsList = async (req, res) => {
+  try {
+    const hospitalId = req.user._id || req.user.id;
+    const deptType = req.query.deptType
+    const status = req.query.status?.trim(); // could be "Active", "Inactive", etc.
+    let { page = 1, limit = 10, search = "", unique = "" } = req.query;
+
+    page = Math.max(Number(page), 1);
+    limit = Number(limit);
+    search = search.trim();
+
+    const matchStage = {
+      role: "patient"
+    };
+
+    if (search.length > 0) {
+      matchStage.$or = [
+        { name: { $regex: search, $options: "i" } },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$patientId" },
+              regex: search,
+              options: "i"
+            }
+          }
+        },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$email" },
+              regex: search,
+              options: "i"
+            }
+          }
+        }
+      ];
+    }
+
+
+
+    const pipeline = [
+      { $match: matchStage },
+
+      // 🔗 Join PatientDepartment
+      {
+        $lookup: {
+          from: "patientdepartments",
+          localField: "_id",
+          foreignField: "patientId",
+          as: "departmentInfo"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$departmentInfo",
+          preserveNullAndEmptyArrays: false
+        }
+      },
+      {
+        $lookup: {
+          from: "bedallotments",
+          localField: "departmentInfo.allotmentId",
+          foreignField: "_id",
+          as: "allotmentInfo"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$allotmentInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      // 🏥 Filter hospital
+      {
+        $match: {
+          "departmentInfo.hospitalId": hospitalId
+        }
+      },
+
+      // 🔗 Join department details
+      {
+        $lookup: {
+          from: "departments",
+          localField: "departmentInfo.departmentId",
+          foreignField: "_id",
+          as: "departmentDetails"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$departmentDetails",
+          preserveNullAndEmptyArrays: false
+        }
+      },
+
+      // ✅ Apply filters FIRST
+      ...(deptType
+        ? [{
+          $match: {
+            "departmentDetails.type": deptType
+          }
+        }]
+        : []),
+
+      ...(status
+        ? [{
+          $match: {
+            "departmentInfo.status": status
+          }
+        }]
+        : []),
+
+      // ✅ Sort (latest first)
+      {
+        $sort: { "departmentInfo.createdAt": -1 }
+      },
+
+      // ✅ Apply unique AFTER filtering
+      ...(unique === "true"
+        ? [
+          {
+            $group: {
+              _id: "$_id", // group by patient
+              doc: { $first: "$$ROOT" }
+            }
+          },
+          {
+            $replaceRoot: { newRoot: "$doc" }
+          }
+        ]
+        : []),
+
+      // 🔗 Join patient extra info
+      {
+        $lookup: {
+          from: "patients",
+          localField: "patientId",
+          foreignField: "_id",
+          as: "patientUser"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$patientUser",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      // ❌ Remove sensitive fields
+      {
+        $project: {
+          passwordHash: 0,
+          fcmToken: 0,
+          walletBalance: 0,
+          lastSeen: 0,
+          isOnline: 0,
+          createdAt: 0,
+          role: 0,
+          created_by: 0,
+          "patientUser.password": 0,
+          "patientUser.name": 0,
+          "patientUser.email": 0,
+          "patientUser.createdAt": 0,
+          "patientUser.updatedAt": 0,
+        }
+      },
+
+      // 📄 Pagination
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit }
+          ],
+          totalCount: [
+            { $count: "count" }
+          ]
+        }
+      }
+    ];
+
+    const result = await User.aggregate(pipeline);
+    const patients = result[0].data;
+    const total = result[0].totalCount[0]?.count || 0;
+
+    res.json({
+      success: true,
+      data: patients,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};

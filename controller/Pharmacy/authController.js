@@ -90,11 +90,11 @@ const signUpPhar = async (req, res) => {
             });
 
             if (newphar) {
-                const userData = await User.create({ name, email, role: 'pharmacy', created_by: 'self', passwordHash: hashedPassword, pharId: newphar?._id })
+                const userData = await User.create({ name,contactNumber, email, role: 'pharmacy', created_by: 'self', passwordHash: hashedPassword, pharId: newphar?._id })
                 newphar.userId = userData?._id
                 await newphar.save()
                 const token = jwt.sign(
-                    { user: newphar._id },
+                    { user: userData._id },
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );
@@ -121,6 +121,8 @@ const signInPhar = async (req, res) => {
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
+        // const isPhar = await Pharmacy.findById(isExist.pharId);
+        // if (isPhar.status !== "approved") return res.status(200).json({ message: `Your profile was ${isPhar.status}`, success: false });
         if (withOtp) {
             const code = generateOTP()
             if (contactNumber) {
@@ -137,7 +139,7 @@ const signInPhar = async (req, res) => {
             }
             return res.status(200).json({ message: "Otp Sent", success: true })
         } else {
-            const user=isExist
+            const user = isExist
             const [image, address, person, license] = await Promise.all([
                 PharImage.findOne({ userId: user._id }),
                 PharAddress.findOne({ userId: user._id }),

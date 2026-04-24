@@ -224,6 +224,7 @@ export const getLaboratories = async (req, res) => {
 
     const contactPerson = await LabPerson.find({ userId: { $in: labIds } })
     const labAddr = await LabAddress.find({ userId: { $in: labIds } }).select('fullAddress userId')
+   
     const labWithContact = labs.map(lab => {
       const contact = contactPerson.find(
         person => person?.userId?.toString() === lab?.userId._id.toString()
@@ -235,15 +236,13 @@ export const getLaboratories = async (req, res) => {
       return {
         ...lab.toObject(),
         contactPerson: contact,
-        address
+        address:address
       };
     });
-
     const total = await Laboratory.countDocuments(query);
-
-    res.json({
+    return res.json({
       success: true,
-      data: labs,
+      data: labWithContact,
       totalPages: Math.ceil(total / limit)
     });
   } catch (err) {

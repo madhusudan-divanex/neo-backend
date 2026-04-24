@@ -268,7 +268,7 @@ export const register = async (req, res) => {
       process.env.JWT_SECRET
     );
 
-    res.json({ token, user ,success:true});
+    res.json({ token, user, success: true });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -285,6 +285,8 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, hospital.passwordHash);
     if (!match)
       return res.status(400).json({ message: "Invalid password" });
+    // const isHospital = await HospitalBasic.findById(hospital.hospitalId);
+    // if (isHospital.kycStatus !== "approved") return res.status(200).json({ message: `Your profile was ${isHospital.kycStatus}`, success: false });
     if (withOtp) {
       const code = generateOTP()
       if (contactNumber) {

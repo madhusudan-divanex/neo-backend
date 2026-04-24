@@ -112,6 +112,8 @@ const signInDoctor = async (req, res) => {
         const phone = isExist.contactNumber
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid credentials', success: false });
+        // const isDoctor = await Doctor.findById(isExist.doctorId);
+        // if (isDoctor.status !=="approved") return res.status(200).json({ message:`Your profile was ${isDoctor.status}`, success: false });
         if (withOtp) {
             const code = generateOTP()
             if (contactNumber && contactNumber !== "7375046291") {

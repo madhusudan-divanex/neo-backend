@@ -23,6 +23,8 @@ import LabAppointment from "../../models/LabAppointment.js";
 import LabPayment from "../../models/LabPayment.js";
 import PaymentInfo from "../../models/PaymentInfo.js";
 import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
+import Country from "../../models/Hospital/Country.js";
+import { assignNH12 } from "../../utils/nh12.js";
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
     try {
@@ -591,11 +593,16 @@ export const addPatient = async (req, res) => {
             const pt = await User.create({ name, patientId: patient._id, email, role: 'patient', created_by: "lab", created_by_id: labId, passwordHash })
             await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
             await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
-            return res.status(200).json({
-                success: true,
-                message: "Patient added successfully",
-                data: pt
-            });
+            const countryData = await Country.findById(countryId)
+            const data = await assignNH12(pt?._id, countryData?.phonecode)
+            if (data) {
+                const patient=await User.findById(pt?._id)
+                return res.status(200).json({
+                    success: true,
+                    message: "Patient added successfully",
+                    data: patient
+                });
+            }
         }
         return res.status(200).json({
             success: false,
@@ -669,6 +676,6 @@ const getLabInvoice = async (req, res) => {
 
 
 export {
-    getAllLaboratory,  addTest, getTest, deleteTest, 
+    getAllLaboratory, addTest, getTest, deleteTest,
     getTestData, updateTest, labTestAction, saveReport, getTestReport, saveLabInvoice, getLabInvoice
 }

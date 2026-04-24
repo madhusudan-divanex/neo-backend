@@ -18,6 +18,10 @@ const Schema = new mongoose.Schema(
       ref: "Department",
       required:true
     },
+    allotmentId:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BedAllotment",
+    },
     status:{type:String,default:'Active',enum:['Active','Inactive']}
   },
   { timestamps: true }

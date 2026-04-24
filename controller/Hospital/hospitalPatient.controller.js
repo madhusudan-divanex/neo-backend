@@ -370,7 +370,7 @@ export const getPatientById = async (req, res) => {
 };
 
 export const updatePatient = async (req, res) => {
-  const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact, patientId } = req.body
+  const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact, patientId ,ptDeptId} = req.body
   try {
     const hospitalId = req.user._id || req.user.id;
     const patient = await User.findByIdAndUpdate(patientId, { name, email }, { new: true })
@@ -390,11 +390,15 @@ export const updatePatient = async (req, res) => {
     }
     await Patient.findByIdAndUpdate(patient.patientId, { name, gender, contactNumber, email }, { new: true })
     await PatientDemographic.findOneAndUpdate({ userId: patient.patientId }, { dob, contact, address, pinCode, countryId, stateId, cityId }, { new: true })
-    const isExist = await PatientDepartment.findOne({ patientId: patient._id, hospitalId })
-    if (isExist) {
-      await PatientDepartment.findOneAndUpdate({ patientId: patient._id, hospitalId }, { departmentId: department, status }, { new: true })
-    } else {
-      await PatientDepartment.create({ patientId: patient._id, hospitalId, departmentId: department, status })
+    if(ptDeptId){
+      const isExist = await PatientDepartment.findByIdAndUpdate(ptDeptId,{status},{new:true})
+      // if (isExist) {
+      //   const de=await PatientDepartment.find({ patientId: patient._id, hospitalId }, { departmentId: department, status }, { new: true })
+        
+      // } else {
+      //   await PatientDepartment.create({ patientId: patient._id, hospitalId, departmentId: department, status })
+      // }
+
     }
     if (req?.user?.loginUser && hospitalId) {
       await HospitalAudit.create({

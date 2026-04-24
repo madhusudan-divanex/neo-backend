@@ -298,13 +298,16 @@ Permission
 
 Api->
     Hospital Transfer
+
     Birth certificate
     Medical certificate
     Filter certificate
     Death certificate
+    Doctor Appointment 
+    Medical Prescription
 
-Hospital->
-    Hospital Transfer
+Paitent History
+Bed Allotment Button 
 
 FeedBack
 
