@@ -24,6 +24,7 @@ import PatientService from "../../models/LandingPage.js/PatientService.js"
 import ScheduleMedicines from "../../models/Admin/ScheduleMedicines.js"
 import Queries from "../../models/Admin/Queries.js"
 import CardGenerate from "../../models/Admin/CardGenerate.js"
+import SubTestCat from "../../models/SubTestCategory.js"
 export const addSpecialty = async (req, res) => {
     const icon = req?.file?.path
     const { name } = req.body
@@ -114,14 +115,15 @@ export const deleteSpecialty = async (req, res) => {
 
 export const addTestCategory = async (req, res) => {
     const icon = req?.file?.path
-    const { name } = req.body
+    const { name, } = req.body
+    const subCat=JSON.parse(req.body.subCat)
     try {
         const isExist = await TestCategory.findOne({ name })
         if (isExist) {
             safeUnlink(icon)
             return res.status(200).json({ message: "Name already exists", success: false })
         }
-        const data = await TestCategory.create({ name, icon })
+        const data = await TestCategory.create({ name, icon ,subCat})
         if (data) {
             return res.status(200).json({ message: "Test category created", success: true })
         }
@@ -143,6 +145,7 @@ export const getTestCategory = async (req, res) => {
 export const updateTestCategory = async (req, res) => {
     const icon = req?.file?.path
     const { name, spId } = req.body
+    const subCat=JSON.parse(req.body.subCat)
     try {
         const isExist = await TestCategory.findOne({ name, _id: { $ne: spId } })
         if (isExist) {
@@ -152,7 +155,7 @@ export const updateTestCategory = async (req, res) => {
         if (isExist?.icon && icon) {
             safeUnlink(isExist?.icon)
         }
-        const data = await TestCategory.findByIdAndUpdate(spId, { name, icon }, { new: true })
+        const data = await TestCategory.findByIdAndUpdate(spId, { name, icon,subCat }, { new: true })
         if (data) {
             return res.status(200).json({ message: "Test category updated", success: true })
         }
@@ -735,6 +738,70 @@ export const getUsers = async (req, res) => {
             return res.status(200).json({ message: "User found", success: true, data })
         }
         return res.status(404).json({ message: "User not found", success: false })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const getSubTestCategory = async (req, res) => {
+    try {
+        // Get page & limit from query params (with defaults)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        // Fetch paginated data
+        const subTestCat = await SubTestCat.find()
+            .skip(skip)
+            .limit(limit);
+
+        // Optional: total count for frontend pagination
+        const total = await SubTestCat.countDocuments();
+
+        return res.status(200).json({
+            success: true,
+            data: subTestCat,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error?.message,
+            success: false
+        });
+    }
+};
+export const addSubTestCategory= async(req,res)=>{
+    const {name}=req.body
+    try {
+        const isExist=await SubTestCat.findOne({name})
+        if(isExist){
+            return res.status(200).json({ message: "This category name already exists", success: true })
+        }
+        await SubTestCat.create({name})
+        return res.status(200).json({ message: "Sub category created", success: true })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const updateSubTestCategory= async(req,res)=>{
+    const {name,subCatId}=req.body
+    try {
+        const isExist=await SubTestCat.findOne({name,_id:{$ne:subCatId}})
+        if(isExist){
+            return res.status(200).json({ message: "This category name already exists", success: true })
+        }
+        const isUpdate=await SubTestCat.findByIdAndUpdate(subCatId,{name},{new:true})
+        if(isUpdate){
+            return res.status(200).json({ message: "Sub category updated", success: true })
+        }else{
+            return res.status(200).json({ message: "Sub category not updated created", success: false })
+        }
     } catch (error) {
         return res.status(200).json({ message: error?.message, success: false })
     }

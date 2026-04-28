@@ -886,7 +886,7 @@ const actionLabAppointment = async (req, res) => {
         }
 
         // Only send notifications if the status is updated
-        if (status) {
+        if (updateData.status) {
             if (req?.user?.loginUser && req.user.id && req.user.type == "hospital") {
                 await HospitalAudit.create({
                     hospitalId: req.user.id, actionUser: req?.user?.loginUser,
@@ -900,7 +900,7 @@ const actionLabAppointment = async (req, res) => {
             }
             const isUser = await User.findById(isPatient.patientId);
 
-            if (status === 'approved') {
+            if (updateData.status === 'approved') {
                 if (isUser.fcmToken) {
                     await sendPush({
                         token: isUser.fcmToken,
@@ -919,7 +919,7 @@ const actionLabAppointment = async (req, res) => {
                     message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleDateString('en-GB')} has been approved by ${isExist.name}`
                 });
 
-            } else if (status === 'rejected') {
+            } else if (updateData.status === 'rejected') {
                 if (isUser.fcmToken) {
                     await sendPush({
                         token: isUser.fcmToken,
@@ -1063,8 +1063,8 @@ const getDoctorAppointmentData = async (req, res) => {
                     select: 'shortName price'
                 })
                 .populate({
-                    path: 'labTest.department',
-                    select: 'departmentName'
+                    path: 'labTest.testCat labTest.subCat',
+                    select: 'name'
                 })
                 .populate('prescriptionId').lean();
         } else {
@@ -1081,8 +1081,8 @@ const getDoctorAppointmentData = async (req, res) => {
                     select: 'shortName price'
                 })
                 .populate({
-                    path: 'labTest.department',
-                    select: 'departmentName'
+                    path: 'labTest.testCat labTest.subCat',
+                    select: 'name'
                 })
                 .populate('prescriptionId').lean();
         }

@@ -54,7 +54,7 @@ const addTest = async (req, res) => {
                 labId,
                 code,
                 shortName,
-                department,
+                category,subCategory,
                 sample,
                 price,
                 component,
@@ -92,7 +92,7 @@ const addTest = async (req, res) => {
                     const certificates = await HospitalCertificate.find({ hospitalId: basicId }).session(session);
 
                     if (!basic || !address || !contact) {
-                        throw new Error("Hospital profile incomplete");
+                        throw new Error("Please Complete your profile first!");
                     }
 
                     // =========================
@@ -193,7 +193,7 @@ const addTest = async (req, res) => {
                     hospitalId,
                     code,
                     shortName,
-                    department,
+                    category,subCategory,
                     sample,
                     price,
                     component,
@@ -236,7 +236,7 @@ const addTest = async (req, res) => {
                     labId,
                     code,
                     shortName,
-                    department,
+                    category,subCategory,
                     sample,
                     price,
                     component,
@@ -357,7 +357,7 @@ const labTestAction = async (req, res) => {
 };
 const getTest = async (req, res) => {
     const ownerId = req.params.id
-    const { page, limit = 10, type = 'lab', name } = req.query
+    const { page, limit = 10, type = 'lab', name ,status} = req.query
     try {
         const user = await User.findById(ownerId);
         if (!user) {
@@ -385,8 +385,11 @@ const getTest = async (req, res) => {
                 $options: "i"
             };
         }
+        if(status){
+            filter.status=status
+        }
 
-        const data = await Test.find(filter).populate('department', 'departmentName').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+        const data = await Test.find(filter).populate('category subCategory', 'name').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
         const totalTest = await Test.countDocuments(filter)
         return res.status(200).json({
             success: true,
@@ -408,7 +411,7 @@ const getTest = async (req, res) => {
 const getTestData = async (req, res) => {
     const testId = req.params.id
     try {
-        const isExist = await Test.findById(testId).populate('department', 'departmentName');
+        const isExist = await Test.findById(testId).populate('category subCategory', 'name');
         if (!isExist) return res.status(200).json({ message: "test  not found", success: false })
         return res.status(200).json({
             success: true,
@@ -457,6 +460,9 @@ const saveReport = async (req, res) => {
         const isAppointment = await LabAppointment.findOne({ labId, _id: appointmentId })
         if (!isAppointment) {
             return res.status(404).json({ message: "appointement not found", success: false })
+        }
+        if (!isAppointment.collectionDate) {
+            return res.status(404).json({ message: "Please collect sample before saving the report", success: false })
         }
         const component = JSON.parse(req.body.component)
         const isExist = await TestReport.findOne({ testId, appointmentId })

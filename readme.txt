@@ -306,10 +306,34 @@ Api->
     Doctor Appointment 
     Medical Prescription
 
-Paitent History
-Bed Allotment Button 
+Admin->
+    Sub Test Category
+Hospital,Doctor,Laboratory,Patient->
+    Test & Sub TestCateogry
+
+Trading FeedBack->
+ 1 bid activity at a time 
+ Bid marker 
+
+
+24 Pdf Templates
+Hospital Transfer flow 
+Admin
+Patient list 
+Patient Detail
+Patient doctor appointment
+Patient doctor appointment detail
+Patient lab appointment
+Paitent Prescription
+Patient Lab Report
+
+
 
 FeedBack
+Neo Ai 
+Patient Detail 
+Department issue 
+
 
 https://hospitals.neohealthcard.com
     phone:8386990249

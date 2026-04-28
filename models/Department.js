@@ -28,7 +28,7 @@ const departmentSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["OPD", "IPD", "EMERGENCY", "LAB"],
+      enum: ["OPD", "IPD", "EMERGENCY", "LAB","PHARMACY"],
     },
 
     headOfDepartment: {

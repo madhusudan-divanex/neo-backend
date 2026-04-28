@@ -295,3 +295,27 @@ export const approveRejectLab = async (req, res) => {
     res.json({ success: true, message: `Lab ${status}`, data: lab });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+export const getLabAppointmentData=async(req,res)=>{
+  const id=req.params.id
+  try {
+    const appointmentData=await LabAppointment.findById(id)
+    .populate('labId patientId','name email contactNumber nh12')
+    .populate('testId')
+    if(!appointmentData){
+      return res.status(404).json({message:"Appointment data not found",success:false})
+    }
+    const labPersonal=await Laboratory.findOne({userId:appointmentData?.labId?._id}).lean()
+    const labAbout=await LabAddress.findOne({userId:appointmentData?.labId?._id}).lean()
+    .select('fullAddress cityId stateId countryId').populate('cityId countryId stateId','name')
+
+    const ptPersonal=await Patient.findOne({userId:appointmentData?.patientId?._id}).lean()
+    const ptDemo=await PatientDemographic.findOne({userId:appointmentData?.patientId?._id})
+    .populate('cityId countryId stateId','name').lean()
+
+    const patient={...ptPersonal,...ptDemo}
+    const lab={...labPersonal,...labAbout}
+    return res.status(200).json({message:"Appointment Data fetched",patient,lab,appointmentData,success:true})
+  } catch (error) {
+    return res.status(500).json({message:error?.message,success:false})
+  }
+}

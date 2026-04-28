@@ -453,6 +453,11 @@ const updatePatient = async (req, res) => {
     try {
         const isExist = await User.findById(userId);
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
+        const patient=await Patient.findById(isExist.patientId)
+        if (!patient) {
+            return res.status(400).json({ message: 'Patient not exist' });
+        }
+        
         // check email in User collection
         const patientEmailExist = await User.findOne({
             email,
@@ -472,8 +477,8 @@ const updatePatient = async (req, res) => {
         if (userContactExist) {
             return res.status(400).json({ message: 'Contact number already exist' });
         }
-        if (profileImage && alreadyEmail.profileImage) {
-            safeUnlink(alreadyEmail.profileImage)
+        if (profileImage && patient.profileImage) {
+            safeUnlink(patient.profileImage)
         }
         const updatePatient = await Patient.findByIdAndUpdate(isExist.patientId, { email, contactNumber, name, gender, profileImage }, { new: true })
         if (updatePatient) {

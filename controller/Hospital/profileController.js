@@ -27,6 +27,8 @@ import Department from "../../models/Department.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 import HospitalTransfer from "../../models/Hospital/HospitalTransfer.js";
 import HospitalImage from "../../models/Hospital/HospitalImage.js";
+import PatientDemographic from "../../models/Patient/demographic.model.js";
+import Patient from "../../models/Patient/patient.model.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -954,10 +956,11 @@ export const createTransfer = async (req, res) => {
       documentShared.prescriptions = isAllotment.prescriptionId
     }
     const transfer = new HospitalTransfer({
-      ...req.body, documentShared,
+      ...req.body, documentShared,sendingDoctor:isAllotment.primaryDoctorId,
       toHospital: isHospital._id, fromHospital: hospitalId, receivingDoctor: isStaffUser._id
     });
     const savedTransfer = await transfer.save();
+    isAllotment.transferid=savedTransfer?._id
     res.status(201).json({
       success: true,
       data: savedTransfer,
@@ -1195,3 +1198,25 @@ export const IpdPatientsList = async (req, res) => {
     });
   }
 };
+
+export const getPatientTransferLetter=async(req,res)=>{
+  const id=req.params.id
+  try {
+    const isExist=await HospitalTransfer.findById(id).populate('fromHospital toHospital sendingDoctor receivingDoctor patientId','name nh12 email contactNumber')
+    .populate('departmentTo departmentFrom','departmentName')
+    if(!isExist){
+      return res.status(404).json({ message: "Transfer data not found" ,success:false})
+    }
+    const hospitalUser=await User.findById(isExist.fromHospital?._id).select('nh12 name email contactNumber hospitalId').lean()
+    const hospitalAddress=await HospitalAddress.findOne({hospitalId:hospitalUser?.hospitalId}).populate('city country state','name').lean()
+    const ptDemo=await PatientDemographic.findOne({userId:isExist.patientId?._id}).select('fullAddress bloodGroup dob').lean()
+    const ptPersonal=await Patient.findOne({userId:isExist.patientId?._id}).select('gender').lean()
+    const patientData={...ptDemo,...ptPersonal}
+    const organization={...hospitalUser,...hospitalAddress}
+    return res.status(200).json({message:"Hospital Transfer data fetched",data:isExist,organization,patientData,success:true})
+
+
+  } catch (error) {
+    return res.status(500).json({ message: error?.message ,success:false})
+  }
+}

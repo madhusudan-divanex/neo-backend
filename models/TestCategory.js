@@ -6,6 +6,7 @@ const spSchema=new Schema({
         unique:true,
         required:true
     },
+    subCat: [{type: mongoose.Schema.Types.ObjectId, ref: 'SubTestCat'  }],
     icon:{
         type:String,
     },

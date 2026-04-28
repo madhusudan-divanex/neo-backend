@@ -29,9 +29,13 @@ const requestSchema = new Schema({
   sample: [sampleSchema],
   packageType: { type: String, enum: ['single', 'profile', 'pacakge'], default: 'single' },
   
-  department: {
+  category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Department', index: true
+    ref: 'test-category', index: true
+  },
+  subCategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubTestCat', index: true
   },
   testType: { type: String, required: true },
   price: { type: String, required: true },

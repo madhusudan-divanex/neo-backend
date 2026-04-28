@@ -1,5 +1,5 @@
 import express from 'express'
-import { addDoctorByAdmin, addHospitalByAdmin, addHospitalCategory, addLabByAdmin, addPatientBanner, addPatientByAdmin, addPharmacyByAdmin, addPharmacyCategory, addScheduleMedicines, addSpecialty, addTestCategory,  deleteContactQuery,  deleteHospitalCategory,  deletePatientBanner, deletePharmacyCategory, deleteSpecialty, deleteTestCategory, generateCard, getCmsData, getContactQuery, getHospitalCategory, getPatientBanner, getPharmacyCategory, getScheduleMedicines, getServices, getSpecialty, getTestCategory, getUsers, updateHospitalCategory, updatePatientBanner, updatePharmacyCategory, updateScheduleMedicines, updateSpecialty, updateTestCategory } from '../controller/Admin/adminController.js'
+import { addDoctorByAdmin, addHospitalByAdmin, addHospitalCategory, addLabByAdmin, addPatientBanner, addPatientByAdmin, addPharmacyByAdmin, addPharmacyCategory, addScheduleMedicines, addSpecialty, addSubTestCategory, addTestCategory,  deleteContactQuery,  deleteHospitalCategory,  deletePatientBanner, deletePharmacyCategory, deleteSpecialty, deleteTestCategory, generateCard, getCmsData, getContactQuery, getHospitalCategory, getPatientBanner, getPharmacyCategory, getScheduleMedicines, getServices, getSpecialty, getSubTestCategory, getTestCategory, getUsers, updateHospitalCategory, updatePatientBanner, updatePharmacyCategory, updateScheduleMedicines, updateSpecialty, updateSubTestCategory, updateTestCategory } from '../controller/Admin/adminController.js'
 import getUploader from '../config/multerConfig.js'
 import { getAdminDashboard } from '../controller/Admin/dashboard.controller.js'
 import adminAuth from '../middleware/adminAuth.js'
@@ -49,4 +49,8 @@ admin.delete('/contact-query/:id',adminAuth,deleteContactQuery)
 
 admin.post('/generate-card',adminAuth,generateCard)
 admin.get('/users',adminAuth,getUsers)
+
+admin.get('/sub-test-category',getSubTestCategory)
+admin.post('/sub-test-category',adminAuth,addSubTestCategory)
+admin.put('/sub-test-category',adminAuth,updateSubTestCategory)
 export default admin

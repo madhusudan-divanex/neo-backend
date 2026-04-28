@@ -142,4 +142,5 @@ router.post('/sell-medicine',authMiddleware,checkPermission('pharmacy',"sellMedi
 
 router.get('/department/:id',auth,profile.getHospitalDepartments)
 router.get('/ipd-patient',auth,profile.IpdPatientsList)
+router.get('/transfer-data/:id',profile.getPatientTransferLetter)
 export default router;

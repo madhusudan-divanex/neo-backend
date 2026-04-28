@@ -24,6 +24,7 @@ import PatientDemographic from "../../models/Patient/demographic.model.js";
 import Patient from "../../models/Patient/patient.model.js";
 import Prescriptions from "../../models/Prescriptions.js";
 import BedAllotment from "../../models/Hospital/BedAllotment.js";
+import TestCategory from "../../models/TestCategory.js";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -1241,5 +1242,13 @@ export const prescriptionPdf = async (req, res) => {
   } catch (error) {
     console.log(error)
     return res.status(500).json({ success: false, message: error?.message })
+  }
+}
+export const getTestCatAndSub = async(req,res)=>{
+  try {
+    const testData=await TestCategory.find().populate('subCat')
+    return res.status(200).json({message:"Test category and sub category data fetched",success:true,data:testData})
+  } catch (error) {
+    return res.status(500).json({message:error?.message,success:false})
   }
 }

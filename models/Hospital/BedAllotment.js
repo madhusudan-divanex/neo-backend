@@ -86,6 +86,10 @@ const BedAllotmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'test-report'
     }],
+    transferId:{
+       type: mongoose.Schema.Types.ObjectId,
+      ref: 'HospitalTransfer'
+    },
     status: {
       type: String,
       enum: ["Active", "Discharged"],

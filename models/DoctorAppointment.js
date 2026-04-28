@@ -31,16 +31,20 @@ const requestSchema = new Schema({
     date: { type: Date, required: true },
     customId: { type: String,},
     fees: { type: String, required: true },
-    note: { type: Date },
+    note: { type: String },
     labTest: {
         lab: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         },
-        department: {
+        testCat: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Department',
+            ref: 'test-category',
         },
+        subCat: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'SubTestCat',
+        }],
         labTests: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Test'

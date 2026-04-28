@@ -8,7 +8,7 @@ import {
   getDoctorAppointments,
   toggleDoctorStatus,
   deleteDoctor,
-  approveRejectDoctor
+  approveRejectDoctor,getDoctorAppointmentData
 } from "../../controller/Admin/doctor.controller.js";
 
 const router = express.Router();
@@ -26,8 +26,10 @@ router.get("/all-appointments", adminAuth, async (req, res) => {
     const data  = await DoctorAppointment.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit).limit(Number(limit))
-      .populate("doctorId", "name profileImage contactNumber")
-      .populate("patientId", "name profileImage contactNumber");
+      .populate("doctorId", "name profileImage contactNumber nh12")
+      .populate("patientId", "name profileImage contactNumber nh12");
+
+    
     res.json({ success: true, data, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -36,37 +38,7 @@ router.get("/all-appointments", adminAuth, async (req, res) => {
 
 // ── Param routes AFTER specific routes ───────────────────────────────
 // Single appointment detail
-router.get("/appointment/:id", adminAuth, async (req, res) => {
-  try {
-    const appt = await DoctorAppointment.findById(req.params.id)
-      .populate("patientId", "name contactNumber email profileImage unique_id")
-      .populate("doctorId",  "name contactNumber email profileImage unique_id")
-      .populate("prescriptionId")
-      .populate({ path: "labTest.lab",   select: "name contactNumber email" })
-      .populate({ path: "labTest.labTests", select: "name shortName" })
-      .lean();
-    if (!appt) return res.status(404).json({ success: false, message: "Not found" });
-
-    // Get patient demographic for age/gender/address
-    const User = (await import("../../models/Hospital/User.js")).default;
-    const PatDemog = (await import("../../models/Patient/demographic.model.js")).default;
-    const demographic = appt.patientId?._id
-      ? await PatDemog.findOne({ userId: appt.patientId._id })
-          .populate("countryId stateId cityId", "name").lean()
-      : null;
-
-    // Get doctor speciality
-    const DoctorAboutModel = (await import("../../models/Doctor/addressAbout.model.js")).default;
-    const docAbout = appt.doctorId?._id
-      ? await DoctorAboutModel.findOne({ userId: appt.doctorId._id })
-          .populate("specialty", "name").lean()
-      : null;
-
-    res.json({ success: true, data: { ...appt, demographic, docAbout } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
+router.get("/appointment/:id", adminAuth,getDoctorAppointmentData);
 
 router.get("/:id", adminAuth, getDoctorDetail);
 router.get("/:id/appointments", adminAuth, getDoctorAppointments);

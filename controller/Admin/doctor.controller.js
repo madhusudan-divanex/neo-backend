@@ -6,6 +6,8 @@ import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
 import DoctorKyc from '../../models/Doctor/kyc.model.js';
 import MedicalLicense from '../../models/Doctor/medicalLicense.model.js';
 import DoctorEduWork from '../../models/Doctor/eduWork.js';
+import Patient from "../../models/Patient/patient.model.js";
+import PatientDemographic from "../../models/Patient/demographic.model.js";
 
 
 export const getDoctorDetail = async (req, res) => {
@@ -243,3 +245,28 @@ export const approveRejectDoctor = async (req, res) => {
     res.json({ success: true, message: `Doctor ${status}`, data: doctor });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
+export const getDoctorAppointmentData=async(req,res)=>{
+  const id=req.params.id
+  try {
+    const appointmentData=await DoctorAppointment.findById(id)
+    .populate('doctorId patientId','name email contactNumber nh12')
+    .populate('prescriptionId').populate('labTest.testCat labTest.subCat')
+    if(!appointmentData){
+      return res.status(404).json({message:"Appointment data not found",success:false})
+    }
+    const doctorPersonal=await Doctor.findOne({userId:appointmentData?.doctorId?._id}).lean()
+    const doctorAbout=await DoctorAbout.findOne({userId:appointmentData?.doctorId?._id}).lean()
+    .select('specialty fees').populate('specialty','name')
+
+    const ptPersonal=await Patient.findOne({userId:appointmentData?.patientId?._id}).lean()
+    const ptDemo=await PatientDemographic.findOne({userId:appointmentData?.patientId?._id})
+    .populate('cityId countryId stateId','name').lean()
+
+    const patient={...ptPersonal,...ptDemo}
+    const doctor={...doctorPersonal,...doctorAbout}
+    return res.status(200).json({message:"Appointment Data fetched",patient,doctor,appointmentData,success:true})
+  } catch (error) {
+    return res.status(500).json({message:error?.message,success:false})
+  }
+}

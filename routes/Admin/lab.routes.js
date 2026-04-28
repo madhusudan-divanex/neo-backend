@@ -6,9 +6,10 @@ import {
   deleteLab,
   getLaboratorieDetail,
   LabAppointmentGet,
-  getLabAppointmentDetail,
+  getLabAppointmentDetail,getLabAppointmentData,
   approveRejectLab
 } from "../../controller/Admin/lab.controller.js";
+import adminAuth from "../../middleware/adminAuth.js";
 
 const router = express.Router();
 
@@ -34,27 +35,7 @@ router.get("/all-appointments", async (req, res) => {
 
 
 // Single lab appointment detail
-router.get("/appointment/:id", async (req, res) => {
-  try {
-    const appt = await LabAppointment.findById(req.params.id)
-      .populate("patientId", "name contactNumber email profileImage unique_id")
-      .populate("labId",     "name contactNumber email profileImage unique_id")
-      .populate("doctorId",  "name contactNumber email profileImage unique_id")
-      .populate("testId",    "name shortName")
-      .lean();
-    if (!appt) return res.status(404).json({ success: false, message: "Not found" });
-
-    // Patient demographic
-    const PatDemog = (await import("../../models/Patient/demographic.model.js")).default;
-    const demographic = appt.patientId?._id
-      ? await PatDemog.findOne({ userId: appt.patientId._id }).lean()
-      : null;
-
-    res.json({ success: true, data: { ...appt, demographic } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
+router.get("/appointment/:id",adminAuth,getLabAppointmentData);
 
 // ── Param routes AFTER ───────────────────────────────────────────────
 router.get("/lab-detail/:id",        getLaboratorieDetail);

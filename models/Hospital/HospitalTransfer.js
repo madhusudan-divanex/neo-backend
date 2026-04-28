@@ -16,6 +16,11 @@ const transferSchema = new Schema({
         ref: "User",
         required: true,
     },
+    sendingDoctor: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

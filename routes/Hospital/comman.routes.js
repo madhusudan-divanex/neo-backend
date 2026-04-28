@@ -26,7 +26,8 @@ import {
   addOrUpatePaymentInfo,
   assignPermission,
   doctorAppointmentInvoice,
-  prescriptionPdf
+  prescriptionPdf,
+  getTestCatAndSub
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
@@ -68,4 +69,5 @@ router.get("/user-data/:nh12",authMiddleware,getUserDataController)
 router.post("/payment-info",authMiddleware,uploader.single('qr'),addOrUpatePaymentInfo)
 router.get("/doctor-appointment-payment/:id",doctorAppointmentInvoice)
 router.get("/prescription/:id",prescriptionPdf)
+router.get('/test-category',getTestCatAndSub)
 export default router;
