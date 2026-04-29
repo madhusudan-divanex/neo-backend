@@ -13,9 +13,13 @@ const requestSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
-    testId: [{
-        type: mongoose.Schema.Types.ObjectId,
+    testId:[{
+      type: mongoose.Schema.Types.ObjectId,
         ref: 'Test', required: true
+    }],
+    subCatId: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubTestCat', required: true
     }],
     doctorAp: {
         type: mongoose.Schema.Types.ObjectId,
@@ -23,7 +27,7 @@ const requestSchema = new Schema({
     },
     customId: { type: String},
     date: { type: Date, required: true },
-    fees: { type: String, required: true },
+    fees: { type: Number, required: true },
     staff:{
          type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

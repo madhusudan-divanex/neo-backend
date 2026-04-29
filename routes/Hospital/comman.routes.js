@@ -27,7 +27,10 @@ import {
   assignPermission,
   doctorAppointmentInvoice,
   prescriptionPdf,
-  getTestCatAndSub
+  getTestCatAndSub,
+  getSubTestCatById,
+  getMyTestCat,
+  getSubTestCatDataById
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
@@ -70,4 +73,7 @@ router.post("/payment-info",authMiddleware,uploader.single('qr'),addOrUpatePayme
 router.get("/doctor-appointment-payment/:id",doctorAppointmentInvoice)
 router.get("/prescription/:id",prescriptionPdf)
 router.get('/test-category',getTestCatAndSub)
+router.get('/my-test-category',authMiddleware,getMyTestCat)
+router.get('/sub-test-category/:id',getSubTestCatById)
+router.get('/sub-test-category-data/:id',getSubTestCatDataById)
 export default router;

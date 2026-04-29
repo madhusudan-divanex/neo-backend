@@ -134,7 +134,7 @@ export const getHospitalPatientReport = async (req, res) => {
     const aptIds = appointments.map(item => item._id)
     const labAppointments = await LabAppointment.find({ _id:{ $in: aptIds }, status: 'deliver-report' })
     const labAptIds = labAppointments.map(item => item?._id)
-    const labReports = await TestReport.find({ appointmentId: { $in: labAptIds } }).populate('labId').populate('testId')
+    const labReports = await TestReport.find({ appointmentId: { $in: labAptIds } }).populate('labId').populate('subCatId','subCategory')
       .populate('appointmentId')
     return res.status(200).json({ message: "labReports", data: labReports, success: true })
 

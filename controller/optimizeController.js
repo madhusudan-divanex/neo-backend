@@ -7,6 +7,10 @@ import HospitalBasic from "../models/Hospital/HospitalBasic.js";
 import User from "../models/Hospital/User.js";
 import LabAppointment from "../models/LabAppointment.js";
 import LabAddress from "../models/Laboratory/labAddress.model.js";
+import PatientDemographic from "../models/Patient/demographic.model.js";
+import MedicalHistory from "../models/Patient/medicalHistory.model.js";
+import Patient from "../models/Patient/patient.model.js";
+import PatientPrescriptions from "../models/Patient/prescription.model.js";
 import Rating from "../models/Rating.js";
 import Speciality from "../models/Speciality.js";
 import StaffEmployement from "../models/Staff/StaffEmployement.js";
@@ -106,12 +110,12 @@ const getPatientDashboard = async (req, res) => {
 const getLabAptData = async (req, res) => {
     const appointmentId = req.params.id;
     try {
-        let isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
+        let isExist = await LabAppointment.findById(appointmentId).populate({ path: 'subCatId', select: 'subCategory' })
                 .populate({ path: 'labId', select: 'name email contactNumber nh12 labId role', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
                 .populate({ path: 'doctorId', select: 'name email contactNumber nh12 doctorId' })
         
         const labAddress = await LabAddress.findOne({ userId: isExist?.labId?._id }).select('fullAddress')
-        const labReports = await TestReport.find({ appointmentId: isExist?._id }).select('upload createdAt')
+        const labReports = await TestReport.find({ appointmentId: isExist?._id }).select('upload createdAt testId subCatId').populate('subCatId','subCategory')
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
         return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, labAddress, labReports,  success: true })
     } catch (err) {
@@ -220,4 +224,21 @@ const saveFrotnendQuery=async(req,res)=>{
         return res.status(500).json({message:error?.message,success:false})
     }
 }
-export { getPatientDashboard,getLabAptData ,getHospitalDoctor,saveFrotnendQuery}
+const getScanUserData=async(req,res)=>{
+    try {
+        const isUser=await User.findOne({nh12:req.params.id}).select('-passwordHash -fcmToken')
+        if(!isUser){
+            return res.status(404).json({message:"User not found",success:false})
+        }
+        const userId=isUser._id
+        if(isUser.role=="patient"){
+            const patient=await Patient.findById(isUser.patientId)
+            const ptDemo=await PatientDemographic.findOne({userId})
+            const medicalHistory=await MedicalHistory.findOne({userId})
+            const prescriptions=await PatientPrescriptions.findOne({userId})
+        }
+    } catch (error) {
+        return res.status(500).json({message:error?.message,success:false})
+    }
+}
+export { getPatientDashboard,getLabAptData,getScanUserData ,getHospitalDoctor,saveFrotnendQuery}

@@ -1262,7 +1262,7 @@ const getLabDetail = async (req, res) => {
         const labAddress = await LabAddress.findOne({ userId }).populate('countryId').populate('stateId')
             .populate('cityId').sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const labTest = await Test.find({ labId: user._id }).select('shortName price status')
+        const labTest = await Test.find({ labId: user._id }).populate('category').populate('subCatData.subCat','subCategory')
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?._id })

@@ -25,6 +25,8 @@ import Patient from "../../models/Patient/patient.model.js";
 import Prescriptions from "../../models/Prescriptions.js";
 import BedAllotment from "../../models/Hospital/BedAllotment.js";
 import TestCategory from "../../models/TestCategory.js";
+import SubTestCat from "../../models/SubTestCategory.js";
+import Test from "../../models/Laboratory/test.model.js";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -1248,6 +1250,38 @@ export const getTestCatAndSub = async(req,res)=>{
   try {
     const testData=await TestCategory.find().populate('subCat')
     return res.status(200).json({message:"Test category and sub category data fetched",success:true,data:testData})
+  } catch (error) {
+    return res.status(500).json({message:error?.message,success:false})
+  }
+}
+export const getSubTestCatById = async(req,res)=>{
+  try {
+    const testData=await SubTestCat.find({category:req.params.id})
+    if(testData.length==0){
+      return res.status(404).json({message:"Sub Test category  data not exist",success:false})
+    }
+    return res.status(200).json({message:"Sub Test category  data fetched",success:true,data:testData})
+  } catch (error) {
+    return res.status(500).json({message:error?.message,success:false})
+  }
+}
+export const getSubTestCatDataById = async(req,res)=>{
+  try {
+    const testData=await SubTestCat.findById(req.params.id).populate('category','name')
+    if(testData.length==0){
+      return res.status(404).json({message:"Sub Test category  data not exist",success:false})
+    }
+    return res.status(200).json({message:"Sub Test category  data fetched",success:true,data:testData})
+  } catch (error) {
+    return res.status(500).json({message:error?.message,success:false})
+  }
+}
+export const getMyTestCat = async(req,res)=>{
+  const userId=req.user.id || req.user.userId
+  try {
+    const testData=await Test.find({labId:userId}).select('category')
+   
+    return res.status(200).json({message:" Test category  data fetched",success:true,data:testData})
   } catch (error) {
     return res.status(500).json({message:error?.message,success:false})
   }

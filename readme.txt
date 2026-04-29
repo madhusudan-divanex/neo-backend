@@ -318,21 +318,28 @@ Trading FeedBack->
 
 24 Pdf Templates
 Hospital Transfer flow 
-Admin
-Patient list 
-Patient Detail
-Patient doctor appointment
-Patient doctor appointment detail
-Patient lab appointment
-Paitent Prescription
-Patient Lab Report
+Admin Paitent->
+ list 
+ Detail
+ doctor appointment
+ doctor appointment detail
+ lab appointment
+ Prescription
+ Lab Report
 
+Allotment Lab test 
+Manual lab Appointment 
+Qr & Barcode Scan
+Admin 
+Filter 
+Template 
 
 
 FeedBack
 Neo Ai 
 Patient Detail 
 Department issue 
+Pharmacy Department
 
 
 https://hospitals.neohealthcard.com

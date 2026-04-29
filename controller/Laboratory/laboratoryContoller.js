@@ -52,17 +52,11 @@ const addTest = async (req, res) => {
 
             const {
                 labId,
-                code,
-                shortName,
-                category,subCategory,
-                sample,
-                price,
-                component,
-                packageType, testType, specialApproval, fastingRequired,
-                testProcessing,
-                type,
+                category,
+                type, totalAmount,
                 hospitalId
             } = req.body;
+            const subCatData = JSON.parse(req.body.subCatData)
 
             const baseUrl = `api/file/`;
 
@@ -190,26 +184,19 @@ const addTest = async (req, res) => {
                 // =========================
                 await Test.create([{
                     labId: hospitalId,
-                    hospitalId,
-                    code,
-                    shortName,
-                    category,subCategory,
-                    sample,
-                    price,
-                    component,
-                    packageType, testType, specialApproval, fastingRequired,
-                    testProcessing,
+                    hospitalId, totalAmount,
+                    category, subCatData,
                     type,
                 }], { session });
                 if (req.user.id && req.user.type == "hospital") {
                     if (req?.user?.loginUser) {
                         await HospitalAudit.create({
                             hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                            note: `An lab test ${shortName} was added.`
+                            note: `An lab test was added.`
                         })
                     } else {
                         await HospitalAudit.create({
-                            hospitalId: req.user.id, note: `An lab test ${shortName} was added.`
+                            hospitalId: req.user.id, note: `An lab test  was added.`
                         })
                     }
                 }
@@ -233,15 +220,8 @@ const addTest = async (req, res) => {
                 }
 
                 await Test.create([{
-                    labId,
-                    code,
-                    shortName,
-                    category,subCategory,
-                    sample,
-                    price,
-                    component,
-                    packageType, testType, specialApproval, fastingRequired,
-                    testProcessing,
+                    labId, totalAmount,
+                    category, subCatData,
                     type,
                 }], { session });
 
@@ -271,29 +251,15 @@ const addTest = async (req, res) => {
 };
 
 const updateTest = async (req, res) => {
-    const { testId, code,
-        shortName,
-        department,
-        sample,
-        price,
-        component,
-        packageType, testType, specialApproval, fastingRequired,
-        testProcessing,
-        type, } = req.body
+    const { testId, category, totalAmount,} = req.body
+    const subCatData = JSON.parse(req.body.subCatData)
+
     try {
         const isExist = await Test.findById(testId);
         if (!isExist) return res.status(200).json({ message: "Test  not found", success: false })
 
         const update = await Test.findByIdAndUpdate(testId, {
-            code,
-            shortName,
-            department,
-            sample,
-            price,
-            component,
-            packageType, testType, specialApproval, fastingRequired,
-            testProcessing,
-            type,
+            category,subCatData,totalAmount
         }, { new: true });
 
         if (update) {
@@ -301,11 +267,11 @@ const updateTest = async (req, res) => {
                 if (req?.user?.loginUser) {
                     await HospitalAudit.create({
                         hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                        note: `An lab test ${shortName} details was updated.`
+                        note: `An lab test  details was updated.`
                     })
                 } else {
                     await HospitalAudit.create({
-                        hospitalId: req.user.id, note: `An lab test ${shortName} details was updated.`
+                        hospitalId: req.user.id, note: `An lab test  details was updated.`
                     })
                 }
 
@@ -336,11 +302,11 @@ const labTestAction = async (req, res) => {
                 if (req?.user?.loginUser) {
                     await HospitalAudit.create({
                         hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                        note: `A lab test ${isExist?.shortName} status was updated to ${status}.`
+                        note: `A lab test status was updated  .`
                     })
                 } else {
                     await HospitalAudit.create({
-                        hospitalId: req.user.id, note: `A lab test ${isExist?.shortName} status was updated to ${status}.`
+                        hospitalId: req.user.id, note: `A lab test  status was updated.`
                     })
                 }
             }
@@ -357,7 +323,7 @@ const labTestAction = async (req, res) => {
 };
 const getTest = async (req, res) => {
     const ownerId = req.params.id
-    const { page, limit = 10, type = 'lab', name ,status} = req.query
+    const { page = 1, limit = 10, type = 'lab', name, status } = req.query
     try {
         const user = await User.findById(ownerId);
         if (!user) {
@@ -369,35 +335,44 @@ const getTest = async (req, res) => {
 
         const filter = {};
 
-        // Decide filter based on type
         if (type === 'hospital') {
             filter.hospitalId = new mongoose.Types.ObjectId(ownerId);
-            // filter.type = 'hospital';
-
         } else {
-            // default → lab
             filter.labId = new mongoose.Types.ObjectId(ownerId);
-            // filter.type = 'lab';
-        }
-        if (name) {
-            filter.shortName = {
-                $regex: name,
-                $options: "i"
-            };
-        }
-        if(status){
-            filter.status=status
         }
 
-        const data = await Test.find(filter).populate('category subCategory', 'name').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
-        const totalTest = await Test.countDocuments(filter)
+        // ✅ Fix 1: Category name se search — pehle matching categories dhundho
+        if (name) {
+            const matchedCategories = await mongoose.model('test-category').find({
+                name: { $regex: name, $options: 'i' }
+            }).select('_id').lean();
+
+            const categoryIds = matchedCategories.map(c => c._id);
+            filter.category = { $in: categoryIds };
+        }
+
+        // ✅ Fix 2: Nested array field filter sahi syntax
+        if (status) {
+            filter['subCatData.status'] = status;
+        }
+
+        const data = await Test.find(filter)
+            .populate('category', 'name')
+            .populate('subCatData.subCat', 'subCategory')
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+            .lean();
+
+        const totalTest = await Test.countDocuments(filter);
+
         return res.status(200).json({
             success: true,
             data,
             message: "Test Fetched",
             pagination: {
-                page,
-                limit,
+                page: Number(page),
+                limit: Number(limit),
                 totalTest,
                 totalPages: Math.ceil(totalTest / limit)
             },
@@ -411,7 +386,7 @@ const getTest = async (req, res) => {
 const getTestData = async (req, res) => {
     const testId = req.params.id
     try {
-        const isExist = await Test.findById(testId).populate('category subCategory', 'name');
+        const isExist = await Test.findById(testId).populate('category', 'name');
         if (!isExist) return res.status(200).json({ message: "test  not found", success: false })
         return res.status(200).json({
             success: true,
@@ -452,7 +427,7 @@ const saveReport = async (req, res) => {
         const labId = req.user.id || req.user.userId
         const {
             patientId,
-            testId,
+            testId,subCatId,
             appointmentId,
             manualComment, remark,
             manualName
@@ -465,7 +440,7 @@ const saveReport = async (req, res) => {
             return res.status(404).json({ message: "Please collect sample before saving the report", success: false })
         }
         const component = JSON.parse(req.body.component)
-        const isExist = await TestReport.findOne({ testId, appointmentId })
+        const isExist = await TestReport.findOne({ subCatId, appointmentId })
         // if ((req.user.isOwner !== true || !req.user.permissionId) && req.user.type !== 'hospital') {
         //     const permission = await Permission.findById(req.user.permissionId);
         //     const panelType = req.user.type;
@@ -479,13 +454,14 @@ const saveReport = async (req, res) => {
         //     }
         // }
         if (isExist) {
-            if (report) {
-                safeUnlink(isExist.upload.report)
-            }
+            // if (report) {
+            //     safeUnlink(isExist.upload.report)
+            // }
+            console.log(component)
             await TestReport.findByIdAndUpdate(isExist._id, {
                 labId,
                 patientId,
-                testId,
+                testId,subCatId,
                 appointmentId,
                 component, remark,
                 // upload:{report,name:manual.name,comment:manual.comment}
@@ -498,7 +474,7 @@ const saveReport = async (req, res) => {
                     note: `An lab report was add in appointment ${isAppointment?.customId} id.`
                 })
             }
-            return res.status(201).json({
+            return res.status(200).json({
                 success: true,
                 message: "Test report saved successfully"
             });
@@ -507,7 +483,7 @@ const saveReport = async (req, res) => {
             const newReport = new TestReport({
                 labId,
                 patientId,
-                testId,
+                testId,subCatId,
                 appointmentId, remark,
                 upload: { report, name: manualName, comment: manualComment },
                 component
@@ -520,7 +496,7 @@ const saveReport = async (req, res) => {
 
             return res.status(201).json({
                 success: true,
-                message: "Test report saved successfully",
+                message: "Test report created successfully",
                 data: newReport
             });
         }
@@ -535,10 +511,10 @@ const saveReport = async (req, res) => {
 const getTestReport = async (req, res) => {
     try {
         const {
-            testId,
+            subCatId,
             appointmentId,
         } = req.body;
-        const isExist = await TestReport.findOne({ testId, appointmentId }).populate('testId')
+        const isExist = await TestReport.findOne({ subCatId, appointmentId }).populate('subCatId')
             .populate({ path: 'labId', select: '-passwordHash', populate: "labId" }).populate('appointmentId')
         if (isExist) {
             return res.status(201).json({
@@ -602,7 +578,7 @@ export const addPatient = async (req, res) => {
             const countryData = await Country.findById(countryId)
             const data = await assignNH12(pt?._id, countryData?.phonecode)
             if (data) {
-                const patient=await User.findById(pt?._id)
+                const patient = await User.findById(pt?._id)
                 return res.status(200).json({
                     success: true,
                     message: "Patient added successfully",

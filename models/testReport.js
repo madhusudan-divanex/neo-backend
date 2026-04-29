@@ -11,7 +11,11 @@ const requestSchema = new Schema({
     },
     testId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Test', required: true
+        ref: 'Test'
+    },
+    subCatId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubTestCat', required: true
     },
     appointmentId: {
         type: mongoose.Schema.Types.ObjectId,
