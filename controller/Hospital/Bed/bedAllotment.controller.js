@@ -178,7 +178,8 @@ export const getAllotmentById = async (req, res) => {
   try {
     const allotment = await BedAllotment.findById(req.params.id)
       .populate("patientId", "name email unique_id nh12")
-      .populate("primaryDoctorId", "name unique_id nh12").populate('labAppointment')
+      .populate("primaryDoctorId", "name unique_id nh12")
+      .populate({path:'labAppointment',populate:[{path:'subCatId',select:'subCategory'}]})
       .populate('departmentId','departmentName')
       .populate({
         path: "bedId",

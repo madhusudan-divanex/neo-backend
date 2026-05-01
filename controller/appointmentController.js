@@ -22,15 +22,16 @@ import PaymentInfo from "../models/PaymentInfo.js";
 import StaffEmployement from "../models/Staff/StaffEmployement.js";
 
 const bookDoctorAppointment = async (req, res) => {
-    const { patientId, doctorId, date, fees, hospitalId } = req.body;
+    const { patientId, doctorId, date, fees, hospitalId, status } = req.body;
+    const insertUser = req.user.id || req.user.userId
     try {
         const isExist = await User.findOne({ role: 'doctor', _id: doctorId });
         if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
-
+        const isInsert = await User.findById(insertUser)
         const isPatient = await User.findOne({ role: 'patient', _id: patientId });
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
 
-        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees, hospitalId })
+        const book = await DoctorAppointment.create({ patientId, doctorId, date, fees, hospitalId, status: isInsert.role == "hospital" ? "approved" : "pending" })
         if (book) {
             if (req?.user?.loginUser && hospitalId) {
                 await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Add an appointment with ${isExist?.name}.` })
@@ -694,13 +695,13 @@ const getLabAppointmentData = async (req, res) => {
     try {
         let isExist;
         if (appointmentId.length < 24) {
-            isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'subCatId'})
+            isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'subCatId' })
                 .populate({ path: 'staff', select: 'name nh12 ' })
                 .populate({ path: 'patientId', select: 'name email contactNumber nh12 patientId', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
                 .populate({ path: 'labId', select: 'name email contactNumber nh12 labId', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
                 .populate({ path: 'doctorId', select: 'name email contactNumber nh12 doctorId' }).populate("invoiceId")
         } else {
-            isExist = await LabAppointment.findById(appointmentId).populate({ path: 'subCatId'})
+            isExist = await LabAppointment.findById(appointmentId).populate({ path: 'subCatId' })
                 .populate({ path: 'staff', select: 'name nh12' })
                 .populate({ path: 'patientId', select: 'name email contactNumber nh12 patientId', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
                 .populate({ path: 'labId', select: 'name email contactNumber nh12 labId', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
@@ -709,7 +710,7 @@ const getLabAppointmentData = async (req, res) => {
         const labAddress = await LabAddress.findOne({ userId: isExist?.labId?._id }).populate('countryId stateId cityId', 'name')
         const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
         const demographic = await PatientDemographic.findOne({ userId: isExist.patientId._id })
-        
+
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
         return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, labAddress, labReports, demographic, success: true })
     } catch (err) {
@@ -760,6 +761,28 @@ const bookLabAppointment = async (req, res) => {
         // 👉 Create snapshot (testData)
         const testData = [];
 
+        // tests.forEach(test => {
+        //     const activeSubs = test.subCatData.filter(sub => sub.status === "active");
+        //     const activeSubIds = activeSubs.map(sub => sub.subCat?._id.toString());
+        //     const isAllSelected = activeSubIds.every(id => subCatId.includes(id));
+        //     if (isAllSelected) {
+        //         testData.push({
+        //             name: `Full Test Package ${}`, // or test.name if you have
+        //             fees: test.totalAmount
+        //         });
+        //     } else {
+        //         activeSubs.forEach(sub => {
+        //             if (subCatId.includes(sub.subCat.toString())) {
+        //                 testData.push({
+        //                     name: sub.subCat?.subCategory,
+        //                     fees: sub.price
+        //                 });
+        //             }
+        //         });
+        //     }
+        // });
+
+        // 👉 Calculate total fees from snapshot
         tests.forEach(test => {
             test.subCatData.forEach(sub => {
                 if (subCatId.includes(sub.subCat?._id.toString()) && sub.status === "active") {
@@ -770,8 +793,6 @@ const bookLabAppointment = async (req, res) => {
                 }
             });
         });
-
-        // 👉 Calculate total fees from snapshot
         const totalFees = testData.reduce((sum, t) => sum + (t.fees || 0), 0);
 
         const testNames = testData.map(t => t.name).join(", ");
@@ -1007,8 +1028,8 @@ const getLabReport = async (req, res) => {
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
         const appointment = await TestReport.find({ patientId: isExist?._id }).populate('appointmentId')
-        .populate({ path: 'labId', select: 'name customId ' })
-            .populate({ path: 'subCatId',select:'subCategory' }).sort({ createdAt: -1 })
+            .populate({ path: 'labId', select: 'name customId ' })
+            .populate({ path: 'subCatId', select: 'subCategory' }).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit).lean()
         const totalData = await TestReport.countDocuments({ patientId: isExist?._id })
@@ -1440,8 +1461,8 @@ const getPatientLabReport = async (req, res) => {
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist' });
         const appointment = await TestReport.find({ patientId: isExist?._id, labId }).populate('appointmentId')
-        .populate({ path: 'labId', select: 'name customId ' })
-            .populate({ path: 'subCatId' ,select:"subCategory"}).sort({ createdAt: -1 })
+            .populate({ path: 'labId', select: 'name customId ' })
+            .populate({ path: 'subCatId', select: "subCategory" }).sort({ createdAt: -1 })
             .skip((page - 1) * 10)
             .limit(limit).lean()
         const totalData = await TestReport.countDocuments({ patientId: isExist?._id, labId })

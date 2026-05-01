@@ -23,10 +23,10 @@ import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
 export const addBed = async (req, res) => {
   try {
     const hospitalId = req.user.id;
-    const { floorId, departmentId, roomId, bedName, perDayFees,doctorNh12 } = req.body;
+    const { floorId, departmentId, roomId, bedName, perDayFees,doctorId } = req.body;
 
     // ✅ Validation
-    if (!floorId || !departmentId || !roomId || !bedName || !perDayFees || !doctorNh12) {
+    if (!floorId || !departmentId || !roomId || !bedName || !perDayFees || !doctorId) {
       return res.status(400).json({
         success: false,
         message: "All fields are required"
@@ -47,7 +47,7 @@ export const addBed = async (req, res) => {
         message: "Bed already exists in this room"
       });
     }
-    const isDoctor=await User.findOne({nh12:doctorNh12 ,role:"doctor"})
+    const isDoctor=await User.findOne({_id:doctorId ,role:"doctor"})
     if(!isDoctor){
       return res.status(404).json({message:"Doctor not found",success:false})
     }
@@ -116,8 +116,8 @@ export const getBedById = async (req, res) => {
 ====================================================== */
 export const updateBed = async (req, res) => {
   try {
-    const { floorId, departmentId, roomId, bedName, perDayFees, underMaintenance,doctorNh12 } = req.body;
-     const isDoctor=await User.findOne({nh12:doctorNh12 ,role:"doctor"})
+    const { floorId, departmentId, roomId, bedName, perDayFees, underMaintenance,doctorId } = req.body;
+     const isDoctor=await User.findOne({_id:doctorId ,role:"doctor"})
     if(!isDoctor){
       return res.status(404).json({message:"Doctor not found",success:false})
     }
@@ -763,30 +763,60 @@ const editAllotmentPrescription = async (req, res) => {
   }
 }
 const addTestForBedPatient = async (req, res) => {
-  const { allotmentId, testIds } = req.body;
+  const { allotmentId, subCatIds,testId } = req.body;
+  // subCatIds = array of subCat IDs (SubTestCat._id)
 
   try {
     const allotment = await BedAllotment.findById(allotmentId);
     if (!allotment)
       return res.status(404).json({ message: 'Allotment does not exist', success: false });
 
-    let labAppointment = null;
+    // ─── Helper: subCat IDs se fees calculate ────────────────────
+    // Test model mein subCatData[] ke andar price hai
+    // Ek subCat ID → uska Test doc dhundho → subCatData mein match karo → price lo
+    const calculateFees = async (subCatIds) => {
+      if (!subCatIds || subCatIds.length === 0) return 0;
+
+      // Woh sare Test docs jo in subCatIds mein se kisi ko bhi contain karte hain
+      const tests = await Test.find({
+        'subCatData.subCat': { $in: subCatIds }
+      }).lean();
+
+      let total = 0;
+      subCatIds.forEach(subCatId => {
+        for (const test of tests) {
+          const match = test.subCatData.find(
+            s => s.subCat.toString() === subCatId.toString() && s.status === 'active'
+          );
+          if (match) {
+            total += Number(match.price || 0);
+            break;
+          }
+        }
+      });
+      return total;
+    };
+
+    // ─── Existing lab appointment update ─────────────────────────
     if (allotment.labAppointment) {
-      labAppointment = await LabAppointment.findById(allotment.labAppointment);
+      const labAppointment = await LabAppointment.findById(allotment.labAppointment);
       if (!labAppointment)
         return res.status(404).json({ message: "Lab appointment not found", success: false });
 
-      // Find reports
+      const existingSubCatIds = labAppointment.testId.map(id => id.toString());
+      const newSubCatIds = subCatIds.map(id => id.toString());
+
+      // TestReport mein subCatId field hai — jo reports ban chuki hain unhe hata nahi sakte
       const reports = await TestReport.find({
         appointmentId: labAppointment._id,
-        testId: { $in: labAppointment.testId }
-      }).select('testId');
+        subCatId: { $in: labAppointment.testId }
+      }).select('subCatId').lean();
 
-      const reportedTestIds = reports.map(r => r.testId.toString());
+      const reportedSubCatIds = reports.map(r => r.subCatId.toString());
 
-      // Prevent deletion of tests with reports
-      const tryingToRemoveReported = labAppointment.testId.some(
-        t => reportedTestIds.includes(t.toString()) && !testIds.includes(t.toString())
+      // Jo reported hain aur naye subCatIds mein nahi hain — unhe remove karna illegal hai
+      const tryingToRemoveReported = reportedSubCatIds.some(
+        id => !newSubCatIds.includes(id)
       );
       if (tryingToRemoveReported)
         return res.status(400).json({
@@ -794,27 +824,23 @@ const addTestForBedPatient = async (req, res) => {
           success: false
         });
 
-      // Calculate tests to add
-      const testsToAdd = testIds.filter(t => !labAppointment.testId.includes(t.toString()));
+      // Naye add hone wale subCats
+      const testsToAdd = newSubCatIds.filter(id => !existingSubCatIds.includes(id));
 
-      // Calculate tests to remove (only if no report)
-      const testsToRemove = labAppointment.testId.filter(
-        t => !testIds.includes(t.toString()) && !reportedTestIds.includes(t.toString())
+      // Remove hone wale subCats (sirf jinki report nahi bani)
+      const testsToRemove = existingSubCatIds.filter(
+        id => !newSubCatIds.includes(id) && !reportedSubCatIds.includes(id)
       );
 
-      // Update labAppointment.testId
-      labAppointment.testId = testIds;
+      // Fees update
+      const addedFees = await calculateFees(testsToAdd);
+      const removedFees = await calculateFees(testsToRemove);
 
-      // Update fees
-      const addedTestData = await Test.find({ _id: { $in: testsToAdd } });
-      const removedTestData = await Test.find({ _id: { $in: testsToRemove } });
-
-      const addedFees = addedTestData.reduce((sum, t) => sum + Number(t.price || 0), 0);
-      const removedFees = removedTestData.reduce((sum, t) => sum + Number(t.price || 0), 0);
-
+      labAppointment.testId = subCatIds;
       labAppointment.fees = (Number(labAppointment.fees) || 0) + addedFees - removedFees;
+
       if (testsToAdd.length > 0) {
-        labAppointment.date = new Date()
+        labAppointment.date = new Date();
         labAppointment.status = "approved";
       }
 
@@ -826,16 +852,18 @@ const addTestForBedPatient = async (req, res) => {
       });
     }
 
-    // No lab appointment → create new
-    const testData = await Test.find({ _id: { $in: testIds } });
-    const totalFees = testData.reduce((sum, t) => sum + (t.price || 0), 0);
+    // ─── No lab appointment → naya create karo ───────────────────
 
-    labAppointment = new LabAppointment({
+    const totalFees = await calculateFees(subCatIds);
+
+    const labAppointment = new LabAppointment({
       patientId: allotment.patientId,
-      testId: testIds,
+      subCatId: subCatIds,           // subCat IDs
+      testId:[testId],
       labId: allotment.hospitalId,
       date: new Date(),
-      fees: totalFees
+      fees: totalFees,
+      status: "approved",
     });
 
     await labAppointment.save({ validateBeforeSave: false });
@@ -843,7 +871,10 @@ const addTestForBedPatient = async (req, res) => {
     allotment.labAppointment = labAppointment._id;
     await allotment.save({ validateBeforeSave: false });
 
-    return res.status(200).json({ message: "Lab appointment created successfully", success: true });
+    return res.status(200).json({
+      message: "Lab appointment created successfully",
+      success: true
+    });
 
   } catch (err) {
     console.error(err);

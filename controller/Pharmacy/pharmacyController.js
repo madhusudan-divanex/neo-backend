@@ -21,16 +21,18 @@ import HospitalAudit from '../../models/Hospital/HospitalAudit.js';
 import PharmacyAudit from '../../models/Pharmacy/PharmacyAudit.model.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
 import ScheduleMedicines from '../../models/Admin/ScheduleMedicines.js';
+import Country from '../../models/Hospital/Country.js';
+import { assignNH12 } from '../../utils/nh12.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
     try {
         const isExist = await User.findById(pharId)
         if (!isExist) return res.status(200).json({ message: "Pharmacy not found", success: false })
-        const isBatchExist = await Inventory.findOne({ batchNumber: req?.body?.batchNumber })
-        if (isBatchExist) {
-            return res.status(200).json({ message: "Batch number already exits", success: false })
-        }
+        // const isBatchExist = await Inventory.findOne({ batchNumber: req?.body?.batchNumber })
+        // if (isBatchExist) {
+        //     return res.status(200).json({ message: "Batch number already exits", success: false })
+        // }
         let data;
 
         if (req.body.schedule == 'H1') {
@@ -115,6 +117,7 @@ const inventoryList = async (req, res) => {
         if (schedule !== 'all') {
             filter.schedule = schedule; // exact match
         }
+        console.log(filter)
         // Fetch data
         const [items, total] = await Promise.all([
             Inventory.find(filter).populate('schedule')
@@ -173,10 +176,10 @@ const inventoryUpdate = async (req, res) => {
         const { inventoryId } = req.body;
         const isExist = await Inventory.findById(inventoryId)
         if (!isExist) return res.status(200).json({ success: false, message: "Inventory not found" })
-        const isBatchExist = await Inventory.findOne({ batchNumber: req?.body?.batchNumber, _id: { $ne: inventoryId } })
-        if (isBatchExist) {
-            return res.status(200).json({ message: "Batch number already exits", success: false })
-        }
+        // const isBatchExist = await Inventory.findOne({ batchNumber: req?.body?.batchNumber, _id: { $ne: inventoryId } })
+        // if (isBatchExist) {
+        //     return res.status(200).json({ message: "Batch number already exits", success: false })
+        // }
         if (isExist.sellCount > req.body.quantity) {
             return res.status(200).json({ success: false, message: `You already Sell ${isExist.sellCount} so we cant update your quantity less then ${isExist?.sellCount}` });
         }
@@ -1206,18 +1209,18 @@ const updateReturn = async (req, res) => {
         if (!ret) return res.status(200).json({ success: false, message: "Return not found" });
 
         // If products changed, validate availability
-        if (products) {
-            if (pharId) {
-                const validation = await validateProductsAvailability(pharId, products);
-                if (!validation.ok) return res.status(200).json({ success: false, message: validation.message });
-                ret.products = products;
-            }
-            if (hospitalId) {
-                const validation = await validateHospitalProductsAvailability(hospitalId, products);
-                if (!validation.ok) return res.status(200).json({ success: false, message: validation.message });
-                ret.products = products;
-            }
-        }
+        // if (products) {
+        //     if (pharId) {
+        //         const validation = await validateProductsAvailability(pharId, products);
+        //         if (!validation.ok) return res.status(200).json({ success: false, message: validation.message });
+        //         ret.products = products;
+        //     }
+        //     if (hospitalId) {
+        //         const validation = await validateHospitalProductsAvailability(hospitalId, products);
+        //         if (!validation.ok) return res.status(200).json({ success: false, message: validation.message });
+        //         ret.products = products;
+        //     }
+        // }
 
         if (deliveryDate) ret.deliveryDate = deliveryDate;
         if (reason) ret.reason = reason;
@@ -1909,7 +1912,7 @@ const patientHospitalAllotment = async (req, res) => {
         const allotments = await BedAllotment.find({ patientId, hospitalId })
             .populate({ path: "patientId", select: "name email unique_id", populate: { path: "patientId", select: "contactNumber profileImage" } })
             .populate("dischargeId", "createdAt").populate("primaryDoctorId", "unique_id name")
-            .populate('departmentId','departmentName')
+            .populate('departmentId', 'departmentName')
             .populate({
                 path: "bedId",
                 populate: [
@@ -1954,6 +1957,8 @@ export const addPatient = async (req, res) => {
             })
             await PatientDemographic.create({ userId: pt._id, dob, contact, address, pinCode, countryId, stateId, cityId })
             await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
+            const countryData = await Country.findById(countryId)
+            const data = await assignNH12(pt?._id, countryData?.phonecode)
             return res.status(200).json({
                 success: true,
                 message: "Patient added successfully",
@@ -2232,13 +2237,13 @@ export const customerReturn = async (req, res) => {
                 await PharmacyAudit.create({ pharId: id, note: `A return was created for patient ${ptData?.name}.` })
             }
         }
-        if (id && req.user.type == "hospital") {
-            if (req.user.loginUser) {
-                await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `A return record was created for patient ${ptData?.name}.` })
-            } else {
-                await HospitalAudit.create({ hospitalId, note: `A return was created for patient ${ptData?.name}.` })
-            }
-        }
+        // if (id && req.user.type == "hospital") {
+        //     if (req.user.loginUser) {
+        //         await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `A return record was created for patient ${ptData?.name}.` })
+        //     } else {
+        //         await HospitalAudit.create({ hospitalId, note: `A return was created for patient ${ptData?.name}.` })
+        //     }
+        // }
 
         await session.commitTransaction();
         session.endSession();
@@ -2314,6 +2319,60 @@ export const getMySchedule = async (req, res) => {
 
     } catch (error) {
         return res.status(500).json({ message: error.message, success: false });
+    }
+};
+export const getCustomerReturn = async (req, res) => {
+    const userId = req.user.id || req.user.userId;
+
+    try {
+        const isUser = await User.findById(userId);
+        if (!isUser || (isUser.role !== "pharmacy" && isUser.role !== "hospital")) {
+            return res.status(404).json({
+                success: false,
+                message: "Pharmacy not found"
+            });
+        }
+
+        // 👉 pagination params
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // 👉 filter
+        const filter = {
+            $or: [
+                { pharId: userId },
+                { hospitalId: userId }
+            ],
+            returnProducts: { $exists: true, $ne: [] }
+        };
+
+        // 👉 total count
+        const total = await Sell.countDocuments(filter);
+
+        // 👉 paginated data
+        const returnData = await Sell.find(filter)
+            .populate('returnProducts.inventoryId').populate('patientId', 'nh12 name')
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 }); // optional sorting
+
+        return res.status(200).json({
+            success: true,
+            data: returnData,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };
 export {

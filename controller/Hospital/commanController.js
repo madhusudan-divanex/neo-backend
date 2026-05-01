@@ -126,7 +126,7 @@ export const GetDoctor = async (req, res) => {
     console.error(err);
     return res.status(500).json({
       success: false,
-      message: "Server error"
+      message: err?.message
     });
   }
 };
@@ -232,7 +232,7 @@ export const getNotification = async (req, res) => {
 
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: e?.message });
   }
 };
 
@@ -248,7 +248,7 @@ export const deleteNotification = async (req, res) => {
 
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: e?.message });
   }
 };
 export const deleteOneNotification = async (req, res) => {
@@ -269,7 +269,7 @@ export const deleteOneNotification = async (req, res) => {
 
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: e?.message });
   }
 };
 

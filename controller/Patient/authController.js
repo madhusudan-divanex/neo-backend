@@ -532,7 +532,7 @@ const getCustomProfile = async (req, res) => {
         const ptDemographic = await PatientDemographic.findOne({ userId: user._id }).lean().sort({ createdAt: -1 })
 
         return res.status(200).json({
-            success: true, customId: user.unique_id, userId: user._id,
+            success: true, customId: user.nh12, userId: user._id,
             data: { ...patientData, ...ptDemographic }
         });
 

@@ -58,7 +58,7 @@ export const changePassword = async (req, res) => {
     res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err?.message});
   }
 };
 
@@ -208,7 +208,7 @@ export const updateProfile = async (req, res) => {
     res.json({ message: "Profile updated" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err?.message});
   }
 };
 
@@ -229,7 +229,7 @@ export const sendEditRequest = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err?.message});
   }
 };
 
@@ -256,7 +256,7 @@ export const approveEditRequest = async (req, res) => {
     res.json({ message: "Edit request approved" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err?.message});
   }
 };
 

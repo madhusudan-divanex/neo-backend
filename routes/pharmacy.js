@@ -2,7 +2,7 @@ import {  changePassword, deletePhar, getProfile, getProfileDetail, resendOtp, s
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { addInventry,  addSupplier, changeRequestStatus, completeReturn, createPO, createReturn,  deletePO, deleteReturn, deleteSupplier,  getAllMedicineRequestsForAdmin,  getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns,    receivePO,  sendMedicineRequest,  updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData, addPatient, getPrescriptionMedicine, getAuditLog, getEODSale, customerReturn, getMySchedule } from "../controller/Pharmacy/pharmacyController.js";
+import { addInventry,  addSupplier, changeRequestStatus, completeReturn, createPO, createReturn,  deletePO, deleteReturn, deleteSupplier,  getAllMedicineRequestsForAdmin,  getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns,    receivePO,  sendMedicineRequest,  updatePO, updateReturn, updateSupplier, medicineData, pharDashboardData, sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData, addPatient, getPrescriptionMedicine, getAuditLog, getEODSale, customerReturn, getMySchedule, getCustomerReturn } from "../controller/Pharmacy/pharmacyController.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
 import { ChatList } from "../controller/Hospital/chatController.js";
 
@@ -102,5 +102,5 @@ pharmacy.post('/add-patient',authMiddleware,addPatient)
 pharmacy.post('/prescription-medicine',authMiddleware,getPrescriptionMedicine)
 pharmacy.get('/my-schedule/:id',authMiddleware,getMySchedule)
 pharmacy.post("/customer-return", authMiddleware,checkPermission('pharmacy',"addReturn"), customerReturn);
-
+pharmacy.get('/customer-return/:id',authMiddleware,getCustomerReturn)
 export default pharmacy

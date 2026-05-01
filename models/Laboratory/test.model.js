@@ -1,8 +1,6 @@
 
 import mongoose, { Schema } from "mongoose";
 
-
-
 const requestSchema = new Schema({
   labId: {
     type: mongoose.Schema.Types.ObjectId,

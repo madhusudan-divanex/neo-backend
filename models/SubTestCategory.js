@@ -25,15 +25,13 @@ const subCatSchema = new Schema({
     shortName: { type: String, required: true },
     component: [componentSchema],
     sample: [sampleSchema],
-    packageType: { type: String, enum: ['single', 'profile', 'pacakge'], default: 'single' },
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'test-category', index: true
     }, 
-    testType: { type: String, required: true },
+    
     specialApproval: { type: Boolean, default: false },
     fastingRequired: { type: Boolean, default: false },
-    testProcessing: { type: String, required: true },
     customId: { type: String },
 }, { timeStamp: true })
 subCatSchema.pre("save", async function (next) {
