@@ -1,0 +1,17 @@
+import mongoose from 'mongoose';
+
+const userSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String,  },
+    gender: { type: String, required: true },
+    profileImage: { type: String },
+    contactNumber: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true },   
+
+    status: { type: String, enum: ['pending', 'approved','rejected'], default: 'pending' }
+
+}, { timestamps: true });
+
+const Patient = mongoose.model('Patient', userSchema);
+
+export default Patient

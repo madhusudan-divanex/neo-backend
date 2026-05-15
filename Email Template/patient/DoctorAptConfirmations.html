@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doctor Appointment Confirmation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+        integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        @media only screen and (max-width: 600px) {
+
+            .container {
+                width: 100% !important;
+            }
+
+            .content-padding {
+                padding: 25px 20px !important;
+            }
+
+            .welcome-text {
+                font-size: 34px !important;
+                line-height: 40px !important;
+            }
+
+            .doctor-image {
+                width: 130px !important;
+            }
+
+            .logo-image {
+                width: 90px !important;
+            }
+
+            .button {
+                width: 100% !important;
+            }
+
+            .social-icons td {
+                padding: 0 3px !important;
+            }
+        }
+    </style>
+</head>
+
+<body style="margin:0;padding:0;background-color:#f4f7fb;font-family: Plus Jakarta Sans, sans-serif;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
+        <tr>
+            <td align="center" style="padding:20px 10px;">
+
+                <!-- Main Container -->
+                <table width="600" cellpadding="0" cellspacing="0" border="0" class="container"
+                    style="width:100%;max-width:600px;background:#ffffff;border-radius:10px;overflow:hidden;">
+
+                    <!-- Header -->
+                    <tr>
+                        <td class="content-padding" style="
+      padding:40px 30px 0px 30px;
+      background-image:url('https://api.neohealthcard.com:9100/uploads/assets/background.png');
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      position:relative;
+    ">
+
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+
+                                    <!-- Center Content -->
+                                    <td align="center" valign="top" style="position:relative;">
+
+                                        <!-- Logo -->
+                                        <img src="https://api.neohealthcard.com:9100/uploads/assets/logo.png"
+                                            width="110" alt="Logo" class="logo-image" style="
+              display:block;
+              border:0;
+              width:110px;
+              max-width:100%;
+              margin:0 auto;
+            " />
+
+                                        <!-- Brand -->
+                                        <div style="
+              font-size:16px;
+              font-weight:700;
+              color:#16345B;
+              margin-top:12px;
+            ">
+                                            NeoHealth<span style="color:#12b4c9;">Care</span>
+                                        </div>
+
+                                        <!-- Welcome -->
+                                        <div class="welcome-text" style="
+              font-size:32px;
+              line-height:1;
+              font-weight:500;
+              color:#16345B;
+              margin-top:25px;
+              margin-bottom:35px;
+              font-family:Georgia,serif;
+            ">
+                                            Appointment <br /> Confirmation
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            </table>
+
+
+
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td class="content-padding" style="
+      padding:25px 32px 35px 32px;
+      color:#5f6368;
+    ">
+
+                            <!-- Greeting -->
+                            <div style="
+        font-size:20px;
+        font-weight:700;
+        color:#16345B;
+        margin-bottom:10px;
+      ">
+                                Hi {{name}},
+                            </div>
+
+                            <!-- Description -->
+                            <div style="
+        font-size:14px;
+        line-height:100%;
+        color:#5f6368;
+        margin-bottom:30px;
+      ">
+
+                                Your appointment has been successfully
+                                confirmed.
+                                <br />
+
+                                We look forward to seeing you at NeoCare
+                                Hospital.
+
+                            </div>
+
+                            <!-- Section Title -->
+                            <div style="
+        font-size:20px;
+        font-weight:700;
+        color:#16345B;
+        margin-bottom:18px;
+      ">
+                                Appointment Details
+                            </div>
+
+                            <!-- Details Box -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                                <tr>
+                                    <td style="
+            background:#f4f7fb;
+            border-radius:6px;
+            padding:18px 14px;
+            font-size:15px;
+            line-height:1.3;
+            color:#6b6b6b;
+          ">
+
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Patient
+                                            Name:</span> <span style="color: #555555;">
+                                            {{name}}
+                                        </span>
+                                        <br />
+
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Appointment
+                                            ID:</span>
+                                        {{aptId}}
+                                        <br />
+
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Doctor:</span>
+                                        {{doctorName}} - {{specialization}}
+                                        <br />
+
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Date:</span>
+                                        {{date}}
+                                        <br />
+
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Time:</span>
+                                        {{time}}
+                                        <br />
+
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Location:</span>
+                                        {{location}}
+
+                                    </td>
+                                </tr>
+
+                            </table>
+
+                            <!-- Button -->
+                            <table cellpadding="0" cellspacing="0" border="0" style="margin-top:30px;">
+
+                                <tr>
+                                    <td bgcolor="#102b5c" style="border-radius:40px;">
+
+                                        <a href="{{btnLink}}" style="
+              display:inline-block;
+              padding:15px 28px;
+              font-size:12px;
+              font-weight:600;
+              color:#ffffff;
+              text-decoration:none;
+            ">
+
+                                            View Appointment <i class="fa-solid fa-arrow-right-long"></i>
+
+                                        </a>
+
+                                    </td>
+                                </tr>
+
+                            </table>
+
+                            <!-- Team -->
+                            <div style="
+        margin-top:30px;
+        font-size:14px;
+        font-weight:700;
+        color:#16345B;
+      ">
+                                Team NeoHealth
+                            </div>
+
+                        </td>
+                    </tr>
+
+
+                    <!-- Divider -->
+                    <tr>
+                        <td style="padding:0 30px;">
+                            <div style="height:1px;background:#e8e8e8;"></div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="padding:35px 20px 30px 20px;">
+
+                            <!-- Connect -->
+                            <div style="
+                  font-size:14px;
+                  font-weight:600;
+                  color:#102b5c;
+                  margin-bottom:18px;
+                ">
+                                Connect with us
+                            </div>
+
+                            <!-- Social Icons -->
+                            <table cellpadding="0" cellspacing="0" border="0" class="social-icons">
+                                <tr>
+
+                                    <td style="padding:0 5px;">
+                                        <a href={{facebook}} style="
+                        display:inline-block;
+                        width:38px;
+                        height:38px;
+                        line-height:38px;
+                        text-align:center;
+                        background:#11c5c9;
+                        border-radius:8px;
+                        color:#ffffff;
+                        text-decoration:none;
+                        font-size:14px;
+                      ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+
+                                    <td style="padding:0 5px;">
+                                        <a href={{twitter}} style="
+                        display:inline-block;
+                        width:38px;
+                        height:38px;
+                        line-height:38px;
+                        text-align:center;
+                        background:#11c5c9;
+                        border-radius:8px;
+                        color:#ffffff;
+                        text-decoration:none;
+                        font-size:14px;
+                      ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+
+                                    <td style="padding:0 5px;">
+                                        <a href={{instagram}} style="
+                        display:inline-block;
+                        width:38px;
+                        height:38px;
+                        line-height:38px;
+                        text-align:center;
+                        background:#11c5c9;
+                        border-radius:8px;
+                        color:#ffffff;
+                        text-decoration:none;
+                        font-size:14px;
+                      ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+
+                                    <td style="padding:0 5px;">
+                                        <a href={{youtube}} style="
+                        display:inline-block;
+                        width:38px;
+                        height:38px;
+                        line-height:38px;
+                        text-align:center;
+                        background:#11c5c9;
+                        border-radius:8px;
+                        color:#ffffff;
+                        text-decoration:none;
+                        font-size:14px;
+                      ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+
+                                </tr>
+                            </table>
+
+                            <!-- Contact -->
+                            <div style="
+                  margin-top:25px;
+                  font-size:13px;
+                  line-height:24px;
+                  color:#8b8b8b;
+                ">
+
+                                123 Healthcare Street, Medical Neo, State –
+                                000000
+                                <br />
+
+                                hospital@email.com |
+                                +91 98765 43210 |
+                                www.hospital.com
+
+                            </div>
+
+                            <!-- Disclaimer -->
+                            <div style="
+                  margin-top:18px;
+                  font-size:12px;
+                  line-height:22px;
+                  color:#b1b1b1;
+                ">
+
+                                This email was sent to you because you
+                                created
+                                an account with NeoCare Hospital.
+                                <br />
+
+                                If you did not create an account,
+                                please ignore this email.
+
+                            </div>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>
