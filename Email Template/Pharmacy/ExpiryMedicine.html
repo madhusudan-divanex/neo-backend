@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Doctor Welcome Email</title>
+  <title>Welcome Email</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
@@ -87,14 +87,7 @@
                         max-width:100%;
                       " />
                     <!-- Brand -->
-                    <div style="
-              font-size:12px;
-              font-weight:700;
-              color:#16345B;
-              margin-top:12px;
-            ">
-                      NeoHealth<span style="color:#12b4c9;">Care</span>
-                    </div>
+
 
                   </td>
 
@@ -133,7 +126,7 @@
 
               <!-- Greeting -->
               <div style="
-                  font-size:18px;
+                  font-size:14px;
                   line-height:100%;
                   color:#5f6368;
                   margin-bottom:25px;
@@ -141,7 +134,7 @@
                   z-index:2;
                 ">
 
-                <span class="font-weight:600"> Hi Dr. Michael Brown,</span>
+                <span class="font-weight:600"> Hi {{name}},</span>
                 <br />
 
                 Welcome to the NeoHealthCare Pharmacy.
@@ -151,7 +144,7 @@
               <!-- Description -->
               <div style="
                   font-size:14px;
-                  line-height:100%;
+                  line-height:1.4;
                   color:#5f6368;
                   margin-bottom:35px;
                   position:relative;
@@ -176,7 +169,7 @@
                 <tr>
                   <td bgcolor="#0f1f4a" class="button" style="border-radius:40px;">
 
-                    <a href="#" style="
+                    <a href="{{btnLink}}" style="
                         display:inline-block;
                         padding:14px 28px;
                         font-size:12px;
@@ -240,14 +233,15 @@
                   <td style="padding:0 5px;">
                     <a href={{facebook}} style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
                         style="margin-top: 10px;" alt="">
@@ -257,14 +251,15 @@
                   <td style="padding:0 5px;">
                     <a href="{{twitter}}" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png" style="margin-top: 10px;"
                         alt="">
@@ -274,14 +269,15 @@
                   <td style="padding:0 5px;">
                     <a href="{{instagram}}" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
                         style="margin-top: 10px;" alt="">
@@ -291,14 +287,15 @@
                   <td style="padding:0 5px;">
                     <a href="{{youtube}}" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png" style="margin-top: 10px;"
                         alt="">
@@ -317,14 +314,13 @@
                   color:#8b8b8b;
                 ">
 
-                123 Healthcare Street, Medical Neo,
-                State – 000000
+                {{address}}
 
                 <br />
 
-                hospital@email.com |
-                +91 98765 43210 |
-                www.hospital.com
+                {{email}} |
+                {{phone}} |
+                {{site}}
 
               </div>
 

@@ -789,17 +789,10 @@ export const addSubTestCategory = async (req, res) => {
         testProcessing,
     } = req.body;
     try {
-<<<<<<< HEAD
         // const isExist = await SubTestCat.findOne({ subCategory })
         // if (isExist) {
         //     return res.status(200).json({ message: "This category name already exists", success: false })
         // }
-=======
-        const isExist = await SubTestCat.findOne({ subCategory })
-        if (isExist) {
-            return res.status(200).json({ message: "This category name already exists", success: false })
-        }
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
         await SubTestCat.create({ code,
                     shortName,
                     category,subCategory,

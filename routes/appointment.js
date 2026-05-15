@@ -3,51 +3,45 @@ import authMiddleware from '../middleware/authMiddleare.js'
 import { actionDoctorAppointment, actionLabAppointment, bookDoctorAppointment, bookLabAppointment, cancelDoctorAppointment, cancelLabAppointment, deleteDoctorPrescription, doctorLabTest, doctorPrescription, editDoctorPrescription, getDoctorAppointment, getDoctorAptPayment, getDoctorPastAppointment, getDoctorPrescriptiondata, getHospitalAppointment, getHospitalDoctorAppointment, getHospitalPastAppointment, getLabAppointment, getPastPatientLabAppointment, getPatientAppointment, getPatientLabAppointment, giveRating, paymentLabAppointment, prescriptionAction, rescheduleLabAppointment, updateDoctorAppointment } from '../controller/appointmentController.js'
 import { get } from 'mongoose'
 import { checkPermission } from '../middleware/permissionCheck.js'
-<<<<<<< HEAD
-=======
 import { addSample, getAppointmentSample } from '../controller/Laboratory/laboratoryContoller.js'
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 
-const appointment=express.Router()
-appointment.post('/doctor',authMiddleware,bookDoctorAppointment)
-appointment.get('/doctor/payment/:id',authMiddleware,getDoctorAptPayment)
-appointment.get('/doctor/:id',authMiddleware,getDoctorAppointment)
-appointment.put('/doctor-action',authMiddleware,checkPermission("doctor","appointmentStatus"),actionDoctorAppointment)
-appointment.post('/doctor-cancel',authMiddleware,cancelDoctorAppointment)
-appointment.put('/doctor',authMiddleware,updateDoctorAppointment)
-appointment.put('/doctor/labtest',authMiddleware,checkPermission("doctor","addLabTest"),updateDoctorAppointment)
+const appointment = express.Router()
+appointment.post('/doctor', authMiddleware, bookDoctorAppointment)
+appointment.get('/doctor/payment/:id', authMiddleware, getDoctorAptPayment)
+appointment.get('/doctor/:id', authMiddleware, getDoctorAppointment)
+appointment.put('/doctor-action', authMiddleware, checkPermission("doctor", "appointmentStatus"), actionDoctorAppointment)
+appointment.post('/doctor-cancel', authMiddleware, cancelDoctorAppointment)
+appointment.put('/doctor', authMiddleware, updateDoctorAppointment)
+appointment.put('/doctor/labtest', authMiddleware, checkPermission("doctor", "addLabTest"), updateDoctorAppointment)
 
-appointment.post('/prescription',authMiddleware,checkPermission("doctor","addPrescription"),doctorPrescription)
-appointment.get('/prescription-data/:id',authMiddleware,getDoctorPrescriptiondata)
-appointment.put('/prescription',authMiddleware,checkPermission("doctor","editPrescription"),editDoctorPrescription)
-appointment.post('/prescription-action',authMiddleware,prescriptionAction)
+appointment.post('/prescription', authMiddleware, checkPermission("doctor", "addPrescription"), doctorPrescription)
+appointment.get('/prescription-data/:id', authMiddleware, getDoctorPrescriptiondata)
+appointment.put('/prescription', authMiddleware, checkPermission("doctor", "editPrescription"), editDoctorPrescription)
+appointment.post('/prescription-action', authMiddleware, prescriptionAction)
 // appointment.delete('/prescription/:id',authMiddleware,checkPermission("doctor","deletePrescription"),deleteDoctorPrescription)
-appointment.post('/lab-test',authMiddleware,doctorLabTest)
-appointment.post('/rating',authMiddleware,giveRating)
-appointment.get('/patient/:id',authMiddleware,getPatientAppointment)
-appointment.get('/patient-lab/:id',authMiddleware,getPatientLabAppointment)
+appointment.post('/lab-test', authMiddleware, doctorLabTest)
+appointment.post('/rating', authMiddleware, giveRating)
+appointment.get('/patient/:id', authMiddleware, getPatientAppointment)
+appointment.get('/patient-lab/:id', authMiddleware, getPatientLabAppointment)
 
-appointment.post('/lab',authMiddleware,bookLabAppointment)
-appointment.put('/lab/reschedule',authMiddleware,rescheduleLabAppointment)
-appointment.get('/lab/:id',authMiddleware,checkPermission("lab","testRequest"),getLabAppointment)
-appointment.put('/lab-action',authMiddleware,checkPermission("lab","appointmentStatus"),actionLabAppointment)
-appointment.put('/lab/payment-action',authMiddleware,checkPermission("lab","paymentStatus"),paymentLabAppointment)
-appointment.post('/lab-cancel',authMiddleware,cancelLabAppointment)
+appointment.post('/lab', authMiddleware, bookLabAppointment)
+appointment.put('/lab/reschedule', authMiddleware, rescheduleLabAppointment)
+appointment.get('/lab/:id', authMiddleware, checkPermission("lab", "testRequest"), getLabAppointment)
+appointment.put('/lab-action', authMiddleware, checkPermission("lab", "appointmentStatus"), actionLabAppointment)
+appointment.put('/lab/payment-action', authMiddleware, checkPermission("lab", "paymentStatus"), paymentLabAppointment)
+appointment.post('/lab-cancel', authMiddleware, cancelLabAppointment)
 
-appointment.get('/doctor/past-appointments/:doctorId/:patientId',authMiddleware,getDoctorPastAppointment)
-appointment.get('/hospital/past-appointments/:hospitalId/:patientId',authMiddleware,getHospitalPastAppointment)
-appointment.get('/hospital/:id',authMiddleware,getHospitalAppointment)
-appointment.get('/lab/past-appointments/:labId/:patientId',authMiddleware,getPastPatientLabAppointment)
+appointment.get('/doctor/past-appointments/:doctorId/:patientId', authMiddleware, getDoctorPastAppointment)
+appointment.get('/hospital/past-appointments/:hospitalId/:patientId', authMiddleware, getHospitalPastAppointment)
+appointment.get('/hospital/:id', authMiddleware, getHospitalAppointment)
+appointment.get('/lab/past-appointments/:labId/:patientId', authMiddleware, getPastPatientLabAppointment)
 
-appointment.get('/hospital/doctor/:id',authMiddleware,getHospitalDoctorAppointment)
-appointment.post('/hospital/prescription',authMiddleware,checkPermission("appointments","addPrescription"),doctorPrescription)
-appointment.put('/hospital/prescription',authMiddleware,checkPermission("appointments","editPrescription"),editDoctorPrescription)
-appointment.post('/hospital/doctor',authMiddleware,checkPermission("appointments","add"),bookDoctorAppointment)
-appointment.put('/hospital/doctor-action',authMiddleware,checkPermission("appointments","status"),actionDoctorAppointment)
+appointment.get('/hospital/doctor/:id', authMiddleware, getHospitalDoctorAppointment)
+appointment.post('/hospital/prescription', authMiddleware, checkPermission("appointments", "addPrescription"), doctorPrescription)
+appointment.put('/hospital/prescription', authMiddleware, checkPermission("appointments", "editPrescription"), editDoctorPrescription)
+appointment.post('/hospital/doctor', authMiddleware, checkPermission("appointments", "add"), bookDoctorAppointment)
+appointment.put('/hospital/doctor-action', authMiddleware, checkPermission("appointments", "status"), actionDoctorAppointment)
 
-<<<<<<< HEAD
-=======
-appointment.get('/lab/sample/:id',authMiddleware,getAppointmentSample)
-appointment.post('/lab/sample',authMiddleware,addSample)
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
+appointment.get('/lab/sample/:id', authMiddleware, getAppointmentSample)
+appointment.post('/lab/sample', authMiddleware, addSample)
 export default appointment

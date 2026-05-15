@@ -1,10 +1,12 @@
 import CMS from "../../models/Admin/cms.model.js";
+import User from "../../models/Hospital/User.js";
+import { sendHospitalEmail } from "../../utils/sendTemplateEmail.js";
 
 export const getCMSPageList = async (req, res) => {
   const { panel } = req.query;
   try {
     const filter = {};
-    if(panel){
+    if (panel) {
       filter.panel = panel
     }
     const pages = await CMS.find(filter).sort({ createdAt: 1 });
@@ -41,6 +43,19 @@ export const saveCMSPage = async (req, res) => {
       { new: true, upsert: true }
     );
     res.json({ success: true, message: "Page saved successfully", data: page });
+    if (panel === "hospital" && req.params.slug === "privacy-policy") {
+      const hospitals = await User.find({ role: "hospital" });
+      await Promise.all(
+        hospitals.map(hospital =>
+          sendHospitalEmail(
+            "Email Template/Hospital/PolicyUpdate.html",
+            { btnLink: process.env.HOSPITAL_URL + "/privacy-policy" },
+            "Compliance & Policy Update",
+            hospital._id
+          )
+        )
+      );
+    }
   } catch (err) {
     console.log(err)
     res.status(500).json({ message: "Failed to save page" });

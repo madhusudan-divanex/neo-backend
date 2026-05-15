@@ -6,14 +6,11 @@ import HospitalPayment from '../models/Hospital/HospitalPayment.js';
 import BedAllotment from '../models/Hospital/BedAllotment.js';
 import mongoose from 'mongoose';
 import Inventory from '../models/Pharmacy/inventory.model.js';
-<<<<<<< HEAD
-import sendPatientEmail from './sendTemplateEmail.js';
+import sendPatientEmail, { sendPharEmail } from './sendTemplateEmail.js';
 import HospitalBasic from '../models/Hospital/HospitalBasic.js';
 import HospitalAddress from '../models/Hospital/HospitalAddress.js';
 import DoctorAppointment from '../models/DoctorAppointment.js';
 import DoctorAbout from '../models/Doctor/addressAbout.model.js';
-=======
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 
 cron.schedule('0 0 * * *', async () => {
   try {
@@ -28,11 +25,7 @@ cron.schedule('0 0 * * *', async () => {
     const prescriptions = await Prescriptions.find({
       status: 'Active', notif: false,
       reVisit: { $exists: true, $ne: null }
-<<<<<<< HEAD
     }).populate('doctorId patientId', 'name');
-=======
-    }).populate('doctorId', 'name');
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 
     for (const prescription of prescriptions) {
 
@@ -42,7 +35,6 @@ cron.schedule('0 0 * * *', async () => {
 
       // agar aaj ka din hai
       if (revisitDate >= today && revisitDate < tomorrow) {
-<<<<<<< HEAD
         const doctorAbout = await DoctorAbout.findOne({
           userId: prescription.doctorId?._id
         }).populate("specialty");
@@ -60,11 +52,6 @@ cron.schedule('0 0 * * *', async () => {
         );
         await Notification.create({
           userId: prescription.patientId?._id,
-=======
-
-        await Notification.create({
-          userId: prescription.patientId,
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
           title: "Doctor Revisit Reminder",
           message: `This is a reminder that you have a scheduled revisit today with Dr. ${prescription.doctorId.name} regarding ${prescription?.diagnosis}. Kindly book your appointment.`,
           type: "REVISIT"
@@ -191,7 +178,79 @@ cron.schedule("0 0 * * *", async () => {
   } catch (err) {
     console.error("❌ Cron failed:", err.message);
   }
-<<<<<<< HEAD
+});
+cron.schedule("0 0 * * *", async () => {
+  try {
+
+    // Aaj ki date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Exact 10th day
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + 10);
+
+    // Start & End
+    const start = new Date(targetDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(targetDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Medicines
+    const upcomingExpired = await Inventory.find({
+      expDate: {
+        $gte: start,
+        $lte: end
+      }
+    }).populate("pharId", "name email");
+
+    // Group by pharmacy
+    const groupedByPharmacy = {};
+
+    for (const med of upcomingExpired) {
+
+      const pharId = med?.pharId?._id?.toString();
+
+      if (!pharId) continue;
+
+      if (!groupedByPharmacy[pharId]) {
+        groupedByPharmacy[pharId] = {
+          pharmacy: med.pharId,
+          medicines: []
+        };
+      }
+
+      groupedByPharmacy[pharId].medicines.push({
+        medicineName: med.medicineName,
+        batchNumber: med.batchNumber,
+        expDate: med.expDate
+      });
+    }
+
+    // Single mail per pharmacy
+    for (const pharId in groupedByPharmacy) {
+
+      const pharmacyData = groupedByPharmacy[pharId];
+
+      await sendPharEmail(
+        "Email Template/Pharmacy/ExpiryMedicine.html",
+        {
+          btnLink: process.env.PHARMACY_URL + "/inventory",
+          name: pharmacyData.pharmacy.name,
+        },
+        "Expiring Medicines Alert",
+        pharId
+      );
+    }
+
+    console.log(
+      `✅ Upcoming expiry check completed. ${Object.keys(groupedByPharmacy).length} pharmacy emails sent.`
+    );
+
+  } catch (err) {
+    console.error("❌ Upcoming expiry cron failed:", err.message);
+  }
 });
 cron.schedule("* * * * *", async () => {
   try {
@@ -278,6 +337,4 @@ cron.schedule("* * * * *", async () => {
   } catch (error) {
     console.error("Cron Error:", error);
   }
-=======
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 });

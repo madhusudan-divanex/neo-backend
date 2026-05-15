@@ -12,6 +12,7 @@ import HospitalCertificate from "../../models/Hospital/HospitalCertificate.js";
 import Kyc from "../../models/Hospital/KycLog.js";
 import { generateOTP, sendEmailOtp, sendMobileOtp } from "../../utils/globalFunction.js";
 import Otp from "../../models/Otp.js";
+import { sendHospitalEmail } from "../../utils/sendTemplateEmail.js";
 
 // ================= RESET PASSWORD =================
 export const resetPassword = async (req, res) => {
@@ -292,7 +293,9 @@ export const login = async (req, res) => {
       if (contactNumber) {
         await sendMobileOtp(contactNumber, code)
       } else {
-        await sendEmailOtp(email, code)
+        // await sendEmailOtp(email, code)
+        sendHospitalEmail("Email Template/Hospital/VerifyAccount.html", { code, name: hospital.name || "Hospital" },
+          "Verify Your Account", hospital._id)
       }
       const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
       if (isOtpExist) {
@@ -358,16 +361,18 @@ export const login = async (req, res) => {
 export const resendOtp = async (req, res) => {
   const { contactNumber, email } = req.body;
   try {
-    // const isExist = contactNumber? await User.findOne({ contactNumber }):await User.findOne({ email });
-    // if (!isExist) {
-    //     return res.status(404).json({ success: false, message: 'Doctor not found' });
-    // }
+    const isExist = contactNumber ? await User.findOne({ contactNumber }) : await User.findOne({ email });
+    if (!isExist) {
+      return res.status(404).json({ success: false, message: 'Doctor not found' });
+    }
     const code = generateOTP()
     if (contactNumber) {
 
       await sendMobileOtp(contactNumber, code)
     } else {
-      await sendEmailOtp(email, code)
+      // await sendEmailOtp(email, code)
+      sendHospitalEmail("Email Template/Hospital/VerifyAccount.html", { code, name: isExist.name || "Hospital" },
+        "Verify Your Account", isExist._id)
     }
     const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
     if (isOtpExist) {

@@ -87,14 +87,7 @@
                         max-width:100%;
                       " />
                     <!-- Brand -->
-                    <div style="
-              font-size:12px;
-              font-weight:700;
-              color:#16345B;
-              margin-top:12px;
-            ">
-                      NeoHealth<span style="color:#12b4c9;">Care</span>
-                    </div>
+
 
                   </td>
 
@@ -102,12 +95,12 @@
                   <td align="center" valign="middle">
 
                     <div class="heading" style="
-                        font-size:42px;
+                        font-size:32px;
                         color:#16345B;
                         font-family:Georgia,serif;
                         font-weight:500;
                       ">
-                      Verify Your Account
+                      Verify Your <br /> Account
                     </div>
 
                   </td>
@@ -133,7 +126,7 @@
 
               <!-- Greeting -->
               <div style="
-                  font-size:18px;
+                  font-size:14px;
                   line-height:100%;
                   color:#5f6368;
                   margin-bottom:25px;
@@ -141,9 +134,23 @@
                   z-index:2;
                 ">
 
-                Hi Dr. Michael Brown,
+                <span style="font-weight: 600;"> Hi {{name}},</span>
                 <br />
                 Welcome to the NeoHealthCare Pharmacy.
+
+              </div>
+              <div style="
+                  font-size:14px;
+                  line-height:100%;
+                  color:#5f6368;
+                  margin-bottom:35px;
+                  position:relative;
+                  z-index:2;
+                ">
+
+                To securely access the pharmacy
+                system, please use the One-Time Password
+                (OTP) below to verify your identity
 
               </div>
 
@@ -174,7 +181,7 @@
             color:#6b6b6b;
           ">
 
-                    482913
+                    {{code}}
 
                   </td>
                 </tr>
@@ -205,12 +212,12 @@
                  position:relative;
               ">
               <!-- Doctor Side Image -->
-              <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
+              <!-- <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
                   position:absolute;
                   right:0;
                   bottom:160px;
                   width:180px;
-                " />
+                " /> -->
               <!-- Connect -->
               <div style="
                   font-size:14px;
@@ -229,14 +236,15 @@
                   <td style="padding:0 5px;">
                     <a href={{facebook}} style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
                         style="margin-top: 10px;" alt="">
@@ -246,14 +254,15 @@
                   <td style="padding:0 5px;">
                     <a href="{{twitter}}" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png" style="margin-top: 10px;"
                         alt="">
@@ -263,14 +272,15 @@
                   <td style="padding:0 5px;">
                     <a href="{{instagram}}" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
                         style="margin-top: 10px;" alt="">
@@ -280,14 +290,15 @@
                   <td style="padding:0 5px;">
                     <a href="{{youtube}}" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                       <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png" style="margin-top: 10px;"
                         alt="">
@@ -306,14 +317,13 @@
                   color:#8b8b8b;
                 ">
 
-                123 Healthcare Street, Medical Neo,
-                State – 000000
+                {{address}}
 
                 <br />
 
-                hospital@email.com |
-                +91 98765 43210 |
-                www.hospital.com
+                {{email}} |
+                {{phone}} |
+                {{website}}
 
               </div>
 

@@ -31,6 +31,7 @@ import Country from '../../models/Hospital/Country.js';
 import { assignNH12 } from '../../utils/nh12.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
 import Department from '../../models/Department.js';
+import { sendLabEmail } from '../../utils/sendTemplateEmail.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
@@ -130,7 +131,9 @@ const signInLab = async (req, res) => {
             if (contactNumber) {
                 await sendMobileOtp(contactNumber, code)
             } else {
-                await sendEmailOtp(email, code)
+                // await sendEmailOtp(email, code)
+                sendLabEmail("Email Template/Laboratory/VerifyAccount.html", { code },
+                    "Verify Your Account", isExist._id)
             }
             const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
             if (isOtpExist) {
@@ -394,16 +397,18 @@ const verifyOtp = async (req, res) => {
 const resendOtp = async (req, res) => {
     const { contactNumber, email } = req.body;
     try {
-        // const isExist = contactNumber? await User.findOne({ contactNumber }):await User.findOne({ email });
-        // if (!isExist) {
-        //     return res.status(404).json({ success: false, message: 'Doctor not found' });
-        // }
+        const isExist = contactNumber ? await User.findOne({ contactNumber }) : await User.findOne({ email });
+        if (!isExist) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
         const code = generateOTP()
         if (contactNumber) {
 
             await sendMobileOtp(contactNumber, code)
         } else {
-            await sendEmailOtp(email, code)
+            // await sendEmailOtp(email, code)
+            sendLabEmail("Email Template/Laboratory/VerifyAccount.html", { code },
+                "Verify Your Account", isExist._id)
         }
         const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
         if (isOtpExist) {
@@ -817,7 +822,9 @@ const labLicense = async (req, res) => {
             labLicenseNumber,
             licenseFile: licenseFilePath,
         });
-        await sendWelcomeEmail(userId)
+        sendLabEmail("Email Template/Laboratory/Welcome.html",
+            { btnLink: process.env.LABORATORY_URL + '/dashboard' },
+            "Welcome to NeoHealthCare", userId)
 
         return res.status(200).json({
             success: true,
@@ -1262,7 +1269,7 @@ const getLabDetail = async (req, res) => {
         const labAddress = await LabAddress.findOne({ userId }).populate('countryId').populate('stateId')
             .populate('cityId').sort({ createdAt: -1 });
         const labLicense = await LabLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const labTest = await Test.find({ labId: user._id }).populate('category').populate('subCatData.subCat','subCategory')
+        const labTest = await Test.find({ labId: user._id }).populate('category').populate('subCatData.subCat', 'subCategory')
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ labId: user?._id })

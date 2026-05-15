@@ -13,14 +13,14 @@ import PatientDemographic from "../../models/Patient/demographic.model.js";
 export const getDoctorDetail = async (req, res) => {
   try {
     const { id } = req.params;
-    const doctor = await User.findById(id).lean();
-    if (!doctor) {
+    const user = await User.findById(id).select('name email contactNumber doctorId nh12').lean();
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: "Doctor not found"
       });
     }
-    const user = await User.findOne({ _id: id }).lean();
+    const doctor = await Doctor.findById(user.doctorId).lean();
 
     let about = null;
     if (id) {
@@ -204,12 +204,19 @@ export const getDoctorAppointments = async (req, res) => {
   try {
     const { id } = req.params;
     const page = Number(req.query.page) || 1;
-    const limit = 10;
+    const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const [appointments, total] = await Promise.all([
       DoctorAppointment.find({ doctorId: id })
-        .populate("patientId", "name unique_id")
+        .populate({
+          path: "patientId", // User model
+          select: "name nh12 patientId",
+          populate: {
+            path: "patientId", // Patient model inside User
+            select: "profileImage" // Patient model fields
+          }
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

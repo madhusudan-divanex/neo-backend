@@ -488,7 +488,6 @@ export const createMedicalCertificate = async (req, res) => {
       }
       const cert = await MedicalCertificate.create({ ...req.body, patientId: patient?._id, doctorId: doctor?._id, hospitalId: req.user.userId });
 
-      res.status(201).json({ cert, success: true });
       sendPatientEmail(
         "Email Template/patient/MedicalCertificate.html",
         {
@@ -501,9 +500,9 @@ export const createMedicalCertificate = async (req, res) => {
         "Medical Certificate",
         patient?._id
       );
+      return res.status(201).json({ cert, success: true });
     } else if (type == "doctor") {
       const cert = await MedicalCertificate.create({ ...req.body, doctorId: req.user.userId, patientId: patient?._id })
-      res.status(201).json({ cert, success: true });
       sendPatientEmail(
         "Email Template/patient/MedicalCertificate.html",
         {
@@ -516,6 +515,7 @@ export const createMedicalCertificate = async (req, res) => {
         "Doctor Consultation Follow-up",
         patient?._id
       );
+      return res.status(201).json({ cert, success: true });
     }
 
   } catch (err) {

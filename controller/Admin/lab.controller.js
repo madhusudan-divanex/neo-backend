@@ -31,13 +31,13 @@ export const getLabAppointmentDetail = async (req, res) => {
   try {
     let isExist;
     if (appointmentId.length < 24) {
-      isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'testId', select: 'shortName price' })
+      isExist = await LabAppointment.findOne({ customId: appointmentId }).populate({ path: 'tests.subCat.subCatId' }).populate('tests.category')
         .populate({ path: 'staff', select: 'name' })
         .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
         .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
         .populate({ path: 'doctorId', select: '-passwordHash' })
     } else {
-      isExist = await LabAppointment.findById(appointmentId).populate({ path: 'testId', select: 'shortName price' })
+      isExist = await LabAppointment.findById(appointmentId).populate({ path: 'tests.subCat.subCatId' }).populate('tests.category')
         .populate({ path: 'staff', select: 'name' })
         .populate({ path: 'patientId', select: '-passwordHash', populate: ({ path: 'patientId', select: 'name email contactNumber gender ' }) })
         .populate({ path: 'labId', select: '-passwordHash', populate: ({ path: 'labId', select: 'name logo gstNumber' }) }).lean()
@@ -73,10 +73,7 @@ export const LabAppointmentGet = async (req, res) => {
 
     const appointments = await LabAppointment.find({ labId: labUserId })
       .populate("patientId", "name unique_id")
-      .populate({
-        path: "testId",
-        select: "shortName price"
-      })
+      .populate({ path: 'tests.subCat.subCatId' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -224,7 +221,7 @@ export const getLaboratories = async (req, res) => {
 
     const contactPerson = await LabPerson.find({ userId: { $in: labIds } })
     const labAddr = await LabAddress.find({ userId: { $in: labIds } }).select('fullAddress userId')
-   
+
     const labWithContact = labs.map(lab => {
       const contact = contactPerson.find(
         person => person?.userId?.toString() === lab?.userId._id.toString()
@@ -236,7 +233,7 @@ export const getLaboratories = async (req, res) => {
       return {
         ...lab.toObject(),
         contactPerson: contact,
-        address:address
+        address: address
       };
     });
     const total = await Laboratory.countDocuments(query);
@@ -295,27 +292,27 @@ export const approveRejectLab = async (req, res) => {
     res.json({ success: true, message: `Lab ${status}`, data: lab });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-export const getLabAppointmentData=async(req,res)=>{
-  const id=req.params.id
+export const getLabAppointmentData = async (req, res) => {
+  const id = req.params.id
   try {
-    const appointmentData=await LabAppointment.findById(id)
-    .populate('labId patientId','name email contactNumber nh12')
-    .populate({ path: 'tests.subCat.subCatId' }).populate('tests.category')
-    if(!appointmentData){
-      return res.status(404).json({message:"Appointment data not found",success:false})
+    const appointmentData = await LabAppointment.findById(id)
+      .populate('labId patientId', 'name email contactNumber nh12')
+      .populate({ path: 'tests.subCat.subCatId' }).populate('tests.category')
+    if (!appointmentData) {
+      return res.status(404).json({ message: "Appointment data not found", success: false })
     }
-    const labPersonal=await Laboratory.findOne({userId:appointmentData?.labId?._id}).lean()
-    const labAbout=await LabAddress.findOne({userId:appointmentData?.labId?._id}).lean()
-    .select('fullAddress cityId stateId countryId').populate('cityId countryId stateId','name')
+    const labPersonal = await Laboratory.findOne({ userId: appointmentData?.labId?._id }).lean()
+    const labAbout = await LabAddress.findOne({ userId: appointmentData?.labId?._id }).lean()
+      .select('fullAddress cityId stateId countryId').populate('cityId countryId stateId', 'name')
 
-    const ptPersonal=await Patient.findOne({userId:appointmentData?.patientId?._id}).lean()
-    const ptDemo=await PatientDemographic.findOne({userId:appointmentData?.patientId?._id})
-    .populate('cityId countryId stateId','name').lean()
+    const ptPersonal = await Patient.findOne({ userId: appointmentData?.patientId?._id }).lean()
+    const ptDemo = await PatientDemographic.findOne({ userId: appointmentData?.patientId?._id })
+      .populate('cityId countryId stateId', 'name').lean()
 
-    const patient={...ptPersonal,...ptDemo}
-    const lab={...labPersonal,...labAbout}
-    return res.status(200).json({message:"Appointment Data fetched",patient,lab,appointmentData,success:true})
+    const patient = { ...ptPersonal, ...ptDemo }
+    const lab = { ...labPersonal, ...labAbout }
+    return res.status(200).json({ message: "Appointment Data fetched", patient, lab, appointmentData, success: true })
   } catch (error) {
-    return res.status(500).json({message:error?.message,success:false})
+    return res.status(500).json({ message: error?.message, success: false })
   }
 }

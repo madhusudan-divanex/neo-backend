@@ -87,14 +87,7 @@
                         max-width:100%;
                       " />
                                         <!-- Brand -->
-                                        <div style="
-              font-size:12px;
-              font-weight:700;
-              color:#16345B;
-              margin-top:12px;
-            ">
-                                            NeoHealth<span style="color:#12b4c9;">Care</span>
-                                        </div>
+
 
                                     </td>
 
@@ -131,7 +124,7 @@
 
                             <!-- Greeting -->
                             <div style="
-                  font-size:18px;
+                  font-size:14px;
                   line-height:100%;
                   color:#5f6368;
                   margin-bottom:25px;
@@ -139,7 +132,7 @@
                   z-index:2;
                 ">
 
-                                Hi Dr. Michael Brown,
+                                <span style="font-weight: 600;">Hi {{doctorName}}</span>
                                 <br />
                                 A hospital transfer request has been initiated for one of your patients and requires
                                 your medical review and approval.
@@ -184,28 +177,43 @@
             color:#6b6b6b;
           ">
 
-                                        <strong>Patient Name:</strong> Sarah
-                                        Johnson
-                                        <br />
-                                        <strong>Transfer ID:</strong>
-                                        54858
-                                        <br />
-                                        <strong>Current Hospital :</strong>
-                                        Forbaxy Amar Jain
-                                        <br />
-                                        <strong>Receiving Hospital :</strong>
-                                        AIIMS Hospital Delhi
-                                        <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Patient Name
+                                            :</span>
+                                        <span style="color: #555555;">
 
-
-                                        <strong>Department:</strong>
-                                        Cardiologist
+                                            {{name}}
+                                        </span>
                                         <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Transfer ID
+                                            :</span>
+                                        <span style="color: #555555;">
 
-                                        <strong>Transfer Date:</strong> 20 May 2026
+                                            {{transferId}}
+                                        </span>
                                         <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Current Hospital
+                                            :</span>
+                                        <span style="color: #555555;">
 
-                                        <strong>Time:</strong> 10:30 AM
+                                            {{fromHospital}}
+                                        </span>
+                                        <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Receiving
+                                            Hospital :</span>
+                                        <span style="color: #555555;">
+
+                                            {{toHospital}}
+                                        </span>
+                                        <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Transfer
+                                            Date:</span> {{transferDate}}
+                                        <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Primary
+                                            Doctor:</span>
+                                        <span style="color: #555555;">
+
+                                            {{doctorName}}
+                                        </span>
                                         <br />
 
                                     </td>
@@ -285,14 +293,15 @@
                                     <td style="padding:0 5px;">
                                         <a href="#" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
                                                 style="margin-top: 10px;" alt="">
@@ -302,14 +311,15 @@
                                     <td style="padding:0 5px;">
                                         <a href="#" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png"
                                                 style="margin-top: 10px;" alt="">
@@ -319,14 +329,15 @@
                                     <td style="padding:0 5px;">
                                         <a href="#" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
                                                 style="margin-top: 10px;" alt="">
@@ -336,14 +347,15 @@
                                     <td style="padding:0 5px;">
                                         <a href="#" style="
                         display:inline-block;
-                        width:36px;
-                        height:36px;
-                        line-height:36px;
+                        width:38px;
+                        height:38px;
+                        line-height:45px;
                         text-align:center;
-                        background:#12b4c9;
+                        background:#11c5c9;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
+                        font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png"
                                                 style="margin-top: 10px;" alt="">

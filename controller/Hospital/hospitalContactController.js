@@ -2,12 +2,14 @@ import HospitalContact from "../../models/Hospital/HospitalContact.js";
 import LabPerson from "../../models/Laboratory/contactPerson.model.js";
 import { saveToGrid } from "../../services/gridfsService.js";
 import { capitalizeFirst } from "../../utils/globalFunction.js";
+import { sendHospitalEmail } from "../../utils/sendTemplateEmail.js";
 
 export const saveContact = async (req, res) => {
   try {
     let contact = await HospitalContact.findOne({
       hospitalId: req.user.created_by_id
     });
+    const isNewContact = !contact;
     const userId = req.user.id
     const baseUrl = `api/file/`;
     const contactData = req.body
@@ -29,6 +31,14 @@ export const saveContact = async (req, res) => {
     }
 
     await contact.save();
+    if (isNewContact) {
+      sendHospitalEmail(
+        "Email Template/Hospital/Welcome.html",
+        { btnLink: process.env.HOSPITAL_URL + "/dashboard" },
+        "Welcome to NeoHealthCare",
+        req.user.id
+      );
+    }
     if (contact) {
       await LabPerson.findOneAndUpdate({ userId: userId }, {
         name: contactData.name,

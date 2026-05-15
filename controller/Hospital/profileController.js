@@ -29,6 +29,7 @@ import HospitalTransfer from "../../models/Hospital/HospitalTransfer.js";
 import HospitalImage from "../../models/Hospital/HospitalImage.js";
 import PatientDemographic from "../../models/Patient/demographic.model.js";
 import Patient from "../../models/Patient/patient.model.js";
+import sendPatientEmail, { sendDoctorEmail } from "../../utils/sendTemplateEmail.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -571,8 +572,8 @@ export const getHospitalDoctorList = async (req, res) => {
         { "email": { $regex: search, $options: "i" } },
       ];
     }
-    const filter = { organizationId:hospitalId,status:'active' }
-    
+    const filter = { organizationId: hospitalId, status: 'active' }
+
     const users = await StaffEmployement.find(filter).select('userId')
     const usersIds = users.map(item => item.userId)
     query._id = { $in: usersIds };
@@ -927,6 +928,10 @@ export const createTransfer = async (req, res) => {
     if (!isStaffUser) {
       return res.status(404).json({ message: "Receiving doctor not found", success: false })
     }
+    const isPatient = await User.findOne({ _id: patientId, role: "patient" })
+    if (!isPatient) {
+      return res.status(404).json({ message: "Patient not found", success: false })
+    }
     const isHospital = await User.findOne({ nh12: toHospital, role: "hospital" })
     if (!isHospital) {
       return res.status(404).json({ message: "Receiving hospital not found", success: false })
@@ -939,7 +944,7 @@ export const createTransfer = async (req, res) => {
     if (!isDepartment) {
       return res.status(404).json({ message: "Receiving department not found in receiving hospital", success: false })
     }
-    const isAllotment = await BedAllotment.findById(fromAllotment)
+    const isAllotment = await BedAllotment.findById(fromAllotment).populate('hospitalId primaryDoctorId', 'name')
     if (!isAllotment) {
       return res.status(404).json({ message: "Allotment not found", success: false })
     }
@@ -954,11 +959,40 @@ export const createTransfer = async (req, res) => {
       documentShared.prescriptions = isAllotment.prescriptionId
     }
     const transfer = new HospitalTransfer({
-      ...req.body, documentShared, sendingDoctor: isAllotment.primaryDoctorId,
+      ...req.body, documentShared, sendingDoctor: isAllotment.primaryDoctorId, allotmentId: isAllotment._id,
       toHospital: isHospital._id, fromHospital: hospitalId, receivingDoctor: isStaffUser._id
     });
     const savedTransfer = await transfer.save();
-    isAllotment.transferid = savedTransfer?._id
+    isAllotment.transferId = savedTransfer?._id
+    isAllotment.save();
+    if (savedTransfer) {
+      sendPatientEmail("Email Template/patient/PatientTransferStatus.html",
+        {
+          name: isPatient?.name,
+          transferId: savedTransfer?.customId,
+          fromHospital: isAllotment?.hospitalId?.name,
+          toHospital: isHospital?.name,
+          transferDate: new Date(savedTransfer.transferDate)?.toLocaleDateString('en-GB'),
+          doctorName: isAllotment?.primaryDoctorId?.name,
+          btnLink: process.env.MAIN_URL + `/transfer-certificate/${savedTransfer._id}`,
+
+        },
+        "Patient Transfer", isPatient?._id
+      )
+      sendDoctorEmail("Email Template/doctor/PatientTransferRequest.html",
+        {
+          name: isAllotment?.primaryDoctorId?.name,
+          transferId: savedTransfer?.customId,
+          fromHospital: isAllotment?.hospitalId?.name,
+          toHospital: isHospital?.name,
+          transferDate: new Date(savedTransfer.transferDate)?.toLocaleDateString('en-GB'),
+          doctorName: isAllotment?.primaryDoctorId?.name,
+          btnLink: process.env.HOSPITAL_URL + `/patient-transfer/${savedTransfer._id}`,
+
+        },
+        "Patient Transfer", isAllotment?.primaryDoctorId?._id
+      )
+    }
     res.status(201).json({
       success: true,
       data: savedTransfer,
@@ -1205,10 +1239,10 @@ export const getPatientTransferLetter = async (req, res) => {
     if (!isExist) {
       return res.status(404).json({ message: "Transfer data not found", success: false })
     }
-    const hospitalUser = await User.findById(isExist.fromHospital?._id).select('nh12 name email contactNumber hospitalId').lean() 
-    const hospital = await HospitalBasic.findById(hospitalUser?.hospitalId) 
-    const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospitalUser?.hospitalId }).populate('city country state', 'name').lean() 
-    const ptDemo = await PatientDemographic.findOne({ userId: isExist.patientId?._id }).select('fullAddress bloodGroup dob').lean() 
+    const hospitalUser = await User.findById(isExist.fromHospital?._id).select('nh12 name email contactNumber hospitalId').lean()
+    const hospital = await HospitalBasic.findById(hospitalUser?.hospitalId)
+    const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospitalUser?.hospitalId }).populate('city country state', 'name').lean()
+    const ptDemo = await PatientDemographic.findOne({ userId: isExist.patientId?._id }).select('fullAddress bloodGroup dob').lean()
     const ptPersonal = await Patient.findOne({ userId: isExist.patientId?._id }).select('gender').lean()
     const patientData = { ...ptDemo, ...ptPersonal }
     const address = `${hospitalAddress?.fullAddress} ,${hospitalAddress?.city?.name}, ${hospitalAddress?.state?.name}, ${hospitalAddress?.country?.name}, ${hospitalAddress?.pinCode}`
@@ -1221,21 +1255,21 @@ export const getPatientTransferLetter = async (req, res) => {
   }
 }
 
-export const getHospitalAllStaff=async(req,res)=>{
-  const hospitalId=req?.user?.id || req?.user?.userId
-  const {type,status}=req.query
+export const getHospitalAllStaff = async (req, res) => {
+  const hospitalId = req?.user?.id || req?.user?.userId
+  const { type, status } = req.query
   try {
-    let filter={organizationId:hospitalId}
-    if(type=='doctor'){
-      filter.userRole='doctor'
-    }else if(type=="staff"){
-      filter.userRole='staff'
+    let filter = { organizationId: hospitalId }
+    if (type == 'doctor') {
+      filter.userRole = 'doctor'
+    } else if (type == "staff") {
+      filter.userRole = 'staff'
     }
-    if(status){
-      filter.status=status
+    if (status) {
+      filter.status = status
     }
-    const staffEmp=await StaffEmployement.find(filter).select('userId role').populate('userId','name nh12')
-    return res.status(200).json({message:"Hospital Employee data fetched",success:true,data:staffEmp})
+    const staffEmp = await StaffEmployement.find(filter).select('userId role').populate('userId', 'name nh12')
+    return res.status(200).json({ message: "Hospital Employee data fetched", success: true, data: staffEmp })
   } catch (error) {
     res.status(500).json({
       success: false,

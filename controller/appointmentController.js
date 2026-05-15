@@ -64,6 +64,7 @@ const bookDoctorAppointment = async (req, res) => {
         if (book) {
             res.status(200).json({ message: "Appointment book successfully", success: true })
             if (!hospitalId) {
+                console.log("for doctor")
                 sendDoctorEmail("Email Template/doctor/PatientApt.html",
                     {
                         aptId: book.customId,
@@ -74,23 +75,23 @@ const bookDoctorAppointment = async (req, res) => {
                         btnLink: process.env.DOCTOR_URL + `/detail-view/${isPatient?.name}/${book?._id}`,
                     },
 
-                    "Doctor Appointment Confirmation", isPatient._id)
+                    "New Appointment Request", isExist._id)
             }
-            if (isInsert.role == "patient") {
-                let btnLink = process.env.PATIENT_URL + `/appointment-detail/${isExist?.name}/${book?._id}`
-                sendPatientEmail("Email Template/patient/DoctorAptConfirmations.html",
-                    {
-                        aptId: book.customId, doctorName: isExist?.name || "Doctor",
-                        date: new Date(date).toLocaleDateString('en-GB'),
-                        time: new Date(date).toLocaleTimeString('en-GB'),
-                        name: isPatient.name,
-                        specialization,
-                        btnLink,
-                        location
-                    },
+            // if (isInsert.role == "patient") {
+            //     let btnLink = process.env.PATIENT_URL + `/appointment-detail/${isExist?.name}/${book?._id}`
+            //     sendPatientEmail("Email Template/patient/DoctorAptConfirmations.html",
+            //         {
+            //             aptId: book.customId, doctorName: isExist?.name || "Doctor",
+            //             date: new Date(date).toLocaleDateString('en-GB'),
+            //             time: new Date(date).toLocaleTimeString('en-GB'),
+            //             name: isPatient.name,
+            //             specialization,
+            //             btnLink,
+            //             location
+            //         },
 
-                    "Doctor Appointment Confirmation", isPatient._id)
-            }
+            //         "Doctor Appointment Confirmation", isPatient._id)
+            // }
             if (req?.user?.loginUser && hospitalId) {
                 await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Add an appointment with ${isExist?.name}.` })
             } else if (hospitalId && !req?.user?.loginUser) {
@@ -391,7 +392,6 @@ const doctorPrescription = async (req, res) => {
 
         const add = await Prescriptions.create({ patientId, hospitalId, doctorId, medications, diagnosis, status, notes, appointmentId, reVisit, })
         if (add) {
-            res.status(200).json({ message: "Presctiption add successfully", success: true })
             const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).populate('specialty')
             sendPatientEmail("Email Template/patient/Prescription.html",
                 {
@@ -416,6 +416,7 @@ const doctorPrescription = async (req, res) => {
                 message: `Dr. ${isExist.name} has added a new prescription (id ${add?.customId}) for ${diagnosis}.`
             })
             await DoctorAppointment.findByIdAndUpdate(isAppointment._id, { prescriptionId: add._id }, { new: true })
+            return res.status(200).json({ message: "Presctiption add successfully", success: true })
         } else {
             return res.status(200).json({ message: "Presctiption not added", success: false })
         }

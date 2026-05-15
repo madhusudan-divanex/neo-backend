@@ -17,23 +17,19 @@ const labSchema = new Schema({
     },
     testId: {
         type: mongoose.Schema.Types.ObjectId,
-<<<<<<< HEAD
-        ref: 'Test', required: true
-=======
-        ref: 'Test', 
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
+        ref: 'Test'
     },
     forTestId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubTestCat', required: true
     },
-    sampleContainer:{
-        type:String,
-        required:true
+    sampleContainer: {
+        type: String,
+        required: true
     },
-    condition:String,
-    resultExpected:String,
-    storageDetail:String,
+    condition: String,
+    resultExpected: String,
+    storageDetail: String,
 }, { timestamps: true })
 labSchema.pre("save", async function (next) {
     if (this.customId) return next();

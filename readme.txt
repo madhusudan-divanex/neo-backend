@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /lab/staff
 /lab/staff/:id
 /lab/staff-data/:id
@@ -13,8 +12,35 @@ Patient->
     Lab Report
     Favorite
     Chat 
+
+Paitent->
+    Lab Report 
+    Discharge Summary 
+    Transfer Document 
+Laboratory->
+    Welcome 
+    Otp 
+Hospital->
+    Welcome 
+    Otp 
+    Policy Update
 Pharmacy->
-    Chat 
+    Welcome 
+    Otp 
+    Expiring Medicines Alert
+Doctor->
+    New Appointment
+    Patient Transfer Request
+
+Flow Pending->
+    Pharmacy summary Report 
+    Hospital Monthly System Report 
+    System Maintenance Notice 
+    Doctor Lab Report View 
+    Doctor follow up reminder 
+    Patient Vaccination Reminder 
+    Patient Ambulance Service Invocie
+    Patient Insurance Claim
 Laboratory->
     Chat
 Laboratory Api ->
@@ -57,17 +83,6 @@ Paitent->
     Update Profile 
     Downlaod Health Card
 
-=======
-API changes in Doctor
-    add lab test in appointment use (appointment/doctor/labtest)
-FeedBack->
-    Remove Blog and Add in main website
-    Doctor Category
-    Pharmacy Category
-    Lab Category 
-    Hospital Category
-    Patient Footer Category
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 Pending 
 Cancel 
 visited

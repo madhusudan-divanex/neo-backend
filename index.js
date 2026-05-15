@@ -67,10 +67,7 @@ import { sendWelcomeEmail } from './utils/globalFunction.js'
 import staff from './routes/staff.js'
 import department from './routes/departmentRoutes.js'
 import certificate from './routes/certificate.js'
-<<<<<<< HEAD
 import './utils/sendTemplateEmail.js'
-=======
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 dotenv.config()
 const app = express()
 app.use(cors())
@@ -82,11 +79,7 @@ const __dirname = path.dirname(__filename);
 
 // Serve uploads folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-<<<<<<< HEAD
 app.use((err, req, res, next) => {
-=======
-app.use((err, req, res, next)=> {
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
     console.error(err.stack);
 
     res.status(err.status || 500).json({
@@ -563,11 +556,7 @@ app.use('/admin', admin)
 app.use("/api/neo", optimizeApi);
 app.use("/api/staff", staff);
 app.use("/api/department", department);
-<<<<<<< HEAD
 app.use('/api/certificate', certificate)
-=======
-app.use('/api/certificate',certificate)
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 
 app.use('/user/:id', async (req, res) => {
     const userId = req.params.id

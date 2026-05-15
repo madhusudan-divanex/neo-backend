@@ -23,6 +23,7 @@ import { error } from 'console';
 import Country from '../../models/Hospital/Country.js';
 import { assignNH12 } from '../../utils/nh12.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
+import { sendPharEmail } from '../../utils/sendTemplateEmail.js';
 
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
@@ -90,7 +91,7 @@ const signUpPhar = async (req, res) => {
             });
 
             if (newphar) {
-                const userData = await User.create({ name,contactNumber, email, role: 'pharmacy', created_by: 'self', passwordHash: hashedPassword, pharId: newphar?._id })
+                const userData = await User.create({ name, contactNumber, email, role: 'pharmacy', created_by: 'self', passwordHash: hashedPassword, pharId: newphar?._id })
                 newphar.userId = userData?._id
                 await newphar.save()
                 const token = jwt.sign(
@@ -128,7 +129,9 @@ const signInPhar = async (req, res) => {
             if (contactNumber) {
                 await sendMobileOtp(contactNumber, code)
             } else {
-                await sendEmailOtp(email, code)
+                // await sendEmailOtp(email, code)
+                sendPharEmail("Email Template/Pharmacy/VerifyAccount.html", { code, name: isExist.name },
+                    "Verify Your Account", isExist._id)
             }
             const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
             if (isOtpExist) {
@@ -381,16 +384,18 @@ const verifyOtp = async (req, res) => {
 const resendOtp = async (req, res) => {
     const { contactNumber, email } = req.body;
     try {
-        // const isExist = contactNumber? await User.findOne({ contactNumber }):await User.findOne({ email });
-        // if (!isExist) {
-        //     return res.status(404).json({ success: false, message: 'Doctor not found' });
-        // }
+        const isExist = contactNumber ? await User.findOne({ contactNumber }) : await User.findOne({ email });
+        if (!isExist) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
         const code = generateOTP()
         if (contactNumber) {
 
             await sendMobileOtp(contactNumber, code)
         } else {
-            await sendEmailOtp(email, code)
+            // await sendEmailOtp(email, code)
+            sendPharEmail("Email Template/Pharmacy/VerifyAccount.html", { code, name: isExist.name },
+                "Verify Your Account", isExist._id)
         }
         const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
         if (isOtpExist) {
@@ -884,7 +889,9 @@ const pharLicense = async (req, res) => {
             pharLicenseNumber,
             licenseFile: licenseFilePath,
         });
-        await sendWelcomeEmail(userId)
+        sendPharEmail("Email Template/Pharmacy/Welcome.html",
+            { btnLink: process.env.PHARMACY_URL + '/dashboard', name: user.name },
+            "Welcome to NeoHealthCare", userId)
 
         return res.status(200).json({
             success: true,

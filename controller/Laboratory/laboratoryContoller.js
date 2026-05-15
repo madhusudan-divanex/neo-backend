@@ -26,6 +26,8 @@ import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import Country from "../../models/Hospital/Country.js";
 import { assignNH12 } from "../../utils/nh12.js";
 import LabSample from "../../models/LabSample.js";
+import sendPatientEmail from "../../utils/sendTemplateEmail.js";
+import SubTestCat from "../../models/SubTestCategory.js";
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
     try {
@@ -433,12 +435,16 @@ const saveReport = async (req, res) => {
             manualComment, remark,
             manualName
         } = req.body;
-        const isAppointment = await LabAppointment.findOne({ labId, _id: appointmentId })
+        const isAppointment = await LabAppointment.findOne({ labId, _id: appointmentId }).populate('patientId staff', 'name')
         if (!isAppointment) {
             return res.status(404).json({ message: "appointement not found", success: false })
         }
-        if (!isAppointment.collectionDate) {
-            return res.status(404).json({ message: "Please collect sample before saving the report", success: false })
+        if (!isAppointment.samples?.some(s => s?.toString() === subCatId?.toString())) {
+            safeUnlink(report)
+            return res.status(404).json({
+                message: "Please collect sample before saving the report",
+                success: false
+            })
         }
         const component = JSON.parse(req.body.component)
         const isExist = await TestReport.findOne({ subCatId, appointmentId })
@@ -495,11 +501,27 @@ const saveReport = async (req, res) => {
             isAppointment.status = "deliver-report"
             await isAppointment.save()
 
+            const subCatData = await SubTestCat.findById(subCatId).populate('subCategory')
+            const sampleData = await LabSample.findOne({ appointmentId, forTestId: subCatId })
+            sendPatientEmail("Email Template/patient/LabReport.html",
+                {
+                    name: isAppointment?.patientId?.name,
+                    reportId: newReport.customId,
+                    testName: subCatData?.subCategory,
+                    reportDate: new Date(newReport.createdAt)?.toLocaleDateString('en-GB'),
+                    sampleDate: new Date(sampleData.createdAt)?.toLocaleDateString('en-GB'),
+                    doctor: isAppointment?.staff?.name,
+                    btnLink: process.env.MAIN_URL + `/lab-report/${appointmentId}`,
+
+                },
+                "Lab Report", isAppointment?.patientId?._id,
+            )
             return res.status(201).json({
                 success: true,
                 message: "Test report created successfully",
                 data: newReport
             });
+
         }
     } catch (error) {
         console.error("Report Errr", error);
@@ -658,17 +680,23 @@ const getLabInvoice = async (req, res) => {
 };
 const addSample = async (req, res) => {
     const labId = req.user.id || req.user.userId
-    const { patientId, appointmentId, testId, forTestId, sampleContainer, condition, resultExpected, storageDetail } = req.body
+    const { patientId, appointmentId, forTestId, sampleContainer, condition, resultExpected, storageDetail } = req.body
     try {
-        if (!patientId || !appointmentId || !testId || !forTestId || !sampleContainer || !storageDetail) {
+        if (!patientId || !appointmentId || !forTestId || !sampleContainer || !storageDetail) {
             return res.status(400).json({ message: "Please fill all requuired fileds" })
+        }
+        const isApt = await LabAppointment.findById(appointmentId)
+        if (!isApt) {
+            return res.status(404).json({ message: "Appointment data not found" })
         }
         const isAlready = await LabSample.findOne({ patientId, appointmentId, forTestId })
         if (isAlready) {
             return res.status(400).json({ message: "Sample already exists", success: false })
         }
-        const data = await LabSample.create({ patientId, appointmentId, testId, forTestId, sampleContainer, condition, resultExpected, storageDetail, labId })
+        const data = await LabSample.create({ patientId, appointmentId, forTestId, sampleContainer, condition, resultExpected, storageDetail, labId })
         if (data) {
+            isApt.samples = [...isApt.samples, data?.forTestId]
+            await isApt.save()
             return res.status(200).json({ message: "Sample saved", success: true })
         }
         return res.status(400).json({ message: "Sample data not saved", success: false })
@@ -677,8 +705,19 @@ const addSample = async (req, res) => {
         return res.status(500).json({ message: error?.message })
     }
 }
+const getAppointmentSample = async (req, res) => {
+    const appointmentId = req.params.id
+    try {
+        const data = await LabSample.find({ appointmentId })
+        return res.status(200).json({ message: "Sample data fetched", data, success: true })
+
+
+    } catch (error) {
+        return res.status(500).json({ message: error?.message })
+    }
+}
 
 export {
-    getAllLaboratory, addTest, getTest, deleteTest,
+    getAllLaboratory, addTest, getTest, deleteTest, addSample, getAppointmentSample,
     getTestData, updateTest, labTestAction, saveReport, getTestReport, saveLabInvoice, getLabInvoice
 }

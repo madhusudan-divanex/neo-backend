@@ -17,6 +17,7 @@ import HospitalAddress from "../../../models/Hospital/HospitalAddress.js";
 import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../../models/Staff/StaffEmployement.js";
 import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
+import sendPatientEmail from "../../../utils/sendTemplateEmail.js";
 /* ======================================================
    ADD BED
 ====================================================== */
@@ -111,10 +112,10 @@ export const getBedById = async (req, res) => {
   }
 };
 export const isBedAvailable = async (req, res) => {
-  const hospitalIS=req.user.id || req.user.userId
+  const hospitalIS = req.user.id || req.user.userId
   try {
     const bed = await HospitalBed.findOne({
-      hospitalId: req.user.id,status:'Available'
+      hospitalId: req.user.id, status: 'Available'
     })
 
     if (!bed) {
@@ -277,7 +278,6 @@ export const getAllotmentHistory = async (req, res) => {
       .populate("dischargeId", "createdAt")
       .populate({
         path: "paymentId",
-        select: "status payments services ipdPayment bedCharges",
         match: paymentFilter
       }).populate('departmentId', 'departmentName')
       .populate({
@@ -532,7 +532,7 @@ export const addOrUpdateDischargePatient = async (req, res) => {
     const vitals = JSON.parse(req.body.vitals)
     const hospitalId = req.user.id || req.user.userId
     let discharge;
-    const isAllotment = await BedAllotment.findOne({ _id: allotmentId, hospitalId }).populate('patientId')
+    const isAllotment = await BedAllotment.findOne({ _id: allotmentId, hospitalId }).populate('patientId primaryDoctorId departmentId')
     if (!isAllotment) {
       return res.status(200).json({ message: "Allotment not found", success: false })
     }
@@ -632,6 +632,18 @@ export const addOrUpdateDischargePatient = async (req, res) => {
       } else if (hospitalId && !req.user?.loginUser) {
         await HospitalAudit.create({ hospitalId, note: `A discharge data was creaated of patient ${isAllotment?.patientId?.name}.` })
       }
+      sendPatientEmail("Email Template/patient/DischargeSummary.html",
+        {
+          name: isAllotment?.patientId?.name,
+          admissionId: isAllotment?.customId,
+          dischargeDate: new Date(discharge.createdAt)?.toLocaleDateString('en-GB'),
+          department: isAllotment?.departmentId?.departmentName,
+          doctorName: isAllotment?.primaryDoctorId?.name,
+          btnLink: process.env.MAIN_URL + `/discharge-invoice/${isAllotment._id}`,
+
+        },
+        "Patient Discharge", isAllotment?.patientId?._id,
+      )
       return res.status(201).json({
         success: true,
         message: "Patient Discharge successfully",
@@ -651,7 +663,7 @@ export const getDischargePatient = async (req, res) => {
   const { id } = req.params
   try {
     const isExist = await DischargePatient.findOne({ allotmentId: id })
-    .populate('nurseSignature doctorSignature','name nh12 email contactNumber')
+      .populate('nurseSignature doctorSignature', 'name nh12 email contactNumber')
     if (isExist) {
       return res.status(200).json({ message: "Discharge recores found", data: isExist, success: true })
     }

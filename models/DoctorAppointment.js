@@ -67,12 +67,8 @@ const requestSchema = new Schema({
     vitals: vitalSchema,
     paymentStatus: { type: String, enum: ['due', 'paid'], default: 'due' },
     status: { type: String, enum: ['pending', 'approved', 'completed', 'rejected', 'cancel'], default: 'pending', index: true },
-<<<<<<< HEAD
     cancelMessage: String,
     reminderSent: { type: Boolean, default: false }
-=======
-    cancelMessage: String
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
 
 }, { timestamps: true })
 requestSchema.pre("save", async function (next) {
