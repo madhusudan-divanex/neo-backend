@@ -95,7 +95,7 @@
                   <td align="center" valign="middle">
 
                     <div class="heading" style="
-                        font-size:34px;
+                        font-size:32px;
                         color:#16345B;
                         font-family:Georgia,serif;
                         font-weight:500;
@@ -126,7 +126,7 @@
 
               <!-- Greeting -->
               <div style="
-                  font-size:18px;
+                  font-size:14px;
                   line-height:100%;
                   color:#5f6368;
                   margin-bottom:25px;
@@ -134,7 +134,7 @@
                   z-index:2;
                 ">
 
-                <span class="font-weight:600"> Hi Dr. Michael Brown,</span>
+                <span class="font-weight:600"> Hi {{name}},</span>
                 <br />
 
                 Welcome to the NeoHealthCare Pharmacy.
@@ -144,7 +144,7 @@
               <!-- Description -->
               <div style="
                   font-size:14px;
-                  line-height:100%;
+                  line-height:1.4;
                   color:#5f6368;
                   margin-bottom:35px;
                   position:relative;
@@ -170,7 +170,7 @@
                 <tr>
                   <td bgcolor="#0f1f4a" class="button" style="border-radius:40px;">
 
-                    <a href="#" style="
+                    <a href="{{btnLink}}" style="
                         display:inline-block;
                         padding:14px 28px;
                         font-size:12px;
@@ -210,12 +210,12 @@
                 position: relative;
               ">
               <!-- Doctor Side Image -->
-              <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
+              <!-- <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
                   position:absolute;
                   right:0;
                   bottom:160px;
                   width:180px;
-                " />
+                " /> -->
               <!-- Connect -->
               <div style="
                   font-size:14px;
@@ -315,14 +315,13 @@
                   color:#8b8b8b;
                 ">
 
-                123 Healthcare Street, Medical Neo,
-                State – 000000
+                {{address}}
 
                 <br />
 
-                hospital@email.com |
-                +91 98765 43210 |
-                www.hospital.com
+                {{email}} |
+                {{phone}} |
+                {{site}}
 
               </div>
 

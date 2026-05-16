@@ -95,7 +95,7 @@
                                     <td align="center" valign="middle">
 
                                         <div class="heading" style="
-                        font-size:42px;
+                        font-size:32px;
                         color:#16345B;
                         font-family:Georgia,serif;
                         font-weight:500;
@@ -124,7 +124,7 @@
 
                             <!-- Greeting -->
                             <div style="
-                  font-size:18px;
+                  font-size:14px;
                   line-height:100%;
                   color:#5f6368;
                   margin-bottom:25px;
@@ -132,14 +132,14 @@
                   z-index:2;
                 ">
 
-                                Dear Team,
+                                <span style="font-weight:600;"> Dear Team,</span>
                                 <br />
 
                             </div>
 
                             <div style="
                   font-size:14px;
-                  line-height:100%;
+                  line-height:1.4;
                   color:#5f6368;
                   margin-bottom:35px;
                   position:relative;
@@ -172,14 +172,28 @@
             line-height:100%;
             color:#6b6b6b;
           ">
-                                        <strong>Patient Name :</strong>
-                                        Sarah Johnson
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Patient Name
+                                            :</span>
+                                        <span style="color: #555555;">
+                                            {{patientName}}
+                                        </span>
                                         <br />
-                                        <strong>Test Name:</strong>
-                                        Blood Glucose Test
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Test Name:</span>
+                                        <span style="color: #555555;">
+                                            {{testName}}
+                                        </span>
                                         <br />
-                                        <strong>Requested On:</strong> 20
-                                        May 2026
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Previous
+                                            Appointment Id:</span>
+                                        <span style="color: #555555;">
+                                            {{prevAptId}}
+                                        </span>
+                                        <br />
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Requested
+                                            On:</span>
+                                        <span style="color: #555555;">
+                                            {{requestedOn}}
+                                        </span>
                                         <br />
 
                                     </td>
@@ -192,7 +206,7 @@
                                 <tr>
                                     <td bgcolor="#102b5c" style="border-radius:40px;">
 
-                                        <a href="#" style="
+                                        <a href="{{btnLink}}" style="
               display:inline-block;
               padding:15px 28px;
               font-size:12px;
@@ -233,12 +247,12 @@
                  position:relative;
               ">
                             <!-- Doctor Side Image -->
-                            <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
+                            <!-- <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
                   position:absolute;
                   right:0;
                   bottom:160px;
                   width:180px;
-                " />
+                " /> -->
                             <!-- Connect -->
                             <div style="
                   font-size:14px;
@@ -338,14 +352,13 @@
                   color:#8b8b8b;
                 ">
 
-                                123 Healthcare Street, Medical Neo,
-                                State – 000000
+                                {{address}}
 
                                 <br />
 
-                                hospital@email.com |
-                                +91 98765 43210 |
-                                www.hospital.com
+                                {{email}} |
+                                {{phone}} |
+                                {{site}}
 
                             </div>
 

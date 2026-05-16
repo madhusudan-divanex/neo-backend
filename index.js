@@ -562,8 +562,8 @@ app.use('/user/:id', async (req, res) => {
     const userId = req.params.id
     try {
         let user;
-        if (userId < 24) {
-            user = await User.findOne({ unique_id: userId }).select('-passwordHash').lean();
+        if (userId?.length < 24) {
+            user = await User.findOne({ nh12: userId }).select('-passwordHash').lean();
         } else {
             user = await User.findOne({ _id: userId }).select('-passwordHash').lean();
         }
@@ -572,17 +572,18 @@ app.use('/user/:id', async (req, res) => {
         }
         // const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
         if (user.role == "patient") {
+            const finalUserId = user._id
             const [
                 kyc,
                 personal,
                 history,
                 familyHistory,
             ] = await Promise.all([
-                PatientKyc.findOne({ userId }),
-                PatientDemographic.findOne({ userId }),
-                MedicalHistory.findOne({ userId }),
+                PatientKyc.findOne({ userId: finalUserId }),
+                PatientDemographic.findOne({ userId: finalUserId }),
+                MedicalHistory.findOne({ userId: finalUserId }),
                 MedicalHistory.findOne({
-                    userId,
+                    userId: finalUserId,
                     familyHistory: { $ne: null }
                 }),
             ]);
@@ -608,6 +609,7 @@ app.use('/user/:id', async (req, res) => {
             data: user
         });
     } catch (err) {
+        console.log(err)
         res.status(500).json({ success: false, message: err.message });
     }
 })

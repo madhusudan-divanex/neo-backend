@@ -124,15 +124,15 @@
 
                             <!-- Greeting -->
                             <div style="
-                  font-size:18px;
-                  line-height:100%;
+                  font-size:14px;
+                  line-height:1.4;
                   color:#5f6368;
                   margin-bottom:25px;
                   position:relative;
                   z-index:2;
                 ">
 
-                                Hi Dr. Michael Brown,
+                                <span style="font-weight:600;">Hi {{name}},</span>
                                 <br />
                                 This is a reminder regarding an upcoming
                                 patient follow-up consultation scheduled in
@@ -180,20 +180,28 @@
             color:#6b6b6b;
           ">
 
-                                        <strong>Patient Name:</strong> Sarah
-                                        Johnson
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Patient
+                                            Name:</span>
+                                        <span style="color: #555555;">
+                                            {{patientName}}
+                                        </span>
                                         <br />
 
 
-                                        <strong>Department:</strong>
-                                        Cardiologist
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Diagnosis:</span>
+                                        <span style="color: #555555;">
+
+                                            {{diagnosis}}
+                                        </span>
                                         <br />
 
-                                        <strong>Conultation Date:</strong> 20 May 2026
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Conultation
+                                            Date:</span>
+                                        <span style="color: #555555;">
+                                            {{date}}
+                                        </span>
                                         <br />
 
-                                        <strong>Time:</strong> 10:30 AM
-                                        <br />
 
                                     </td>
                                 </tr>
@@ -206,7 +214,7 @@
                                 <tr>
                                     <td bgcolor="#102b5c" style="border-radius:40px;">
 
-                                        <a href="#" style="
+                                        <a href="{{btnLink}}" style="
               display:inline-block;
               padding:15px 28px;
               font-size:12px;
@@ -247,13 +255,13 @@
                  position:relative;
               ">
                             <!-- Doctor Side Image -->
-                            <img src="https://api.neohealthcard.com:9100/uploads/assets/asideDoctor.png" width="150"
+                            <!-- <img src="https://api.neohealthcard.com:9100/uploads/assets/asideDoctor.png" width="150"
                                 alt="Doctor" class="doctor-image" style="
                   position:absolute;
                   right:0;
                   bottom:160px;
                   width:180px;
-                " />
+                " /> -->
                             <!-- Connect -->
                             <div style="
                   font-size:14px;
@@ -353,14 +361,13 @@
                   color:#8b8b8b;
                 ">
 
-                                123 Healthcare Street, Medical Neo,
-                                State – 000000
+                                {{address}}
 
                                 <br />
 
-                                hospital@email.com |
-                                +91 98765 43210 |
-                                www.hospital.com
+                                {{email}} |
+                                {{phone}} |
+                                {{site}}
 
                             </div>
 

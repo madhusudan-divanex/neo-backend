@@ -29,7 +29,7 @@ export const getHospitalDetail = async (req, res) => {
       hospitalBasicId = userCheck.hospitalId;
     }
 
-    const hospital = await HospitalBasic.findById(hospitalBasicId).lean();
+    const hospital = await HospitalBasic.findById(hospitalBasicId).populate("userId", "name email contactNumber nh12").lean();
 
     if (!hospital) {
       return res.status(404).json({
@@ -44,7 +44,7 @@ export const getHospitalDetail = async (req, res) => {
        2️⃣ Contact Person
     ================================================== */
     const contactPerson = await HospitalContact.findOne({
-      hospitalId: id,
+      hospitalId: hospitalBasicId,
     }).lean();
 
     /* =================================================
@@ -65,62 +65,24 @@ export const getHospitalDetail = async (req, res) => {
     /* =================================================
        5b️⃣ Hospital Images
     ================================================== */
-    const hospitalImages = await HospitalImage.find({ hospitalId: hospitalRealId }).lean();
+    const hospitalImages = await HospitalImage.find({ hospitalId: hospitalBasicId }).lean();
 
     /* =================================================
        5c️⃣ Hospital Certificates
     ================================================== */
-    const certificates = await HospitalCertificate.find({ hospitalId: hospitalRealId }).lean();
+    const certificates = await HospitalCertificate.find({ hospitalId: hospitalBasicId }).lean();
 
     /* =================================================
        5d️⃣ Hospital Address
     ================================================== */
-    const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospitalRealId })
+    const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospitalBasicId })
       .populate("country", "name")
-      .populate("state",   "name")
-      .populate("city",    "name")
+      .populate("state", "name")
+      .populate("city", "name")
       .lean();
 
-    /* =================================================
-       5e️⃣ Hospital User (for unique_id)
-    ================================================== */
-    const hospitalUser = await User.findOne({ hospitalId: hospitalRealId }).select("unique_id name").lean();
 
-    /* =================================================
-       6️⃣ Doctors List (for Doctor List tab)
-    ================================================== */
 
-    const employments = await StaffEmployement.find({
-      organizationId: hospital?._id,
-      status: "active"
-    }).select("userId");
-
-    const userIds = employments.map(e => e.userId);
-
-    const doctors = await User.find({
-      _id: { $in: userIds },
-      role: "doctor"
-    })
-      .populate("doctorId")
-      .select("-passwordHash")
-      .lean();
-
-    /* ---- Attach Doctor About ---- */
-
-    const abouts = await DoctorAbout.find({
-      userId: { $in: userIds }
-    }).populate("specialty");
-
-    const doctorsWithDetails = doctors.map(d => {
-      const about = abouts.find(
-        a => a.userId.toString() === d._id.toString()
-      );
-
-      return {
-        ...d,
-        about: about || null
-      };
-    });
 
     /* =================================================
        FINAL RESPONSE
@@ -134,8 +96,6 @@ export const getHospitalDetail = async (req, res) => {
       images: hospitalImages.length ? hospitalImages : images,
       documents,
       certificates,
-      doctors: doctorsWithDetails,
-      uniqueId: hospitalUser?.unique_id || ""
     });
 
   } catch (error) {
@@ -201,31 +161,33 @@ export const deleteHospital = async (req, res) => {
 
 export const getHospitals = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "" ,status} = req.query;
+    const { page = 1, limit = 10, search = "", status } = req.query;
 
     const query = {
-      hospitalName: { $regex: search, $options: "i" },      
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
+      role: "hospital"
     };
-    if(status && status!=="all"){
-      query.kycStatus=status
-    } 
-
     // 1️⃣ Hospitals
-    const hospitals = await HospitalBasic.find(query).populate("userId","nh12")
+    const hospitals = await User.find(query).select('name email nh12 contactNumber hospitalId').populate("hospitalId")
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .sort({ createdAt: -1 })
       .lean(); // IMPORTANT
 
     // 2️⃣ Hospital IDs
-    const hospitalIds = hospitals.map(h => h._id);
+    const hospitalIds = hospitals.map(h => h.hospitalId?._id);
 
     // 3️⃣ Contacts
     const contacts = await HospitalContact.find({
       hospitalId: { $in: hospitalIds }
     }).lean();
 
-     const address = await HospitalAddress.find({
+    const address = await HospitalAddress.find({
       hospitalId: { $in: hospitalIds }
     }).select('fullAddress hospitalId').lean();
 
@@ -243,11 +205,11 @@ export const getHospitals = async (req, res) => {
     // 5️⃣ Merge contact into hospital
     const finalData = hospitals.map(h => ({
       ...h,
-      contact: contactMap[h._id.toString()] || null,
-      address: addresMap[h?._id?.toString()] || null,
+      contact: contactMap[h?.hospitalId?._id.toString()] || null,
+      address: addresMap[h?.hospitalId?._id?.toString()] || null,
     }));
 
-    const total = await HospitalBasic.countDocuments(query);
+    const total = await User.countDocuments(query);
 
     res.json({
       success: true,
@@ -278,4 +240,83 @@ export const approveRejectHospital = async (req, res) => {
     await hosp.save();
     res.json({ success: true, message: `Hospital ${status}`, data: hosp });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+export const getHospitalDoctors = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  const search = req.query.search?.trim();
+
+  try {
+    const { id } = req.params;
+
+    // Get employed doctors
+    const staffEmp = await StaffEmployement.find({
+      organizationId: id,
+      userRole: "doctor",
+    }).select('-password')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    const doctorIds = staffEmp.map((emp) => emp.userId);
+
+    // Base filter
+    const filter = {
+      _id: { $in: doctorIds },
+      role: "doctor",
+    };
+
+    // Add search only if search exists
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const doctors = await User.find(filter).select('doctorId nh12 email contactNumber name')
+      .populate("doctorId", "profileImage dob");
+
+    const doctorAbout = await DoctorAbout.find({
+      userId: { $in: doctorIds },
+    })
+      .select("specialty hospitalName userId")
+      .populate("specialty");
+
+    // Create map
+    const doctorAboutMap = {};
+
+    doctorAbout.forEach((d) => {
+      doctorAboutMap[d.userId.toString()] = d;
+    });
+
+    // Merge data
+    const finalData = doctors.map((d) => ({
+      ...d.toObject(),
+      staffEmp: staffEmp.find((emp) => emp.userId.toString() === d._id.toString()) || null,
+      doctorAbout: doctorAboutMap[d._id.toString()] || null,
+    }));
+
+    const total = await User.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: finalData,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
+
+  } catch (err) {
+    console.log(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
 };

@@ -6,7 +6,7 @@ import HospitalPayment from '../models/Hospital/HospitalPayment.js';
 import BedAllotment from '../models/Hospital/BedAllotment.js';
 import mongoose from 'mongoose';
 import Inventory from '../models/Pharmacy/inventory.model.js';
-import sendPatientEmail, { sendPharEmail } from './sendTemplateEmail.js';
+import sendPatientEmail, { sendDoctorEmail, sendPharEmail } from './sendTemplateEmail.js';
 import HospitalBasic from '../models/Hospital/HospitalBasic.js';
 import HospitalAddress from '../models/Hospital/HospitalAddress.js';
 import DoctorAppointment from '../models/DoctorAppointment.js';
@@ -49,6 +49,18 @@ cron.schedule('0 0 * * *', async () => {
           },
           "Doctor Consultation Follow-up",
           prescription?.patientId?._id
+        );
+        sendDoctorEmail(
+          "Email Template/Doctor/PatientFollowUp.html",
+          {
+            patientName: prescription?.patientId?.name || "Patient",
+            date: new Date().toLocaleDateString("en-GB"),
+            name: prescription?.doctorId?.name,
+            btnLink: process.env.DOCTOR_URL + `/detail-view/${prescription?.patientId?.name}/${prescription?.appointmentId}`,
+            diagnosis: prescription?.diagnosis
+          },
+          "Patient Follow-up Reminder",
+          prescription?.doctorId?._id
         );
         await Notification.create({
           userId: prescription.patientId?._id,
@@ -337,4 +349,65 @@ cron.schedule("* * * * *", async () => {
   } catch (error) {
     console.error("Cron Error:", error);
   }
+});
+cron.schedule("0 9 * * 1", async () => {
+
+  try {
+
+    const lowStockMedicines = await Inventory.find({
+
+      $expr: {
+
+        $lte: [
+          "$quantity",
+          { $multiply: ["$sellCount", 0.10] }
+        ]
+
+      }
+
+    }).populate("pharId", "name email");
+
+    // unique pharmacies with data
+    const pharmacies = {};
+
+    for (const med of lowStockMedicines) {
+
+      const pharId = med?.pharId?._id?.toString();
+
+      if (!pharId) continue;
+
+      pharmacies[pharId] = med.pharId;
+
+    }
+
+    // send one mail per pharmacy
+    for (const pharId in pharmacies) {
+
+      const pharmacy = pharmacies[pharId];
+
+      await sendPharEmail(
+
+        "Email Template/Pharmacy/LowMedicine.html",
+
+        {
+          btnLink: process.env.PHARMACY_URL + "/inventory",
+          name: pharmacy?.name,
+        },
+
+        "Low Stock Alert",
+
+        pharId
+
+      );
+
+    }
+
+    console.log(`✅ Low stock alert sent to ${Object.keys(pharmacies).length} pharmacies`);
+
+  } catch (err) {
+
+    console.error("❌ Low stock cron failed:", err.message);
+
+  }
+
 });

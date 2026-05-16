@@ -17,7 +17,7 @@ import HospitalAddress from "../../../models/Hospital/HospitalAddress.js";
 import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../../models/Staff/StaffEmployement.js";
 import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
-import sendPatientEmail from "../../../utils/sendTemplateEmail.js";
+import sendPatientEmail, { sendHospitalEmail } from "../../../utils/sendTemplateEmail.js";
 /* ======================================================
    ADD BED
 ====================================================== */
@@ -351,6 +351,7 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
 
     if (paymentId) {
       // 👉 UPDATE
+      const oldPayment = await HospitalPayment.findById(paymentId)
       payment = await HospitalPayment.findByIdAndUpdate(
         paymentId,
         {
@@ -363,6 +364,19 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
         },
         { new: true, runValidators: true }
       );
+      if (oldPayment?.payments?.length === 0 && payments?.length > 0) {
+        sendPatientEmail("Email Template/patient/PaymentInvoice.html",
+          {
+            btnLink: process.env.MAIN_URL + `/ipd-invoice/${isAllotment?._id}`,
+            name: isAllotment?.patientId?.name,
+            invoiceId: payment?.customId,
+            paymentDate: new Date(payments[0]?.date).toLocaleDateString("en-GB"),
+            paymentMethod: payments[0]?.type,
+
+          },
+          "Hospital Payment Invoice", isAllotment.patientId?._id
+        )
+      }
 
       if (!payment) {
         return res.status(404).json({
@@ -407,6 +421,19 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
         await HospitalAudit.create({
           hospitalId, note: `An allotment payment was created of patient ${isAllotment?.patientId?.name}.`
         })
+      }
+      if (payments?.length > 0) {
+        sendPatientEmail("Email Template/patient/PaymentInvoice.html",
+          {
+            btnLink: process.env.MAIN_URL + `/ipd-invoice/${isAllotment?._id}`,
+            name: isAllotment?.patientId?.name,
+            invoiceId: payment?.customId,
+            paymentDate: new Date(payments[0]?.date).toLocaleDateString("en-GB"),
+            paymentMethod: payments[0]?.type,
+
+          },
+          "Hospital Payment Invoice", isAllotment.patientId?._id
+        )
       }
       return res.status(201).json({
         success: true,

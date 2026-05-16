@@ -31,14 +31,6 @@ export const saveContact = async (req, res) => {
     }
 
     await contact.save();
-    if (isNewContact) {
-      sendHospitalEmail(
-        "Email Template/Hospital/Welcome.html",
-        { btnLink: process.env.HOSPITAL_URL + "/dashboard" },
-        "Welcome to NeoHealthCare",
-        req.user.id
-      );
-    }
     if (contact) {
       await LabPerson.findOneAndUpdate({ userId: userId }, {
         name: contactData.name,
@@ -50,6 +42,14 @@ export const saveContact = async (req, res) => {
     }
 
     res.json({ message: "Contact saved", contact });
+    if (isNewContact) {
+      sendHospitalEmail(
+        "Email Template/Hospital/Welcome.html",
+        { btnLink: process.env.HOSPITAL_URL + "/dashboard" },
+        "Welcome to NeoHealthCare",
+        req.user.id
+      );
+    }
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

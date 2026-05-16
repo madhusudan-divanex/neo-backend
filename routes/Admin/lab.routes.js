@@ -6,7 +6,7 @@ import {
   deleteLab,
   getLaboratorieDetail,
   LabAppointmentGet,
-  getLabAppointmentDetail,getLabAppointmentData,
+  getLabAppointmentDetail, getLabAppointmentData,
   approveRejectLab
 } from "../../controller/Admin/lab.controller.js";
 import adminAuth from "../../middleware/adminAuth.js";
@@ -22,11 +22,17 @@ router.get("/all-appointments", async (req, res) => {
     const filter = {};
     if (status && status !== "all") filter.status = status;
     const total = await LabAppointment.countDocuments(filter);
-    const data  = await LabAppointment.find(filter)
+    const data = await LabAppointment.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit).limit(Number(limit))
-      .populate("labId",      "name")
-      .populate("patientId",  "name contactNumber");
+      .populate({
+        path: "labId", select: "name email contactNumber nh12 labId",
+        populate: ({ path: "labId", select: "logo" })
+      })
+      .populate({
+        path: "patientId", select: "name email contactNumber nh12 patientId",
+        populate: ({ path: "patientId", select: "profileImage" })
+      }).populate('tests.category');
     res.json({ success: true, data, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -35,14 +41,14 @@ router.get("/all-appointments", async (req, res) => {
 
 
 // Single lab appointment detail
-router.get("/appointment/:id",adminAuth,getLabAppointmentData);
+router.get("/appointment/:id", adminAuth, getLabAppointmentData);
 
 // ── Param routes AFTER ───────────────────────────────────────────────
-router.get("/lab-detail/:id",        getLaboratorieDetail);
-router.get("/lab-appointments/:id",  LabAppointmentGet);
+router.get("/lab-detail/:id", getLaboratorieDetail);
+router.get("/lab-appointments/:id", LabAppointmentGet);
 router.get("/appointments-detail/:id", getLabAppointmentDetail);
-router.patch("/:id/status",          toggleLabStatus);
-router.patch("/:id/approve-reject",  approveRejectLab);
-router.delete("/:id",                deleteLab);
+router.patch("/:id/status", toggleLabStatus);
+router.patch("/:id/approve-reject", approveRejectLab);
+router.delete("/:id", deleteLab);
 
 export default router;

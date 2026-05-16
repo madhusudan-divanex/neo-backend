@@ -72,21 +72,27 @@ export const getDoctors = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const matchQuery = {
-      name: { $regex: search, $options: "i" }
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
+      role: "doctor"
     };
-    if (status && status !== "all") matchQuery.status = status;
+    // if (status && status !== "all") matchQuery.status = status;
 
-    const doctors = await Doctor.aggregate([
+    const doctors = await User.aggregate([
       { $match: matchQuery },
       {
         $lookup: {
-          from: "users",               // users collection
-          localField: "_id",
-          foreignField: "doctorId",
-          as: "user"
+          from: "doctors",               // users collection
+          localField: "doctorId",
+          foreignField: "_id",
+          as: "doctor"
         }
       },
-      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: "doctor-abouts",               // users collection
@@ -112,20 +118,20 @@ export const getDoctors = async (req, res) => {
         $project: {
           name: 1,
           email: 1,
+          nh12: 1,
           contactNumber: 1,
-          dob: 1,
-          status: 1,
-          profileImage: 1,
+          "doctor.dob": 1,
+          "doctor._id": 1,
+          "doctor.status": 1,
+          "doctor.profileImage": 1,
           createdAt: 1,
           "about.hospitalName": 1,
           "specialty.name": 1,
-          "user._id": 1,
-          "user.nh12": 1
         }
       }
     ]);
 
-    const total = await Doctor.countDocuments(matchQuery);
+    const total = await User.countDocuments(matchQuery);
 
     res.json({
       success: true,
@@ -143,7 +149,7 @@ export const getDoctors = async (req, res) => {
  */
 export const toggleDoctorStatus = async (req, res) => {
   try {
-    const { doctorId } = req.params; // 👈 this is USER ID
+    const { doctorId, } = req.params; // 👈 this is USER ID
 
     // ✅ doctor ko USER ID se find karo
     const doctor = await Doctor.findOne({ _id: doctorId });
@@ -205,16 +211,47 @@ export const getDoctorAppointments = async (req, res) => {
     const { id } = req.params;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
+    const search = req.query.search?.trim();
+    const status = req.query.status
+      ? req.query.status.split(",").map(s => s.trim()).filter(Boolean)
+      : [];
+
     const skip = (page - 1) * limit;
 
+    // Build patient filter only if search exists
+    let patientFilter = {};
+
+    if (search) {
+      patientFilter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { nh12: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
+
+    // Step 1: get matching patients (if search exists)
+    let patientIds = [];
+
+    if (search) {
+      const patients = await User.find(patientFilter).select("_id");
+      patientIds = patients.map(p => p._id);
+    }
+
+    const appointmentFilter = {
+      doctorId: id,
+      ...(search ? { patientId: { $in: patientIds } } : {}),
+      ...(status && (status && status.length > 0) ? { status: { $in: status } } : {})
+    };
+
     const [appointments, total] = await Promise.all([
-      DoctorAppointment.find({ doctorId: id })
+      DoctorAppointment.find(appointmentFilter)
         .populate({
-          path: "patientId", // User model
+          path: "patientId",
           select: "name nh12 patientId",
           populate: {
-            path: "patientId", // Patient model inside User
-            select: "profileImage" // Patient model fields
+            path: "patientId",
+            select: "profileImage"
           }
         })
         .sort({ createdAt: -1 })
@@ -222,7 +259,7 @@ export const getDoctorAppointments = async (req, res) => {
         .limit(limit)
         .lean(),
 
-      DoctorAppointment.countDocuments({ doctorId: id })
+      DoctorAppointment.countDocuments(appointmentFilter)
     ]);
 
     res.json({

@@ -37,7 +37,6 @@ Flow Pending->
     Hospital Monthly System Report 
     System Maintenance Notice 
     Doctor Lab Report View 
-    Doctor follow up reminder 
     Patient Vaccination Reminder 
     Patient Ambulance Service Invocie
     Patient Insurance Claim

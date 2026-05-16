@@ -8,7 +8,7 @@ import {
   getDoctorAppointments,
   toggleDoctorStatus,
   deleteDoctor,
-  approveRejectDoctor,getDoctorAppointmentData
+  approveRejectDoctor, getDoctorAppointmentData
 } from "../../controller/Admin/doctor.controller.js";
 
 const router = express.Router();
@@ -23,13 +23,19 @@ router.get("/all-appointments", adminAuth, async (req, res) => {
     const filter = {};
     if (status && status !== "all") filter.status = status;
     const total = await DoctorAppointment.countDocuments(filter);
-    const data  = await DoctorAppointment.find(filter)
+    const data = await DoctorAppointment.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit).limit(Number(limit))
-      .populate("doctorId", "name profileImage contactNumber nh12")
-      .populate("patientId", "name profileImage contactNumber nh12");
+      .populate({
+        path: "doctorId", select: "name email contactNumber nh12 doctorId",
+        populate: ({ path: "doctorId", select: "profileImage" })
+      })
+      .populate({
+        path: "patientId", select: "name email contactNumber nh12 patientId",
+        populate: ({ path: "patientId", select: "profileImage" })
+      });
 
-    
+
     res.json({ success: true, data, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -38,7 +44,7 @@ router.get("/all-appointments", adminAuth, async (req, res) => {
 
 // ── Param routes AFTER specific routes ───────────────────────────────
 // Single appointment detail
-router.get("/appointment/:id", adminAuth,getDoctorAppointmentData);
+router.get("/appointment/:id", adminAuth, getDoctorAppointmentData);
 
 router.get("/:id", adminAuth, getDoctorDetail);
 router.get("/:id/appointments", adminAuth, getDoctorAppointments);

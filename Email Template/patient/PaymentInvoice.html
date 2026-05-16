@@ -89,7 +89,7 @@
                                         <!-- Welcome -->
                                         <div class="welcome-text" style="
               font-size:32px;
-              line-height:54px;
+              line-height:1;
               font-weight:500;
               color:#16345B;
               margin-top:25px;
@@ -118,18 +118,18 @@
 
                             <!-- Greeting -->
                             <div style="
-        font-size:20px;
+        font-size:14px;
         font-weight:700;
         color:#16345B;
         margin-bottom:10px;
       ">
-                                Hi Sarah Johnson,
+                                <span style="font-weight:600;">Hi {{name}},</span>
                             </div>
 
                             <!-- Description -->
                             <div style="
         font-size:14px;
-        line-height:100%;
+        line-height:1.4;
         color:#5f6368;
         margin-bottom:30px;
       ">
@@ -168,14 +168,26 @@
             color:#6b6b6b;
           ">
 
-                                        <strong>Invoice Id:</strong> 7489658
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Invoice
+                                            Id:</span>
+                                        <span style="color: #555555;">
+
+                                        </span>{{invoiceId}}
                                         <br />
 
-                                        <strong>Payment Date:</strong>
-                                        20 May 2026
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Payment
+                                            Date:</span>
+                                        <span style="color: #555555;">
+
+                                            {{paymentDate}}
+                                        </span>
                                         <br />
-                                        <strong>Payment Method:</strong>
-                                        CASH
+                                        <span style="font-weight: 400;font-size: 14px;color: #888888;">Payment
+                                            Method:</span>
+                                        <span style="color: #555555;">
+
+                                            {{paymentMethod}}
+                                        </span>
                                         <br />
 
                                     </td>
@@ -189,7 +201,7 @@
                                 <tr>
                                     <td bgcolor="#102b5c" style="border-radius:40px;">
 
-                                        <a href="#" style="
+                                        <a href="{{btnLink}}" style="
               display:inline-block;
               padding:15px 28px;
               font-size:12px;
@@ -328,13 +340,12 @@
                   color:#8b8b8b;
                 ">
 
-                                123 Healthcare Street, Medical Neo, State –
-                                000000
+                                {{address}}
                                 <br />
 
-                                hospital@email.com |
-                                +91 98765 43210 |
-                                www.hospital.com
+                                {{email}} |
+                                {{phone}} |
+                                {{site}}
 
                             </div>
 

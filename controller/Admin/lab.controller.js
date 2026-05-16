@@ -60,8 +60,12 @@ export const LabAppointmentGet = async (req, res) => {
   try {
     const labUserId = req.params.id;
     const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const limit = parseInt(req.query.limit) || 5;
     const skip = (page - 1) * limit;
+    const search = req.query.search?.trim();
+    const status = req.query.status
+      ? req.query.status.split(",").map(s => s.trim()).filter(Boolean)
+      : [];
 
     const labUser = await User.findById(labUserId);
     if (!labUser) {
@@ -70,15 +74,37 @@ export const LabAppointmentGet = async (req, res) => {
         message: "Lab not found"
       });
     }
+    let patientFilter = {};
 
-    const appointments = await LabAppointment.find({ labId: labUserId })
-      .populate("patientId", "name unique_id")
-      .populate({ path: 'tests.subCat.subCatId' })
+    if (search) {
+      patientFilter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { nh12: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
+    let patientIds = [];
+
+    if (search) {
+      const patients = await User.find(patientFilter).select("_id");
+      patientIds = patients.map(p => p._id);
+    }
+    const appointmentFilter = {
+      labId: labUserId,
+      ...(search ? { patientId: { $in: patientIds } } : {}),
+      ...(status && (status && status.length > 0) ? { status: { $in: status } } : {})
+    };
+
+
+    const appointments = await LabAppointment.find(appointmentFilter)
+      .populate({ path: "patientId", select: "name nh12 patientId", populate: { path: "patientId", select: "profileImage" } })
+      .populate({ path: 'tests.category' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await LabAppointment.countDocuments({ labId: labUserId });
+    const total = await LabAppointment.countDocuments(appointmentFilter);
 
     const formatted = appointments.map((item) => ({
       _id: item._id,
@@ -86,17 +112,17 @@ export const LabAppointmentGet = async (req, res) => {
       appointmentId: item.customId,
 
       patientName: item.patientId?.name || "N/A",
-      patientId: item.patientId?.unique_id || "N/A",
+      patientId: item.patientId?.nh12 || "N/A",
+      patientImage: item.patientId?.patientId?.profileImage,
 
       date: item.date,
 
-      amount: item.fees,
+      fees: item.fees,
 
       tests:
-        item.testId
-          ?.filter(Boolean)
-          ?.map((t) => t.shortName) || [],
-
+        item.tests
+          ?.filter(sc => sc?.category)
+          ?.map(sc => sc.category.name) || [],
       paymentStatus: item.paymentStatus,
 
       status: item.status
@@ -132,7 +158,7 @@ export const getLaboratorieDetail = async (req, res) => {
         message: "Lab not found"
       });
     }
-    const labData = await Laboratory.findById(user.labId).select("-password");
+    const labData = await Laboratory.findById(user.labId).populate('userId', 'name nh12 email contactNumber');
 
     // 2️⃣ Fetch latest related documents
     const labPerson = await LabPerson.findOne({ userId }).sort({ createdAt: -1 });
@@ -209,11 +235,18 @@ export const getLaboratories = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const query = {
-      name: { $regex: search, $options: "i" }
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
     };
     if (status && status !== "all") query.status = status;
 
-    const labs = await Laboratory.find(query).populate("userId", "nh12")
+    const labs = await Laboratory.find(query).populate({
+      path: "userId", select: "nh12 name email contactNumber", match: query
+    })
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });

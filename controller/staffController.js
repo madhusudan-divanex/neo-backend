@@ -9,6 +9,7 @@ import StaffEmployement from "../models/Staff/StaffEmployement.js";
 import Otp from "../models/Otp.js";
 import { generateOTP, sendEmailOtp, sendMobileOtp } from "../utils/globalFunction.js";
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
+import { sendDoctorEmail } from "../utils/sendTemplateEmail.js";
 
 
 export const createStaffProfile = async (req, res) => {
@@ -278,7 +279,7 @@ export const getStaffEmployement = async (req, res) => {
     if (!userData) {
       return res.status(404).json({ message: "Requesting user not found" });
     }
-    const data = await StaffEmployement.find({ status: { $ne: "inactive" }, organizationId: userId }).select('role userId').populate('userId','name').sort({createdAt:-1})
+    const data = await StaffEmployement.find({ status: { $ne: "inactive" }, organizationId: userId }).select('role userId').populate('userId', 'name').sort({ createdAt: -1 })
 
     return res.status(200).json({ message: "Employement fetched", data, success: true })
   } catch (error) {
@@ -402,7 +403,6 @@ export const staffLogin = async (req, res) => {
     if (!isStaff) {
       return res.status(404).json({ message: "Staff not found " })
     }
-    console.log(isStaff, email, contactNumber)
     const staffUser = await User.findById(isStaff.userId)
     const isMatch = await bcrypt.compare(password, isStaff.password);
     if (isMatch) {
@@ -411,7 +411,9 @@ export const staffLogin = async (req, res) => {
         if (contactNumber) {
           await sendMobileOtp(contactNumber, code)
         } else {
-          await sendEmailOtp(email, code)
+          sendDoctorEmail("Email Template/doctor/VerifyOtp.html", { code, name: staffUser?.name || "Staff" },
+            "Verify Your Account", staffUser?._id)
+          // await sendEmailOtp(email, code)
         }
         const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
         if (isOtpExist) {

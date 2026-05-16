@@ -16,20 +16,24 @@ import mongoose from 'mongoose';
 import safeUnlink from '../../utils/globalFunction.js';
 import Notification from '../../models/Notifications.js';
 import City from '../../models/Hospital/City.js';
+import MedicineRequest from "../../models/Pharmacy/medicineRequest.model.js";
+import ScheduleMedicines from "../../models/Admin/ScheduleMedicines.js";
+import Sell from "../../models/Pharmacy/sell.model.js";
+import Inventory from "../../models/Pharmacy/inventory.model.js";
 
 export const getPharmaciesDetail = async (req, res) => {
   const userId = req.params.id;
 
   try {
     // Find user
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId).select("name email contactNumber nh12 pharId").lean();
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "Pharmacy not found"
       });
     }
-    const data = await Pharmacy.findById(user.pharId)
+    const data = await Pharmacy.findById(user.pharId).lean()
 
     // Fetch latest related documents
     const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
@@ -80,7 +84,7 @@ export const getPharmaciesDetail = async (req, res) => {
     // Return final response
     return res.status(200).json({
       success: true,
-      user: data,
+      user: { ...user, ...data },
       pharPerson,
       pharAddress,
       pharImg, customId: user.unique_id,
@@ -107,21 +111,21 @@ export const getPharmacies = async (req, res) => {
     const limit = 10;
     const skip = (page - 1) * limit;
 
+
+
     const query = {
-      role: "parent",
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
     };
+    if (status && status !== "all") query.status = status;
 
-    // status filter
-    if (status && status !== "all") {
-      query.status = status;
-    }
-
-    // ✅ search filter FIX
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
-    }
-
-    const pharmacies = await Pharmacy.find(query).populate("userId", "nh12")
+    const pharmacies = await Pharmacy.find(query).populate({
+      path: "userId", select: "nh12 name email contactNumber", match: query
+    })
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -167,10 +171,10 @@ export const togglePharmacyStatus = async (req, res) => {
 
     // 🔄 verify → approved → pending
     pharmacy.status =
-      pharmacy.status === "verify"
+      pharmacy.status === "approved"
         ? "pending"
         : pharmacy.status === "pending"
-          ? "verify"
+          ? "approved"
           : "pending";
 
     await pharmacy.save();
@@ -214,3 +218,57 @@ export const approveRejectPharmacy = async (req, res) => {
     res.json({ success: true, message: `Pharmacy ${status}`, data: phar });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
+export const getH1MedicineReqeusts = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  try {
+    const requests = await MedicineRequest.find({ pharId: req.params.id }).sort({ createdAt: -1 }).populate('medicineId').skip(skip).limit(limit);
+    const count = await MedicineRequest.countDocuments({ pharId: req.params.id });
+    res.json({ success: true, data: requests, totalPages: Math.ceil(count / limit) });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+}
+
+export const updateMedicineReqeustStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    const request = await MedicineRequest.findById(id);
+    if (!request) return res.status(404).json({ success: false, message: "Request not found" });
+    request.status = status;
+    await request.save();
+    res.json({ success: true, message: `Request ${status}` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+}
+export const getSellH1Medicines = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  try {
+    const h1 = await ScheduleMedicines.findOne({ name: 'H1' })
+    if (!h1) return res.status(404).json({ success: false, message: 'H1 not found' })
+    const getH1Medicines = await Inventory.find({ pharId: req.params.id, schedule: h1?._id })
+    if (!getH1Medicines) return res.status(404).json({ success: false, message: 'No H1 medicines found' })
+    const inventoryIds = getH1Medicines.map((item) => item._id)
+
+    const sellData = await Sell.find({ pharId: req.params.id, "products.inventoryId": { $in: inventoryIds }, returnProducts: [] }).sort({ createdAt: -1 })
+      .populate('patientId doctorId', 'name').populate({ path: 'prescriptionId', select: 'doctorId', populate: { path: 'doctorId', select: 'name' } }).skip(skip).limit(limit);
+    const count = await Sell.countDocuments({ pharId: req.params.id, "products.inventoryId": { $in: inventoryIds } });
+
+    res.json({ success: true, data: sellData, totalPages: Math.ceil(count / limit) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+export const getSellH1MedicineDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const sell = await Sell.findById(id).populate('patientId doctorId', 'name')
+      .populate({ path: 'prescriptionId', populate: { path: 'doctorId', select: 'name nh12', populate: { path: 'doctorId', select: 'profileImage' } } });
+    res.json({ success: true, data: sell });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+}

@@ -23,7 +23,7 @@ import StaffEmployement from "../models/Staff/StaffEmployement.js";
 import Department from "../models/Department.js";
 import PatientDepartment from "../models/Hospital/PatientDepartment.js";
 import HospitalAddress from "../models/Hospital/HospitalAddress.js";
-import sendPatientEmail, { sendDoctorEmail } from "../utils/sendTemplateEmail.js";
+import sendPatientEmail, { sendDoctorEmail, sendLabEmail } from "../utils/sendTemplateEmail.js";
 
 const bookDoctorAppointment = async (req, res) => {
     const { patientId, doctorId, date, hospitalId, status, } = req.body;
@@ -957,13 +957,74 @@ const bookLabAppointment = async (req, res) => {
                 message: `You have received a new appointment request from ${isPatient.name} on ${new Date(date).toLocaleString('en-GB')}.`
             });
 
-            return res.status(200).json({
+            res.status(200).json({
                 message: "Appointment booked successfully",
                 success: true,
                 data: book
             });
+            const existingAppointments = await LabAppointment.find({
+                patientId,
+                labId,
+                status: { $ne: "cancel" }
+            });
+            let duplicateAppointment = null;
+
+            for (const appointment of existingAppointments) {
+
+                const existingSubCatIds = appointment.tests
+                    .flatMap(t => t.subCat || [])
+                    .map(s => s.subCatId.toString())
+                    .sort();
+
+                const isSameTests =
+                    JSON.stringify(existingSubCatIds) === JSON.stringify(allSubCatIds);
+
+                if (isSameTests) {
+                    duplicateAppointment = appointment;
+                    break;
+                }
+            }
+            if (duplicateAppointment) {
+                const testNames = testsWithPrice
+                    .flatMap(test =>
+                        test.subCat.map(sub => {
+
+                            const matchedTest = labTestDocs.find(
+                                doc => doc._id.toString() === test.testId.toString()
+                            );
+
+                            const matchedSubCat = matchedTest?.subCatData?.find(
+                                s => s.subCat?._id?.toString() === sub.subCatId.toString()
+                            );
+
+                            return matchedSubCat?.subCat?.subCategory;
+
+                        })
+                    )
+                    .filter(Boolean)
+                    .join(", ");
+                sendLabEmail(
+
+                    "Email Template/Laboratory/ReTestRequest.html",
+
+                    {
+                        patientName: isPatient?.name,
+                        testName: testNames,
+                        prevAptId: duplicateAppointment?.customId,
+                        requestedOn: new Date(date)?.toLocaleDateString('en-GB'),
+                        btnLink: process.env.LABORATORY_URL + `/appointment-details/${book?._id}`
+                    },
+
+                    "Re Test Request",
+
+                    labId
+
+                );
+
+            }
+
         } else {
-            return res.status(200).json({
+            res.status(200).json({
                 message: "Appointment not booked",
                 success: false
             });
@@ -971,7 +1032,7 @@ const bookLabAppointment = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: err?.message, success: false });
+        res.status(500).json({ message: err?.message, success: false });
     }
 };
 const rescheduleLabAppointment = async (req, res) => {
