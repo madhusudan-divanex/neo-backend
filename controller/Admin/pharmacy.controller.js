@@ -160,6 +160,66 @@ export const getPharmacies = async (req, res) => {
     res.status(500).json({ message: "Failed to load pharmacies" });
   }
 };
+export const getPharmacyRequests = async (req, res) => {
+  try {
+    const { search = "", page = 1, status = "" } = req.query;
+
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+
+
+    const query = {
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
+    };
+    if (status && status !== "all") {
+      query.status = status
+    } else {
+      query.status = { $in: ["pending", "rejected"] }
+    }
+
+    const pharmacies = await Pharmacy.find(query).populate({
+      path: "userId", select: "nh12 name email contactNumber", match: query
+    })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+    const pharIds = pharmacies?.map(item => item?.userId?._id)
+    const contactPerson = await PharPerson.find({ userId: { $in: pharIds } })
+    const pharAddr = await PharAddress.find({ userId: { $in: pharIds } }).select('fullAddress userId')
+    const pharmaciesWithContact = pharmacies.map(pharmacy => {
+      const contact = contactPerson.find(
+        person => person?.userId?.toString() === pharmacy?.userId._id.toString()
+      );
+      const address = pharAddr.find(
+        item => item?.userId?.toString() === pharmacy?.userId._id.toString()
+      );
+
+      return {
+        ...pharmacy.toObject(),
+        contactPerson: contact,
+        address
+      };
+    });
+
+    const total = await Pharmacy.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: pharmaciesWithContact,
+      totalPages: Math.ceil(total / limit),
+    });
+
+  } catch (err) {
+    console.error(err); // 👈 debugging ke liye important
+    res.status(500).json({ message: "Failed to load pharmacies" });
+  }
+};
 
 /* ================= STATUS TOGGLE ================= */
 export const togglePharmacyStatus = async (req, res) => {

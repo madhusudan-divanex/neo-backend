@@ -31,6 +31,24 @@ Pharmacy->
 Doctor->
     New Appointment
     Patient Transfer Request
+Admin ->
+    Doctor appointments
+    Lab appointments
+    Dashboard 
+    Patients,Hospital,Lab Edit Request 
+    
+    Pharmacy (pharma details,medicine request,sell orders)
+    Lab (Lab details,appointments)
+    Hospital (hospital details,doctors)
+Email Template->
+Lab->
+    Re Test Reqeust
+Doctor->
+    Paitent Follow up Reminder
+Pharmacy->
+    Low Stock 
+Patient->
+    Hospital Invoice 
 
 Flow Pending->
     Pharmacy summary Report 

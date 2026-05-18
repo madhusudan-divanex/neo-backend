@@ -11,6 +11,10 @@ import HospitalBasic from '../models/Hospital/HospitalBasic.js';
 import HospitalAddress from '../models/Hospital/HospitalAddress.js';
 import DoctorAppointment from '../models/DoctorAppointment.js';
 import DoctorAbout from '../models/Doctor/addressAbout.model.js';
+import User from '../models/Hospital/User.js';
+import Rating from '../models/Rating.js';
+import Laboratory from '../models/Laboratory/laboratory.model.js';
+import Doctor from '../models/Doctor/doctor.model.js';
 
 cron.schedule('0 0 * * *', async () => {
   try {
@@ -410,4 +414,146 @@ cron.schedule("0 9 * * 1", async () => {
 
   }
 
+});
+cron.schedule("0 2 * * *", async () => {
+  console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
+
+  try {
+    // Step 1: Saare lab/hospital users fetch karo
+    const labUsers = await User.find({
+      labId: { $exists: true, $ne: null },
+      role: { $in: ['lab', 'hospital'] }
+    }).select('_id labId').lean();
+
+    if (!labUsers.length) {
+      console.log('[RatingCron] No lab users found. Skipping.');
+      return;
+    }
+
+    const labUserIds = labUsers.map(u => u._id);
+
+    // Step 2: Ek hi aggregation mein saari ratings calculate karo
+    const ratings = await Rating.aggregate([
+      {
+        $match: { labId: { $in: labUserIds } }
+      },
+      {
+        $group: {
+          _id: '$labId',
+          avgRating: { $avg: '$star' },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Step 3: Rating map banao  ->  userId => { avg, total }
+    const ratingMap = {};
+    ratings.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // Step 4: Har lab ke liye bulkWrite se ek saath update karo (efficient)
+    const bulkOps = labUsers.map(u => {
+      const rating = ratingMap[u._id.toString()] || {
+        avgRating: 0,
+        totalReviews: 0
+      };
+
+      return {
+        updateOne: {
+          filter: { _id: u.labId },          // Laboratory model ka _id
+          update: {
+            $set: {
+              rating: rating.avgRating,
+            }
+          }
+        }
+      };
+    });
+
+    const result = await Laboratory.bulkWrite(bulkOps);
+
+    console.log(
+      `[RatingCron] Done. Modified: ${result.modifiedCount} | ` +
+      `Matched: ${result.matchedCount} | ` +
+      `Time: ${new Date().toISOString()}`
+    );
+
+  } catch (err) {
+    console.error('[RatingCron] Error:', err.message);
+  }
+});
+cron.schedule("0 2 * * *", async () => {
+  console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
+
+  try {
+    // Step 1: Saare lab/hospital users fetch karo
+    const doctorUsers = await User.find({
+      doctorId: { $exists: true, $ne: null },
+      role: { $in: ['doctor'] }
+    }).select('_id doctorId').lean();
+
+    if (!doctorUsers.length) {
+      console.log('[RatingCron] No lab users found. Skipping.');
+      return;
+    }
+
+    const doctorUserIds = doctorUsers.map(u => u._id);
+
+    // Step 2: Ek hi aggregation mein saari ratings calculate karo
+    const ratings = await Rating.aggregate([
+      {
+        $match: { doctorId: { $in: doctorUserIds } }
+      },
+      {
+        $group: {
+          _id: '$doctorId',
+          avgRating: { $avg: '$star' },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Step 3: Rating map banao  ->  userId => { avg, total }
+    const ratingMap = {};
+    ratings.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // Step 4: Har lab ke liye bulkWrite se ek saath update karo (efficient)
+    const bulkOps = doctorUsers.map(u => {
+      const rating = ratingMap[u._id.toString()] || {
+        avgRating: 0,
+        totalReviews: 0
+      };
+
+      return {
+        updateOne: {
+          filter: { _id: u.doctorId },          // Laboratory model ka _id
+          update: {
+            $set: {
+              rating: rating.avgRating,
+            }
+          }
+        }
+      };
+    });
+
+    const result = await Doctor.bulkWrite(bulkOps);
+
+    console.log(
+      `[RatingCron] Done. Modified: ${result.modifiedCount} | ` +
+      `Matched: ${result.matchedCount} | ` +
+      `Time: ${new Date().toISOString()}`
+    );
+
+  } catch (err) {
+    console.error('[RatingCron] Error:', err.message);
+  }
 });

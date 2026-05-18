@@ -1499,7 +1499,7 @@ const sellMedicine = async (req, res) => {
                     name: ptName,
                     role: "patient",
                     passwordHash,
-                    contactNumber:ptMob,
+                    contactNumber: ptMob,
                     created_by: pharmacy.role,
                     created_by_id: pharmacy._id
                 });
@@ -1540,6 +1540,7 @@ const sellMedicine = async (req, res) => {
                 const user = new User({
                     name: dtName,
                     role: "doctor",
+                    contactNumber: dtMob,
                     passwordHash,
                     created_by: pharmacy.role,
                     created_by_id: pharmacy._id
@@ -1665,7 +1666,7 @@ const getSellMedicine = async (req, res) => {
             endDate,
             sort,
             inventoryId,
-            search,onlySell,
+            search, onlySell,
             page = 1,
             limit = 10
         } = req.query;
@@ -1691,8 +1692,8 @@ const getSellMedicine = async (req, res) => {
         if (inventoryId) {
             matchStage["products.inventoryId"] = new mongoose.Types.ObjectId(inventoryId);
         }
-        if(onlySell){
-            matchStage.returnProducts=[]
+        if (onlySell) {
+            matchStage.returnProducts = []
         }
         const sells = await Sell.aggregate([
             { $match: matchStage },
@@ -1884,7 +1885,7 @@ const getPatientPrescriptionData = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
         }
-        const fullId = await userId.length ==12 ? user._id : userId
+        const fullId = await userId.length == 12 ? user._id : userId
         const patient = await Patient.findById(user.patientId).lean()
         const medicalHistory = await MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 })
         const demographic = await PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 })
@@ -2315,7 +2316,7 @@ export const customerReturn = async (req, res) => {
         session.startTransaction();
 
         const id = req.user.id || req.user.userId;
-        const { sellId, returnProducts ,refundStatus,refundMode,returnDate} = req.body;
+        const { sellId, returnProducts, refundStatus, refundMode, returnDate } = req.body;
 
         // 🔹 Validation: sellId exists
         if (!sellId) {
@@ -2382,7 +2383,7 @@ export const customerReturn = async (req, res) => {
 
         await Sell.findByIdAndUpdate(
             sellId,
-            { returnProducts: [...existingReturnProducts, ...returnProducts] ,refundStatus,refundMode,returnDate},
+            { returnProducts: [...existingReturnProducts, ...returnProducts], refundStatus, refundMode, returnDate },
             { new: true, session }
         );
         if (id && req.user.type == "pharmacy") {
@@ -2534,6 +2535,6 @@ export {
     getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById,
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,
     addSupplier, updatePO, updateSupplier, deleteSupplier, createReturn, listReturns, completeReturn, updateReturn, deletePO, deleteReturn,
-    createPO, receivePO, medicineData, pharDashboardData,patientHospitalPrescriptions,
+    createPO, receivePO, medicineData, pharDashboardData, patientHospitalPrescriptions,
     sellMedicine, getSellMedicine, deleteSellData, getSellData, getPatientPrescriptionData, patientHospitalAllotment
 }

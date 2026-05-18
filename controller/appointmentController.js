@@ -77,21 +77,21 @@ const bookDoctorAppointment = async (req, res) => {
 
                     "New Appointment Request", isExist._id)
             }
-            // if (isInsert.role == "patient") {
-            //     let btnLink = process.env.PATIENT_URL + `/appointment-detail/${isExist?.name}/${book?._id}`
-            //     sendPatientEmail("Email Template/patient/DoctorAptConfirmations.html",
-            //         {
-            //             aptId: book.customId, doctorName: isExist?.name || "Doctor",
-            //             date: new Date(date).toLocaleDateString('en-GB'),
-            //             time: new Date(date).toLocaleTimeString('en-GB'),
-            //             name: isPatient.name,
-            //             specialization,
-            //             btnLink,
-            //             location
-            //         },
+            if (isInsert.role == "patient") {
+                let btnLink = process.env.PATIENT_URL + `/appointment-detail/${isExist?.name}/${book?._id}`
+                sendPatientEmail("Email Template/patient/DoctorAptConfirmations.html",
+                    {
+                        aptId: book.customId, doctorName: isExist?.name || "Doctor",
+                        date: new Date(date).toLocaleDateString('en-GB'),
+                        time: new Date(date).toLocaleTimeString('en-GB'),
+                        name: isPatient.name,
+                        specialization,
+                        btnLink,
+                        location
+                    },
 
-            //         "Doctor Appointment Confirmation", isPatient._id)
-            // }
+                    "Doctor Appointment Confirmation", isPatient._id)
+            }
             if (req?.user?.loginUser && hospitalId) {
                 await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Add an appointment with ${isExist?.name}.` })
             } else if (hospitalId && !req?.user?.loginUser) {
@@ -1654,9 +1654,9 @@ const getHospitalDoctorAppointment = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        let filter = { doctorId };
+        let filter = { doctorId, hospitalId };
         if (status) {
-            filter.hospitalId = hospitalId
+
             filter.status = status;
         }
         if (statuses) {

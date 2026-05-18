@@ -124,7 +124,6 @@ export const getDoctors = async (req, res) => {
           "doctor._id": 1,
           "doctor.status": 1,
           "doctor.profileImage": 1,
-          createdAt: 1,
           "about.hospitalName": 1,
           "specialty.name": 1,
         }
@@ -144,6 +143,90 @@ export const getDoctors = async (req, res) => {
   }
 };
 
+export const getDoctorRequests = async (req, res) => {
+  try {
+    const { search = "", page = 1, status = "" } = req.query;
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    const matchQuery = {
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
+      gender: { $exists: true },
+      dob: { $exists: true }
+    };
+    if (status && status !== "all") {
+      matchQuery.status = status
+    } else {
+      matchQuery.status = { $in: ["pending", "rejected"] }
+    }
+
+    const doctors = await Doctor.aggregate([
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "doctor-abouts",               // users collection
+          localField: "userId",
+          foreignField: "userId",
+          as: "about"
+        }
+      },
+      { $unwind: { path: "$about", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "specialities", // 👈 collection name check kar lena
+          localField: "about.specialty",
+          foreignField: "_id",
+          as: "specialty"
+        }
+      },
+      { $unwind: { path: "$specialty", preserveNullAndEmptyArrays: true } },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $project: {
+          "user.name": 1,
+          "user.email": 1,
+          "user.nh12": 1,
+          "user.contactNumber": 1,
+          "user._id": 1,
+          profileImage: 1,
+          dob: 1,
+          _id: 1,
+          status: 1,
+          createdAt: 1,
+          "about.hospitalName": 1,
+          "specialty.name": 1,
+        }
+      }
+    ]);
+
+    const total = await User.countDocuments(matchQuery);
+
+    res.json({
+      success: true,
+      data: doctors,
+      totalPages: Math.ceil(total / limit)
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 /**
  * TOGGLE DOCTOR STATUS + PUSH
  */

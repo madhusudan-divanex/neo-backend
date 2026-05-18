@@ -7,19 +7,36 @@ import {
   getLaboratorieDetail,
   LabAppointmentGet,
   getLabAppointmentDetail, getLabAppointmentData,
-  approveRejectLab
+  approveRejectLab,
+  getLabRequests
 } from "../../controller/Admin/lab.controller.js";
 import adminAuth from "../../middleware/adminAuth.js";
+import User from "../../models/Hospital/User.js";
 
 const router = express.Router();
 
 // ── Specific routes FIRST ─────────────────────────────────────────────
 router.get("/", getLaboratories);
+router.get("/requests", getLabRequests);
 
 router.get("/all-appointments", async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status, search = '' } = req.query;
     const filter = {};
+    if (search) {
+      const patients = await User.find({
+        role: "patient", $or: [
+          { nh12: { $regex: search, $options: "i" } },
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { contactNumber: { $regex: search, $options: "i" } },
+        ]
+      }).select("_id")
+      if (patients.length > 0) {
+        filter.patientId = { $in: patients }
+      }
+
+    }
     if (status && status !== "all") filter.status = status;
     const total = await LabAppointment.countDocuments(filter);
     const data = await LabAppointment.find(filter)

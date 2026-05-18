@@ -228,6 +228,78 @@ export const getHospitals = async (req, res) => {
   }
 };
 
+export const getHospitalRequests = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = "", status } = req.query;
+
+    const query = {
+      $or: [
+        { hospitalName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { mobileNo: { $regex: search, $options: "i" } },
+      ],
+      logoFileId: { $exists: true }
+    };
+    if (status && status !== "all") {
+      query.kycStatus = status
+    } else {
+      query.kycStatus = { $in: ["pending", "rejected"] }
+    }
+    // 1️⃣ Hospitals
+    const hospitals = await HospitalBasic.find(query).populate("userId", "name email nh12 contactNumber")
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .sort({ createdAt: -1 })
+      .lean(); // IMPORTANT
+
+    // 2️⃣ Hospital IDs
+    const hospitalIds = hospitals.map(h => h._id);
+
+    // 3️⃣ Contacts
+    const contacts = await HospitalContact.find({
+      hospitalId: { $in: hospitalIds }
+    }).lean();
+
+    const address = await HospitalAddress.find({
+      hospitalId: { $in: hospitalIds }
+    }).select('fullAddress hospitalId').lean();
+
+    // 4️⃣ Map contacts by hospitalId
+    const contactMap = {};
+    contacts.forEach(c => {
+      contactMap[c.hospitalId.toString()] = c;
+    });
+
+    const addresMap = {};
+    address.forEach(c => {
+      addresMap[c.hospitalId.toString()] = c;
+    });
+
+    // 5️⃣ Merge contact into hospital
+    const finalData = hospitals.map(h => ({
+      ...h,
+      contact: contactMap[h?._id.toString()] || null,
+      address: addresMap[h?._id?.toString()] || null,
+    }));
+
+    const total = await HospitalBasic.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: finalData,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
+
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
 export const approveRejectHospital = async (req, res) => {
   try {
     const { id } = req.params;

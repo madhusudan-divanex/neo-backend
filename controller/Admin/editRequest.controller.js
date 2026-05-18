@@ -27,7 +27,9 @@ export const getEditRequests = async (req, res) => {
       match = {
         $or: [
           { name: { $regex: search, $options: "i" } },
-          { nh12: { $regex: search, $options: "i" } }
+          { nh12: { $regex: search, $options: "i" } },
+          { contactNumber: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
         ]
       };
     }
@@ -395,7 +397,6 @@ export const getMedicineRequests = async (req, res) => {
         .populate("pharId hospitalId", "name nh12 email ").populate('medicineId', 'medicineName'),
       MedicineRequest.countDocuments(filter),
     ]);
-    console.log(requests)
 
     res.json({ success: true, data: requests, totalPages: Math.ceil(total / limit), total });
   } catch (err) {

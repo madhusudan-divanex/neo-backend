@@ -1042,6 +1042,8 @@ const getLabs = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const name = req.query.name;
         const location = req.query.location;
+        const category = req.query.category;
+        const sortBy = req.query.sortBy;
         const type = req.query.type;
 
         /* ================= USER FILTER ================= */
@@ -1051,6 +1053,24 @@ const getLabs = async (req, res) => {
             userFilter.role = type; // lab OR hospital
         } else {
             userFilter.role = { $in: ['lab', 'hospital'] };
+        }
+
+        if (category) {
+            if (sortBy == "ASC") {
+                const alltests = await Test.find({ category: { $in: category.split(",") } }).sort({ totalAmount: 1 }).distinct("labId")
+                const labIds = alltests.map((f) => f)
+                userFilter._id = { $in: labIds };
+            }
+            else if (sortBy == "DESC") {
+                const alltests = await Test.find({ category: { $in: category.split(",") } }).sort({ totalAmount: -1 }).distinct("labId")
+                const labIds = alltests.map((f) => f)
+                userFilter._id = { $in: labIds };
+            } else {
+                const alltests = await Test.find({ category: { $in: category.split(",") } }).distinct("labId")
+                const labIds = alltests.map((f) => f)
+                userFilter._id = { $in: labIds };
+            }
+
         }
 
         if (name) {
@@ -1108,34 +1128,13 @@ const getLabs = async (req, res) => {
             );
         }
 
-        /* ================= RATINGS ================= */
-        const ratingIds = users.map(u => u._id);
 
-        const ratings = await Rating.aggregate([
-            { $match: { labId: { $in: ratingIds } } },
-            {
-                $group: {
-                    _id: "$labId",
-                    avgRating: { $avg: "$star" },
-                    totalReviews: { $sum: 1 }
-                }
-            }
-        ]);
-
-        const ratingMap = {};
-        ratings.forEach(r => {
-            ratingMap[r._id.toString()] = {
-                avgRating: Number(r.avgRating.toFixed(1)),
-                totalReviews: r.totalReviews
-            };
-        });
 
         /* ================= FINAL DATA ================= */
         const finalData = users.map(u => ({
             ...u,
             address: labAddressMap[u._id.toString()] || null,
-            avgRating: ratingMap[u._id.toString()]?.avgRating || 0,
-            totalReviews: ratingMap[u._id.toString()]?.totalReviews || 0
+            avgRating: u?.labId?.rating || 0
         }));
 
         return res.status(200).json({

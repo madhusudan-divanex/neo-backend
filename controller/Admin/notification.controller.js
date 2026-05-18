@@ -2,15 +2,22 @@ import Notification from "../../models/Notifications.js";
 
 /* GET ALL NOTIFICATIONS */
 export const getNotifications = async (req, res) => {
+  const page = req.query.page || 1;
+  const limit = req.query.limit || 10;
+  const skip = (page - 1) * limit;
   try {
 
     const notifications = await Notification
       .find({})
-      .sort({ _id: -1 });   // DESC order (latest first)
-
+      .sort({ createdAt: -1 })   // DESC order (latest first)
+      .skip(skip)
+      .limit(limit);
+    const total = await Notification.countDocuments();
+    const totalPages = Math.ceil(total / limit);
     res.json({
       success: true,
-      count: notifications.length,
+      totalPages,
+      currentPage: page,
       data: notifications
     });
 

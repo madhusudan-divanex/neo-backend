@@ -1,18 +1,19 @@
-import mongoose  from 'mongoose';
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    contactNumber: { type: String, required: true },
-    customId:String,
-    gstNumber: { type: String, required: true }  , 
-    about: { type: String, required: true }  , 
-    logo: { type: String},
-    role:{type:String,default:'parent'},
-    allowEdit:{type:Boolean,default:false},
-    category:[{ type: mongoose.Schema.Types.ObjectId, ref: 'test-category',index:true }],
-    status: { type: String, enum:["pending","block","approved","rejected"],default: 'pending' }  ,
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' ,index:true},      
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  contactNumber: { type: String, required: true },
+  customId: String,
+  gstNumber: { type: String, required: true },
+  about: { type: String, required: true },
+  logo: { type: String },
+  rating: { type: Number, decimal: true, default: 0 },
+  role: { type: String, default: 'parent' },
+  allowEdit: { type: Boolean, default: false },
+  category: [{ type: mongoose.Schema.Types.ObjectId, ref: 'test-category', index: true }],
+  status: { type: String, enum: ["pending", "block", "approved", "rejected"], default: 'pending' },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
 
 }, { timestamps: true });
 userSchema.pre("save", async function (next) {

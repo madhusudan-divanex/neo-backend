@@ -1189,7 +1189,7 @@ const getDoctors = async (req, res) => {
         // }
         // const users = await userQuery.lean();
         const users = await User.find(filter).select('name email contactNumber doctorId')
-            .populate('doctorId', 'profileImage').sort({ createdAt: -1 })
+            .populate('doctorId', 'profileImage rating').sort({ createdAt: -1 })
             .limit(limit)
             .skip((page - 1) * limit)
             .lean();
@@ -1215,42 +1215,18 @@ const getDoctors = async (req, res) => {
             addressMap[addr.userId.toString()] = addr;
         });
 
-        // 3️⃣ Fetch rating stats (AVG + COUNT)
-        const ratingStats = await Rating.aggregate([
-            {
-                $match: {
-                    doctorId: { $in: doctorIds }
-                }
-            },
-            {
-                $group: {
-                    _id: "$doctorId",
-                    avgRating: { $avg: "$star" },
-                    totalReviews: { $sum: 1 }
-                }
-            }
-        ]);
 
-        const ratingMap = {};
-        ratingStats.forEach(r => {
-            ratingMap[r._id.toString()] = {
-                avgRating: Number(r.avgRating.toFixed(1)),
-                totalReviews: r.totalReviews
-            };
-        });
 
         // 4️⃣ Merge everything
         const validDoctorIds = new Set(
             doctorAddresses.map(d => d.userId.toString())
         );
-
         let finalData = users
             .filter(user => validDoctorIds.has(user._id.toString()))
             .map(user => ({
                 ...user,
                 doctorAddress: addressMap[user._id.toString()] || null,
-                avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-                totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+                avgRating: user?.doctorId?.rating || 0,
             }))
             .filter(doc => doc.avgRating >= minRating);
 

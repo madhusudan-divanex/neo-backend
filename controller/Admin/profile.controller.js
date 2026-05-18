@@ -17,14 +17,11 @@ export const getAdminProfile = async (req, res) => {
 
 export const updateAdminProfile = async (req, res) => {
   try {
-    const { name, mobile, about, contactNumber } = req.body || {};
+    const { name, email } = req.body || {};
 
     const updateData = {};
-    if (name)          updateData.name = name;
-    if (mobile)        updateData.contactNumber = mobile;    // User model uses contactNumber
-    if (contactNumber) updateData.contactNumber = contactNumber;
-    if (about)         updateData.about = about;             // stored in extra field
-    if (req.file)      updateData.profileImage = req.file.filename;
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
 
     const admin = await User.findByIdAndUpdate(
       req.admin._id, updateData, { new: true }

@@ -123,7 +123,7 @@ export const addTestCategory = async (req, res) => {
             safeUnlink(icon)
             return res.status(200).json({ message: "Name already exists", success: false })
         }
-        const data = await TestCategory.create({ name, icon,  })
+        const data = await TestCategory.create({ name, icon, })
         if (data) {
             return res.status(200).json({ message: "Test category created", success: true })
         }
@@ -155,7 +155,7 @@ export const updateTestCategory = async (req, res) => {
         if (isExist?.icon && icon) {
             safeUnlink(isExist?.icon)
         }
-        const data = await TestCategory.findByIdAndUpdate(spId, { name, icon,  }, { new: true })
+        const data = await TestCategory.findByIdAndUpdate(spId, { name, icon, }, { new: true })
         if (data) {
             return res.status(200).json({ message: "Test category updated", success: true })
         }
@@ -728,6 +728,7 @@ export const getUsers = async (req, res) => {
                 { name: { $regex: search, $options: "i" } },
                 { email: { $regex: search, $options: "i" } },
                 { contactNumber: { $regex: search, $options: "i" } },
+                { nh12: { $regex: search, $options: "i" } },
             ];
         }
         const data = await User.findOne(filter).select("name email contactNumber role nh12 labId pateintId doctorId hospitalId pharmacyId")
@@ -753,7 +754,7 @@ export const getSubTestCategory = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Fetch paginated data
-        const subTestCat = await SubTestCat.find().populate('category','name')
+        const subTestCat = await SubTestCat.find().populate('category', 'name')
             .skip(skip)
             .limit(limit);
 
@@ -793,40 +794,44 @@ export const addSubTestCategory = async (req, res) => {
         // if (isExist) {
         //     return res.status(200).json({ message: "This category name already exists", success: false })
         // }
-        await SubTestCat.create({ code,
-                    shortName,
-                    category,subCategory,
-                    sample,
-                    component,
-                    packageType, testType, specialApproval, fastingRequired,
-                    testProcessing, })
+        await SubTestCat.create({
+            code,
+            shortName,
+            category, subCategory,
+            sample,
+            component,
+            packageType, testType, specialApproval, fastingRequired,
+            testProcessing,
+        })
         return res.status(200).json({ message: "Sub category created", success: true })
     } catch (error) {
         return res.status(200).json({ message: error?.message, success: false })
     }
 }
 export const updateSubTestCategory = async (req, res) => {
-    const { subCatId,code,
-                    shortName,
-                    category,subCategory,
-                    sample,
-                    component,
-                    packageType, testType, specialApproval, fastingRequired,
-                    testProcessing,
-                    type, } = req.body
+    const { subCatId, code,
+        shortName,
+        category, subCategory,
+        sample,
+        component,
+        packageType, testType, specialApproval, fastingRequired,
+        testProcessing,
+        type, } = req.body
     try {
         const isExist = await SubTestCat.findOne({ subCategory, _id: { $ne: subCatId } })
         if (isExist) {
             return res.status(200).json({ message: "This category name already exists", success: true })
         }
-        const isUpdate = await SubTestCat.findByIdAndUpdate(subCatId, { code,
-                    shortName,
-                    category,subCategory,
-                    sample,
-                    component,
-                    packageType, testType, specialApproval, fastingRequired,
-                    testProcessing,
-                    type, }, { new: true })
+        const isUpdate = await SubTestCat.findByIdAndUpdate(subCatId, {
+            code,
+            shortName,
+            category, subCategory,
+            sample,
+            component,
+            packageType, testType, specialApproval, fastingRequired,
+            testProcessing,
+            type,
+        }, { new: true })
         if (isUpdate) {
             return res.status(200).json({ message: "Sub category updated", success: true })
         } else {

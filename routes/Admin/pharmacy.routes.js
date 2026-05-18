@@ -8,12 +8,14 @@ import {
   getH1MedicineReqeusts,
   updateMedicineReqeustStatus,
   getSellH1Medicines,
-  getSellH1MedicineDetails
+  getSellH1MedicineDetails,
+  getPharmacyRequests
 } from "../../controller/Admin/pharmacy.controller.js";
 
 const router = express.Router();
 
 router.get("/", getPharmacies);
+router.get("/requests", getPharmacyRequests);
 router.get("/:id", getPharmaciesDetail);
 router.patch("/:id/status", togglePharmacyStatus);
 router.delete("/:id", deletePharmacy);

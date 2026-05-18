@@ -9,15 +9,16 @@ const uploader = getUploader("blogs");
 // Get all blogs (public)
 router.get("/", async (req, res) => {
   try {
-    const { status = "all", page = 1, limit = 10, category } = req.query;
+    const { status = "all", page = 1, limit = 10, category, search } = req.query;
     const filter = {};
     if (status && status !== "all") filter.status = status;
     if (category) filter.category = category;
+    if (search) filter.title = { $regex: search, $options: "i" };
     const total = await Blog.countDocuments(filter);
     const baseUrl = `${process.env.BACKEND_URL}/uploads/blogs/`;
     const data = await Blog.find(filter).sort({ createdAt: -1 })
       .skip((page - 1) * limit).limit(Number(limit));
-    res.json({ success: true, data,baseUrl, total, totalPages: Math.ceil(total / limit) });
+    res.json({ success: true, data, baseUrl, total, totalPages: Math.ceil(total / limit) });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -29,7 +30,7 @@ router.get("/:id", async (req, res) => {
     const baseUrl = `${process.env.BACKEND_URL}/uploads/blogs/`;
     blog.views = (blog.views || 0) + 1;
     await blog.save();
-    res.json({ success: true, data: blog ,baseUrl});
+    res.json({ success: true, data: blog, baseUrl });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 

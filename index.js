@@ -615,11 +615,6 @@ app.use('/user/:id', async (req, res) => {
 })
 
 
-
-
-
-
-
 const fileRoute = (await import("./routes/Hospital/fileRoute.js")).default;
 const locationRoutes = (await import("./routes/Hospital/location.routes.js")).default;
 const doctorRoutes = (await import("./routes/Hospital/hospitalDoctor.routes.js")).default;

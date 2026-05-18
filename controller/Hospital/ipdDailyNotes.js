@@ -28,7 +28,7 @@ export const createIPDHeader = async (req, res) => {
         const doctorExists = await User.findOne({ nh12: doctorNh12, role: "doctor" });
         if (!doctorExists) return res.status(404).json({ success: false, message: "Doctor not found" });
 
-        const doctorInHospital = await StaffEmployement.findOne({organizationId: hospitalId, userId: doctorExists?._id });
+        const doctorInHospital = await StaffEmployement.findOne({ organizationId: hospitalId, userId: doctorExists?._id, status: "active" });
         if (!doctorInHospital) return res.status(400).json({ success: false, message: "Doctor is not employed at this hospital" });
 
         // 3️⃣ Validate patient
@@ -73,7 +73,10 @@ export const createIPDHeader = async (req, res) => {
             minute: "2-digit",
             hour12: false
         });
-        const staffData = await StaffEmployement.findOne({ userId: authorExists?._id,organizationId: hospitalId})
+        const staffData = await StaffEmployement.findOne({ userId: authorExists?._id, organizationId: hospitalId, status: "active" })
+        if (!staffData) {
+            return res.status(404).json({ success: false, message: "Staff is not employed at this hospital" });
+        }
 
         // ✅ All good, create header
         const header = new IPDHeader({
@@ -936,9 +939,9 @@ export const createSignOff = async (req, res) => {
             });
         }
         const isStaff = await User.findOne({ nh12: authorActorNh12, role: "staff", })
-        if(isStaff){
-            const staffHasEmp=await StaffEmployement.findOne({userId:isStaff._id,organizationId:headerExists.hospitalId,status:"active"})
-            if(!staffHasEmp){
+        if (isStaff) {
+            const staffHasEmp = await StaffEmployement.findOne({ userId: isStaff._id, organizationId: headerExists.hospitalId, status: "active" })
+            if (!staffHasEmp) {
                 return res.status(404).json({ success: false, message: "Staff is not registered as hospital staff" })
             }
         }

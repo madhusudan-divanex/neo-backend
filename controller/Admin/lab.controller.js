@@ -279,6 +279,62 @@ export const getLaboratories = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+export const getLabRequests = async (req, res) => {
+  try {
+    const { search = "", page = 1, status = "" } = req.query;
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    const query = {
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { nh12: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ],
+      logo: { $exists: true }
+    };
+    if (status && status !== "all") {
+      query.status = status
+    } else {
+      query.status = { $in: ["pending", "rejected"] }
+    }
+
+    const labs = await Laboratory.find(query).populate({
+      path: "userId", select: "nh12 name email contactNumber", match: query
+    })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+    const labIds = labs?.map(item => item?.userId?._id)
+
+    const contactPerson = await LabPerson.find({ userId: { $in: labIds } })
+    const labAddr = await LabAddress.find({ userId: { $in: labIds } }).select('fullAddress userId')
+
+    const labWithContact = labs.map(lab => {
+      const contact = contactPerson.find(
+        person => person?.userId?.toString() === lab?.userId._id.toString()
+      );
+      const address = labAddr.find(
+        item => item?.userId?.toString() === lab?.userId._id.toString()
+      );
+
+      return {
+        ...lab.toObject(),
+        contactPerson: contact,
+        address: address
+      };
+    });
+    const total = await Laboratory.countDocuments(query);
+    return res.json({
+      success: true,
+      data: labWithContact,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 /* STATUS TOGGLE + PUSH */
 export const toggleLabStatus = async (req, res) => {
@@ -342,9 +398,11 @@ export const getLabAppointmentData = async (req, res) => {
     const ptDemo = await PatientDemographic.findOne({ userId: appointmentData?.patientId?._id })
       .populate('cityId countryId stateId', 'name').lean()
 
+    const testReports = await TestReport.find({ appointmentId: appointmentData?._id }).populate('subCatId')
+
     const patient = { ...ptPersonal, ...ptDemo }
     const lab = { ...labPersonal, ...labAbout }
-    return res.status(200).json({ message: "Appointment Data fetched", patient, lab, appointmentData, success: true })
+    return res.status(200).json({ message: "Appointment Data fetched", patient, lab, appointmentData, testReports, success: true })
   } catch (error) {
     return res.status(500).json({ message: error?.message, success: false })
   }

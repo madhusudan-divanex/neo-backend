@@ -8,19 +8,36 @@ import {
   getDoctorAppointments,
   toggleDoctorStatus,
   deleteDoctor,
-  approveRejectDoctor, getDoctorAppointmentData
+  approveRejectDoctor, getDoctorAppointmentData,
+  getDoctorRequests
 } from "../../controller/Admin/doctor.controller.js";
+import User from "../../models/Hospital/User.js";
 
 const router = express.Router();
 
 // ── Specific routes FIRST (before /:id) ──────────────────────────────
 router.get("/", adminAuth, getDoctors);
+router.get("/requests", adminAuth, getDoctorRequests);
 
 // All appointments (must be before /:id)
 router.get("/all-appointments", adminAuth, async (req, res) => {
   try {
     const { page = 1, limit = 10, status, search } = req.query;
     const filter = {};
+    if (search) {
+      const patients = await User.find({
+        role: "patient", $or: [
+          { nh12: { $regex: search, $options: "i" } },
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { contactNumber: { $regex: search, $options: "i" } },
+        ]
+      }).select("_id")
+      if (patients.length > 0) {
+        filter.patientId = { $in: patients }
+      }
+
+    }
     if (status && status !== "all") filter.status = status;
     const total = await DoctorAppointment.countDocuments(filter);
     const data = await DoctorAppointment.find(filter)

@@ -3,7 +3,7 @@
  * Replaces Admin model completely.
  */
 import bcrypt from "bcryptjs";
-import jwt    from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import User from "../../models/Hospital/User.js";
 
@@ -53,7 +53,9 @@ export const adminLogin = async (req, res) => {
     res.json({
       message: "Admin login successful",
       token,
-      admin: { id: admin._id, name: admin.name, email: admin.email }
+      admin: {
+        id: admin._id, customId: admin.unique_id, name: admin.name, email: admin.email
+      }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
