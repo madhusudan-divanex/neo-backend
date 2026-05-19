@@ -39,7 +39,8 @@ import {
   dischargeSummaryPdf,
   consentLetterPdf,
   labInvoicePdf,
-  pharmacyReturnPdf
+  pharmacyReturnPdf,
+  searchAllUsers
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
@@ -51,6 +52,7 @@ const uploader = getUploader('hospital')
 router.get("/check-doctor-id/:unique_id", GetDoctor);
 router.post("/add-existing-doctor", auth, addExistingDoctorToHospital);
 router.get("/search", auth, searchUsers);
+router.get("/search-all", searchAllUsers);
 router.post("/save-fcm-token", auth, saveFcmToken);
 router.get("/notification", auth, getNotification);
 router.delete("/delete-all-notification", auth, deleteNotification);

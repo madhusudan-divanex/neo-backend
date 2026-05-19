@@ -92,6 +92,11 @@ const sendDoctorEmail = async (path, data, subject, userId) => {
         console.log(error);
     }
 };
+const test = async () => {
+    sendDoctorEmail("Email Template/doctor/Welcome.html", { name: "Doctor" },
+        "Welcome", "69eb577df76821d368f37ebc")
+}
+// test();
 const sendLabEmail = async (path, data, subject, userId) => {
     try {
 

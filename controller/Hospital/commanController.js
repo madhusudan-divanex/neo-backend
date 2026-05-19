@@ -60,7 +60,7 @@ export const saveFcmToken = async (req, res) => {
 // ================= SEARCH USERS =================
 export const searchUsers = async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, } = req.query;
     const myId = req.user.id;
 
     if (!q) return res.json({ success: true, data: [] });
@@ -111,7 +111,60 @@ export const searchUsers = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+export const searchAllUsers = async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
 
+    if (!q) return res.json({ success: true, data: [] });
+
+    const users = await User.find({
+      role: { $in: ["doctor", "hospital", "lab", "pharmacy"] },
+      $or: [
+        { name: { $regex: q, $options: "i" } },
+        { nh12: { $regex: q, $options: "i" } }
+      ]
+    })
+      .select("_id name email nh12 role doctorId hospitalId labId pharId patientId")
+      .populate({ path: "doctorId", select: "profileImage" })
+      .populate({ path: "hospitalId", select: "logoFileId" })
+      .populate({ path: "labId", select: "logo" })
+      .populate({ path: "pharId", select: "logo" })
+      .populate({ path: "patientId", select: "profileImage" })
+      .limit(limit);
+
+    // ✅ Organize Data
+    const formattedUsers = users.map(user => {
+      let image = null;
+
+      if (user.doctorId?.profileImage) {
+        image = user.doctorId.profileImage;
+      } else if (user.hospitalId?.logoFileId) {
+        image = user.hospitalId.logoFileId;
+      } else if (user.labId?.logo) {
+        image = user.labId.logo;
+      } else if (user.pharId?.logo) {
+        image = user.pharId.logo;
+      } else if (user.patientId?.profileImage) {
+        image = user.patientId.profileImage;
+      }
+
+      return {
+        _id: user?.role == "hospital" ? user?.hospitalId?._id : user._id,
+        name: user.name,
+        email: user.email,
+        nh12: user.nh12,
+        role: user.role,
+        image // 👈 frontend me item.image se access ho jayega
+      };
+    });
+
+    res.json({ success: true, data: formattedUsers });
+
+  } catch (e) {
+    console.log(e)
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 // ================= GET DOCTOR BY UNIQUE ID =================
 export const GetDoctor = async (req, res) => {

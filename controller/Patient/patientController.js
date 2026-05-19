@@ -702,7 +702,7 @@ async function getPrescriptionLabDetail(req, res) {
       const labTests = await Test.find({ _id: { $in: appointments.labTest.labTests } }).lean()
       const labImage = await LabImage.findOne({ userId: appointments.labTest.lab }).lean()
       const labStatus = await LabAppointment.findOne({ doctorAp: appointmentId }).select('status')
-      const labReport = labStatus=="deliver-report" ? await TestReport.find({ appointmentId: labStatus?._id }).populate('subCatId') : []
+      const labReport = labStatus == "deliver-report" ? await TestReport.find({ appointmentId: labStatus?._id }).populate('subCatId') : []
       return res.status(200).json({
         message: "lab data fetched", labStatus, success: true, labReport,
         labData: { ...labData, labImg: labImage?.thumbnail }, labAddress, labTests
@@ -1000,66 +1000,20 @@ const getTopUserByCategory = async (req, res) => {
           { treatmentAreas: catId }
         ]
       })
-        .select('userId specialty fullAddress fees hospitalName')
-        .populate("specialty")
+        .select('userId specialty fullAddress cityId stateId fees hospitalName')
+        .populate("specialty cityId stateId")
         .populate({
           path: 'userId',
           select: 'name contactNumber email doctorId',
           populate: {
             path: "doctorId",
-            select: "profileImage"
+            select: "profileImage rating"
           }
         })
         .skip(skip)
         .limit(limit);
-      const doctorIds = doctorAbout?.map(item => item.userId?._id).filter(Boolean);
-      const ratingStats = await Rating.aggregate([
-        {
-          $match: {
-            doctorId: { $in: doctorIds }
-          }
-        },
-        {
-          $group: {
-            _id: "$doctorId",
-            avgRating: { $avg: "$star" },
-            totalReviews: { $sum: 1 }
-          }
-        }
-      ]);
-
-      const ratingMap = {};
-      ratingStats.forEach(r => {
-        if (!r._id) return; // skip null ids
-
-        ratingMap[r._id.toString()] = {
-          avgRating: Number(r.avgRating.toFixed(1)),
-          totalReviews: r.totalReviews
-        };
-      });
 
 
-      const doctorsWithRatings = doctorAbout.map(doc => {
-        const docId = doc.userId?._id;
-
-        if (!docId) {
-          return {
-            ...doc.toObject(),
-            rating: {
-              avgRating: 0,
-              totalReviews: 0
-            }
-          };
-        }
-
-        return {
-          ...doc.toObject(),
-          rating: ratingMap[docId.toString()] || {
-            avgRating: 0,
-            totalReviews: 0
-          }
-        };
-      });
       const total = await DoctorAbout.countDocuments({
         $or: [
           { specialty: catId },
@@ -1070,7 +1024,7 @@ const getTopUserByCategory = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Doctors data fetched",
-        data: doctorsWithRatings,
+        data: doctorAbout,
         pagination: {
           total,
           page,
@@ -1120,7 +1074,7 @@ const getTopUserByCategory = async (req, res) => {
 
     else if (catType == "lab") {
       const labs = await Laboratory.find({ category: catId })
-        .select('userId logo')
+        .select('userId logo rating')
         .populate('userId', 'name email contactNumber')
         .skip(skip)
         .limit(limit);
@@ -1130,30 +1084,7 @@ const getTopUserByCategory = async (req, res) => {
       const labAddressData = await LabAddress.find({
         userId: { $in: labIds }
       });
-      const ratingStats = await Rating.aggregate([
-        {
-          $match: {
-            labId: { $in: labIds }
-          }
-        },
-        {
-          $group: {
-            _id: "$labId",
-            avgRating: { $avg: "$star" },
-            totalReviews: { $sum: 1 }
-          }
-        }
-      ]);
 
-      const ratingMap = {};
-      ratingStats.forEach(r => {
-        if (!r._id) return; // skip null ids
-
-        ratingMap[r._id.toString()] = {
-          avgRating: Number(r.avgRating.toFixed(1)),
-          totalReviews: r.totalReviews
-        };
-      });
 
 
 

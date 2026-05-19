@@ -288,7 +288,7 @@ io.on("connection", (socket) => {
                         fromUserId: callerId,
                         conversationId,
                         offer,
-                        callType, name: conversation.name
+                        callType, name: conversation.name, photo: conversation.image ? process.env.BACKEND_URL + '/' + conversation.image : ""
                     });
                 }
             }
@@ -320,23 +320,39 @@ io.on("connection", (socket) => {
 
         if (receiver?.fcmToken) {
             const from = await User.findById(callerId);
-            await sendPush({
-                token: receiver.fcmToken,
-                title: `Incoming Call`,
-                body: callType === "video" ? "📹 Video Call" : "📞 Voice Call",
-                data: {
-                    type: "call",
-                    callType,
-                    fromUserId: callerId.toString()
-                }
-            });
+            // await sendPush({
+            //     token: receiver.fcmToken,
+            //     title: `Incoming Call`,
+            //     body: callType === "video" ? "📹 Video Call" : "📞 Voice Call",
+            //     data: {
+            //         type: "call",
+            //         callType,
+            //         fromUserId: callerId.toString()
+            //     }
+            // });
         }
 
         if (receiverSocket) {
+            const caller = await User.findById(callerId).select("patientId doctorId labId pharId hospitalId role name")
+                .populate("patientId doctorId", "profileImage").populate('labId pharId', 'logo').populate('hospitalId', 'logoFileId');
+            let callerName = caller?.name;
+            let callerPhoto = "";
+            if (caller.role == "patient") {
+                callerPhoto = caller.patientId?.profileImage ? process.env.BACKEND_URL + '/' + caller.patientId?.profileImage : "";
+            } else if (caller.role == "doctor") {
+                callerPhoto = caller.doctorId?.profileImage ? process.env.BACKEND_URL + '/' + caller.doctorId?.profileImage : "";
+            } else if (caller.role == "lab") {
+                callerPhoto = caller.labId?.logo ? process.env.BACKEND_URL + '/' + caller.labId?.logo : "";
+            } else if (caller.role == "pharmacy") {
+                callerPhoto = caller.pharId?.logo ? process.env.BACKEND_URL + '/' + caller.pharId?.logo : "";
+            } else if (caller.role == "hospital") {
+                callerPhoto = caller.hospitalId?.logoFileId ? process.env.BACKEND_URL + '/api/file/' + caller.hospitalId?.logoFileId : "";
+            }
+            console.log("testing", callerName, callerPhoto);
             io.to(receiverSocket).emit("incoming-call", {
                 fromUserId: callerId,
                 offer,
-                callType
+                callType, name: callerName, photo: callerPhoto
             });
         }
     });
@@ -400,7 +416,7 @@ io.on("connection", (socket) => {
 
         activeCalls.delete(callerId);
         if (toUserId) activeCalls.delete(toUserId);
-
+        let savedCallLog = null;
         if (socket.callLog) {
             socket.callLog.endTime = new Date();
             socket.callLog.duration =
@@ -410,12 +426,13 @@ io.on("connection", (socket) => {
                 socket.callLog.duration < 2 ? "missed" : "completed";
 
             await socket.callLog.save();
+            savedCallLog = socket.callLog;
             socket.callLog = null;
         }
 
         // 🟢 GROUP
         if (isGroup) {
-            const callerId = socket.callLog?.caller?.toString();
+            const callerId = savedCallLog?.caller?.toString();
 
             // Agar caller ne end kiya
             if (socket.userId === callerId) {

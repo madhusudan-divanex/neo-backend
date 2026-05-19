@@ -990,12 +990,12 @@ export const saveFirstPatientPage = async (req, res) => {
   const heroImage = req.files?.heroImage?.[0];
   const downloadImage = req.files?.downloadImage?.[0];
   const howItWorkImage = req.files?.howItWorkImage?.[0];
-  const footerCategory =req.body.category ? JSON.parse(req.body.category) :[]
+  const footerCategory = req.body.category ? JSON.parse(req.body.category) : []
   try {
     // 🔍 Get existing document
     const existingPage = await FirstPatient.findOne({});
 
-    let updateData = { ...req.body,category:footerCategory };
+    let updateData = { ...req.body, category: footerCategory };
     // 🖼️ Hero Image
     if (heroImage) {
       if (existingPage?.heroImage) {
@@ -1274,12 +1274,12 @@ export const getPatientLandingPage = async (req, res) => {
     const howItWorks = await HowItWorkPT.find()
     const ptServices = await PatientService.find()
     const ptBanner = await PatientBanner.find()
-    const hospitalCat=await HospitalCategory.find()
-    const pharmacyCat=await PharmacyCategory.find()
+    const hospitalCat = await HospitalCategory.find()
+    const pharmacyCat = await PharmacyCategory.find()
 
     res.json({
       success: true,
-      data: { firstSection, testCat, speciality, testimonial, howItWorks, ptServices, ptBanner,hospitalCat,pharmacyCat },
+      data: { firstSection, testCat, speciality, testimonial, howItWorks, ptServices, ptBanner, hospitalCat, pharmacyCat },
     });
 
   } catch (err) {
@@ -1294,7 +1294,7 @@ export const getPatientFooterCategory = async (req, res) => {
 
     res.json({
       success: true,
-      data:  firstSection
+      data: firstSection
     });
 
   } catch (err) {
@@ -1466,7 +1466,7 @@ export const saveFourthHospitalPage = async (req, res) => {
     const data = await FourthHospital.findOne()
     const security = req?.body?.security ? JSON.parse(req.body.security) : data?.security
     const interoperability = req?.body?.interoperability ? JSON.parse(req.body.interoperability) : data?.interoperability
-    const deployment =req?.body?.deployment ? JSON.parse(req.body.deployment) :data?.deployment
+    const deployment = req?.body?.deployment ? JSON.parse(req.body.deployment) : data?.deployment
     const page = await FourthHospital.findOneAndUpdate(
       {},
       {
@@ -1520,7 +1520,8 @@ export const saveFirstMainPage = async (req, res) => {
       topShot,
       bottomShot,
       bottomDesc,
-      appUiDesc
+      appUiDesc,
+      footerData
     } = req.body;
 
     // ✅ SAFE PARSE ALL JSON FIELDS
@@ -1536,6 +1537,7 @@ export const saveFirstMainPage = async (req, res) => {
     appUiShot = safeParse(appUiShot);
     topShot = safeParse(topShot);
     bottomShot = safeParse(bottomShot);
+    footerData = safeParse(footerData);
 
     // 🔥 MAIN FIX
     let neoHealthCard = safeParse(req.body.neoHealthCard) || {};
@@ -1579,7 +1581,8 @@ export const saveFirstMainPage = async (req, res) => {
         bottomShot,
         bottomDesc,
         appUiDesc,
-        neoHealthCard
+        neoHealthCard,
+        footerData
       },
       { new: true, upsert: true }
     );

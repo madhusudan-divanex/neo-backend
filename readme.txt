@@ -35,6 +35,7 @@ Admin ->
     Doctor appointments
     Lab appointments
     Dashboard 
+    Suppliers
     Patients,Hospital,Lab Edit Request 
     
     Pharmacy (pharma details,medicine request,sell orders)

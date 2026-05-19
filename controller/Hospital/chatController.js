@@ -16,7 +16,7 @@ export const CreateConversation = async (req, res) => {
     }
 
     let conversation = await Conversation.findOne({
-      participants: { $all: [myId, userId] },type:"individual"
+      participants: { $all: [myId, userId] }, type: "individual"
     }).populate("participants", "name role profileImage");
 
     if (!conversation) {
@@ -85,46 +85,129 @@ export const EditMessage = async (req, res) => {
 };
 
 export const ChatList = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
   try {
     const userId = req.user.id || req.user.userId;
+
     const conversations = await Conversation.find({
       $or: [
         { participants: userId },
         { createdBy: userId }
       ]
-
     })
-      .populate("participants", "name role profileImage")
-      .sort({ lastMessageAt: -1 });
+      .populate({
+        path: "participants",
+        select: "name role doctorId hospitalId patientId labId pharId",
+        populate: [
+          {
+            path: "doctorId",
+            select: "profileImage"
+          },
+          {
+            path: "hospitalId",
+            select: "logoFileId"
+          },
+          {
+            path: "patientId",
+            select: "profileImage"
+          },
+          {
+            path: "labId",
+            select: "logo"
+          },
+          {
+            path: "pharId",
+            select: "logo"
+          }
+        ]
+      }).sort({ lastMessageAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
     const result = await Promise.all(
       conversations.map(async (conv) => {
+
         const unreadCount = await Message.countDocuments({
           conversationId: conv._id,
           seen: false,
           sender: { $ne: userId }
         });
 
+        const otherParticipant = conv.participants.find(
+          (p) => p._id.toString() !== userId
+        );
+
+        let image = "";
+
+        if (conv.image) {
+          image = process.env.BACKEND_URL + "/" + conv.image;
+        } else if (otherParticipant) {
+
+          switch (otherParticipant.role) {
+
+            case "doctor":
+              image = process.env.BACKEND_URL + "/" + otherParticipant.doctorId?.profileImage || "";
+              break;
+
+            case "hospital":
+              image = process.env.BACKEND_URL + "/api/file/" + otherParticipant.hospitalId?.logoFileId || "";
+              break;
+
+            case "patient":
+              image = process.env.BACKEND_URL + "/" + otherParticipant.patientId?.profileImage || "";
+              break;
+
+            case "lab":
+              image = process.env.BACKEND_URL + "/" + otherParticipant.labId?.logo || "";
+              break;
+
+            case "pharmacy":
+              image = process.env.BACKEND_URL + "/" + otherParticipant.pharId?.logo || "";
+              break;
+
+            default:
+              image = "";
+          }
+        }
+
         return {
           _id: conv._id,
+
           participants: conv.participants.filter(
             (p) => p._id.toString() !== userId
           ),
+
           lastMessage: conv.lastMessage,
           lastMessageAt: conv.lastMessageAt,
-          unreadCount, type: conv.type,
+          unreadCount,
+          type: conv.type,
           name: conv.name,
-          image: conv.image
+          image
         };
       })
     );
+    const totalDocuments = await Conversation.countDocuments({
+      $or: [
+        { participants: userId },
+        { createdBy: userId }
+      ]
+    });
 
     return res.json({
       success: true,
-      data: result
+      data: result,
+      totalPages: Math.ceil(totalDocuments / limit)
     });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
 

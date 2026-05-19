@@ -1162,76 +1162,80 @@ const getCustomProfile = async (req, res) => {
 const getDoctors = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-    const name = req.query.name;
-    const specialty = req.query.specialty // Doctor About
-    const language = req.query.language // Doctor About
-    const fees = req.query.fees //  Doctor About
-    const status = req.query.status // Doctor
-    const rating = req.query.rating // Rating
+    const { name, specialty, language, fees, rating, sortBy } = req.query;
+
     try {
         const specialties = specialty ? specialty.split(',') : [];
         const languages = language ? language.split(',') : [];
         const minRating = rating ? Number(rating) : 0;
-        const maxFees = fees ? Number(fees) : null;
+        const feesRange = fees ? fees.split('_') : [];
+        const minFees = feesRange[0] !== undefined ? Number(feesRange[0]) : null;
+        const maxFees = feesRange[1] !== undefined ? Number(feesRange[1]) : null;
 
-        let filter = { role: 'doctor', fcmToken: { $ne: null } }
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
+        /* ===== STEP 1: DoctorAbout filters + sort ===== */
+        const aboutFilter = {};
+        if (specialties.length) aboutFilter.specialty = { $in: specialties };
+        if (languages.length) aboutFilter.language = { $in: languages };
+        if (minFees !== null || maxFees !== null) {
+            aboutFilter.fees = {
+                ...(minFees !== null && { $gte: minFees }),
+                ...(maxFees !== null && { $lte: maxFees }),
+            };
         }
-        // 1️⃣ Fetch lab users
-        // let userQuery = User.find({ role: 'doctor', created_by: 'self' })
-        //     .select('-passwordHash')
-        //     .populate('doctorId')
-        //     .sort({ createdAt: -1 });
 
-        // if (!isFilterApplied) {
-        //     userQuery = userQuery.limit(limit).skip((page - 1) * limit);
-        // }
-        // const users = await userQuery.lean();
-        const users = await User.find(filter).select('name email contactNumber doctorId')
-            .populate('doctorId', 'profileImage rating').sort({ createdAt: -1 })
-            .limit(limit)
-            .skip((page - 1) * limit)
-            .lean();
+        const sortOption = sortBy === 'lowToHigh' ? { fees: 1 }
+            : sortBy === 'highToLow' ? { fees: -1 }
+                : { createdAt: -1 };  // default sort
 
-        const doctorIds = users.map(u => u._id);
-        // 2️⃣ Fetch addresses
-        const doctorAddresses = await DoctorAbout.find({
-            userId: { $in: doctorIds },
-            ...(specialties.length && { specialty: { $in: specialties } }),
-            ...(languages.length && { language: { $in: languages } }),
-            ...(maxFees && {
-                $expr: {
-                    $lte: [{ $toDouble: "$fees" }, maxFees]
-                }
-            })
-        })
+        const matchedAbouts = await DoctorAbout.find(aboutFilter)
+            .sort(sortOption)
             .populate('countryId stateId cityId specialty', 'name')
             .lean();
 
+        // Sorted order mein userIds — yahi final order hoga
+        const sortedUserIds = matchedAbouts.map(a => a.userId.toString());
 
-        const addressMap = {};
-        doctorAddresses.forEach(addr => {
-            addressMap[addr.userId.toString()] = addr;
+        /* ===== STEP 2: User filter (no sort, no pagination yet) ===== */
+        const userFilter = {
+            role: 'doctor',
+            fcmToken: { $ne: null },
+            _id: { $in: sortedUserIds }
+        };
+        if (name) userFilter.name = { $regex: name, $options: 'i' };
+
+        const users = await User.find(userFilter)
+            .select('name email contactNumber doctorId')
+            .populate('doctorId', 'profileImage rating')
+            .lean();  // ← koi sort nahi, order baad mein lagayenge
+
+        /* ===== STEP 3: Maps banao ===== */
+        const aboutMap = {};
+        matchedAbouts.forEach(a => {
+            aboutMap[a.userId.toString()] = a;
         });
 
+        const userMap = {};
+        users.forEach(u => {
+            userMap[u._id.toString()] = u;
+        });
 
+        /* ===== STEP 4: DoctorAbout ka sorted order restore karo ===== */
+        const mergedData = sortedUserIds
+            .map(id => {
+                const user = userMap[id];
+                if (!user) return null;  // name filter mein remove hua hoga
+                return {
+                    ...user,
+                    doctorAddress: aboutMap[id] || null,
+                    avgRating: user?.doctorId?.rating || 0,
+                };
+            })
+            .filter(Boolean)
+            .filter(doc => doc.avgRating >= minRating);  // rating filter
 
-        // 4️⃣ Merge everything
-        const validDoctorIds = new Set(
-            doctorAddresses.map(d => d.userId.toString())
-        );
-        let finalData = users
-            .filter(user => validDoctorIds.has(user._id.toString()))
-            .map(user => ({
-                ...user,
-                doctorAddress: addressMap[user._id.toString()] || null,
-                avgRating: user?.doctorId?.rating || 0,
-            }))
-            .filter(doc => doc.avgRating >= minRating);
-
-
-        const total = Object.keys(finalData).length;
+        /* ===== STEP 5: Ab pagination manually lagao ===== */
+        const total = mergedData.length;
+        const finalData = mergedData.slice((page - 1) * limit, page * limit);
 
         return res.status(200).json({
             success: true,
@@ -1245,10 +1249,7 @@ const getDoctors = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({
-            success: false,
-            message: err.message
-        });
+        return res.status(500).json({ success: false, message: err.message });
     }
 };
 const getDoctorData = async (req, res) => {
@@ -1268,7 +1269,7 @@ const getDoctorData = async (req, res) => {
         const doctorLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 });
         const uniquePatientIds = await DoctorAppointment.distinct(
             "patientId",
-            { doctorId: user.doctorId }
+            { doctorId: userId }
         );
 
         const totalPatients = uniquePatientIds.length;
@@ -1291,7 +1292,7 @@ const getDoctorData = async (req, res) => {
             }
         ]);
 
-        const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
+        const avgRating = doctorData?.rating || 0;
 
         // 5️⃣ Count star ratings
         const ratingStats = await Rating.aggregate([

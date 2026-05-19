@@ -1040,74 +1040,90 @@ const getLabs = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 10;
         const page = parseInt(req.query.page) || 1;
-        const name = req.query.name;
-        const location = req.query.location;
-        const category = req.query.category;
-        const sortBy = req.query.sortBy;
-        const type = req.query.type;
+        const { name, location, category, sortBy, type } = req.query;
 
-        /* ================= USER FILTER ================= */
-        const userFilter = { labId: { $exists: true, $ne: null } };
-
-        if (type) {
-            userFilter.role = type; // lab OR hospital
-        } else {
-            userFilter.role = { $in: ['lab', 'hospital'] };
-        }
+        /* ===== STEP 1: Category filter — Test se sorted labIds nikalo ===== */
+        let sortedLabUserIds = null; // null = no category filter
 
         if (category) {
-            if (sortBy == "ASC") {
-                const alltests = await Test.find({ category: { $in: category.split(",") } }).sort({ totalAmount: 1 }).distinct("labId")
-                const labIds = alltests.map((f) => f)
-                userFilter._id = { $in: labIds };
-            }
-            else if (sortBy == "DESC") {
-                const alltests = await Test.find({ category: { $in: category.split(",") } }).sort({ totalAmount: -1 }).distinct("labId")
-                const labIds = alltests.map((f) => f)
-                userFilter._id = { $in: labIds };
-            } else {
-                const alltests = await Test.find({ category: { $in: category.split(",") } }).distinct("labId")
-                const labIds = alltests.map((f) => f)
-                userFilter._id = { $in: labIds };
-            }
+            const sortOption = sortBy === 'ASC' ? { totalAmount: 1 }
+                : sortBy === 'DESC' ? { totalAmount: -1 }
+                    : {};
 
+            // distinct() sort preserve nahi karta — find() use karo
+            const tests = await Test.find({
+                category: { $in: category.split(',') }
+            })
+                .sort(sortOption)
+                .select('labId')
+                .lean();
+
+            // Sorted order mein unique labIds (userId) — order preserve karna hai
+            const seen = new Set();
+            sortedLabUserIds = [];
+            tests.forEach(t => {
+                const id = t.labId.toString();
+                if (!seen.has(id)) {
+                    seen.add(id);
+                    sortedLabUserIds.push(t.labId);
+                }
+            });
         }
 
-        if (name) {
-            userFilter.name = { $regex: name, $options: 'i' };
-        }
+        /* ===== STEP 2: Location filter — valid userIds nikalo ===== */
+        let locationUserIds = null; // null = no location filter
 
-        /* ================= USERS (PAGINATED & MIXED) ================= */
-        let users = await User.find(userFilter)
-            .select('-passwordHash')
-            .populate('labId')
-            .limit(limit)
-            .skip((page - 1) * limit)
-            .sort({ createdAt: -1 })
-            .lean();
-
-        const total = await User.countDocuments(userFilter);
-
-        /* ================= SPLIT IDS ================= */
-        const labUserIds = users.map(u => u._id);
-
-
-        /* ================= LOCATION ================= */
-        let cityId = null;
         if (location) {
             const city = await City.findOne({
                 name: new RegExp(`^${location}$`, 'i')
-            });
-            if (city) cityId = city._id;
+            }).lean();
+
+            const labAddressFilter = {};
+            if (city) labAddressFilter.cityId = city._id;
+
+            const labAddresses = await LabAddress.find(labAddressFilter)
+                .select('userId')
+                .lean();
+
+            locationUserIds = labAddresses.map(a => a.userId.toString());
         }
 
-        /* ================= LAB ADDRESSES ================= */
-        const labAddressFilter = {
-            userId: { $in: labUserIds }
-        };
-        if (cityId) labAddressFilter.cityId = cityId;
+        /* ===== STEP 3: User filter banao — saare filters combine karo ===== */
+        const userFilter = { labId: { $exists: true, $ne: null } };
 
-        const labAddresses = await LabAddress.find(labAddressFilter)
+        userFilter.role = type ? type : { $in: ['lab', 'hospital'] };
+
+        if (name) userFilter.name = { $regex: name, $options: 'i' };
+
+        // Category + location dono hain toh intersection lo
+        if (sortedLabUserIds && locationUserIds) {
+            const locationSet = new Set(locationUserIds);
+            const intersected = sortedLabUserIds.filter(id =>
+                locationSet.has(id.toString())
+            );
+            userFilter._id = { $in: intersected };
+
+        } else if (sortedLabUserIds) {
+            userFilter._id = { $in: sortedLabUserIds };
+
+        } else if (locationUserIds) {
+            userFilter._id = { $in: locationUserIds };
+        }
+
+        /* ===== STEP 4: Users fetch karo (no sort — order baad mein restore karenge) ===== */
+        const total = await User.countDocuments(userFilter);
+
+        const users = await User.find(userFilter)
+            .select('-passwordHash')
+            .populate('labId')
+            .lean(); // ← koi limit/skip/sort nahi — baad mein manually karenge
+
+        /* ===== STEP 5: Address map banao (sirf fetched users ke liye) ===== */
+        const fetchedUserIds = users.map(u => u._id);
+
+        const labAddresses = await LabAddress.find({
+            userId: { $in: fetchedUserIds }
+        })
             .populate('countryId stateId cityId', 'name')
             .lean();
 
@@ -1116,26 +1132,36 @@ const getLabs = async (req, res) => {
             labAddressMap[a.userId.toString()] = a;
         });
 
+        /* ===== STEP 6: User map banao ===== */
+        const userMap = {};
+        users.forEach(u => {
+            userMap[u._id.toString()] = u;
+        });
 
-        /* ================= LOCATION FILTER APPLY ================= */
-        if (location) {
-            const validIds = new Set([
-                ...labAddresses.map(a => a.userId.toString()),
-            ]);
+        /* ===== STEP 7: Sorted order restore karo + merge ===== */
+        let mergedData;
 
-            users = users.filter(u =>
-                validIds.has(u._id.toString())
-            );
+        if (sortedLabUserIds) {
+            // Category sort ka order follow karo
+            mergedData = sortedLabUserIds
+                .map(id => userMap[id.toString()])
+                .filter(Boolean) // name/location filter mein remove hue users hata do
+                .map(u => ({
+                    ...u,
+                    address: labAddressMap[u._id.toString()] || null,
+                    avgRating: u?.labId?.rating || 0,
+                }));
+        } else {
+            // Default: createdAt DESC (User.find ka natural order)
+            mergedData = users.map(u => ({
+                ...u,
+                address: labAddressMap[u._id.toString()] || null,
+                avgRating: u?.labId?.rating || 0,
+            }));
         }
 
-
-
-        /* ================= FINAL DATA ================= */
-        const finalData = users.map(u => ({
-            ...u,
-            address: labAddressMap[u._id.toString()] || null,
-            avgRating: u?.labId?.rating || 0
-        }));
+        /* ===== STEP 8: Manual pagination ===== */
+        const finalData = mergedData.slice((page - 1) * limit, page * limit);
 
         return res.status(200).json({
             success: true,
@@ -1149,10 +1175,7 @@ const getLabs = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({
-            success: false,
-            message: err.message
-        });
+        return res.status(500).json({ success: false, message: err.message });
     }
 };
 const getLabList = async (req, res) => {
