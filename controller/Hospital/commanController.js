@@ -41,6 +41,7 @@ import PharAddress from "../../models/Pharmacy/pharmacyAddress.model.js";
 import LabPayment from "../../models/LabPayment.js";
 import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
 import LabSample from "../../models/LabSample.js";
+import mongoose from "mongoose";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -118,6 +119,7 @@ export const searchAllUsers = async (req, res) => {
     if (!q) return res.json({ success: true, data: [] });
 
     const users = await User.find({
+      nh12: { $ne: null },
       role: { $in: ["doctor", "hospital", "lab", "pharmacy"] },
       $or: [
         { name: { $regex: q, $options: "i" } },
@@ -1631,8 +1633,15 @@ export const bedInvoicePdf = async (req, res) => {
 export const labReportPdf = async (req, res) => {
   const id = req.params.id
   try {
-    const appointmentData = await LabAppointment.findOne({ $or: [{ customId: id }, { _id: id }] })
-      .populate('patientId', 'name email contactNumber nh12').populate('staff', 'name nh12')
+    const query = [{ customId: id }];
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query.push({ _id: id });
+    }
+
+    const appointmentData = await LabAppointment.findOne({
+      $or: query
+    }).populate('patientId', 'name email contactNumber nh12').populate('staff', 'name nh12')
     if (!appointmentData) {
       return res.status(404).json({ message: "Appointment data not found", success: false })
     }

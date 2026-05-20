@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Doctor Welcome Email</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap%22
-    rel=" stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+    rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Jacques+Francois&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
     integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
@@ -34,9 +34,13 @@
         padding: 25px 20px !important;
       }
 
-      .heading {
+      /* .heading {
         font-size: 38px !important;
         line-height: 44px !important;
+      } */
+
+      .heading h2 {
+        font-size: 28px !important;
       }
 
       .doctor-image {
@@ -76,14 +80,6 @@
         <!-- Main Container -->
         <table width="610" cellpadding="0" cellspacing="0" border="0" class="container"
           style=" width:100%; max-width:600px; background:#ffffff; border-radius:10px; overflow:hidden; position: relative;">
-          <tr>
-            <td>
-              <div style=" content: ''; position: absolute; bottom: 0; right: -55px; width: 273px; height: 410px; background-image: url('https://api.neohealthcard.com:9100/uploads/assets/asideDoctor.png'); background-size:cover;
-                background-position:right;
-                background-repeat:no-repeat;"></div>
-            </td>
-
-          </tr>
           <!-- Header -->
           <tr>
             <td style="
@@ -95,7 +91,6 @@
               ">
 
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
-
                 <tr>
 
                   <!-- Left Logo -->
@@ -112,13 +107,13 @@
 
                   <!-- Center Heading -->
                   <td align="center" valign="middle">
-                    <div class="heading" style="
+                    <div class="heading">
+                      <h2 style="
                         font-size:32px;
                         color:#052F59;
                         letter-spacing: 2px;
                         font-family:Jacques Francois, serif;
-                        font-weight:500;">
-                      Welcome!
+                        font-weight:500; margin: 0;">Welcome!</h2>
                     </div>
 
                   </td>
@@ -136,12 +131,9 @@
           <!-- Body -->
           <tr>
             <td class="content-padding" style="
-                padding:35px 38px 40px 38px;
+                padding:20px 38px 20px 38px;
                 position:relative;
               ">
-
-
-
               <!-- Greeting -->
               <div style="
                   font-size:14x;
@@ -156,7 +148,7 @@
 
                   Hi {{name}},
                 </span>
-                <p style="margin: 0;  font-size:14x; font-weight: 400; color:#555555;">Welcome to NeoHealthCare.</p>
+                <p style="margin: 0;  font-size:14px; font-weight: 400; color:#555555;">Welcome to NeoHealthCare.</p>
 
               </div>
 
@@ -246,7 +238,8 @@
                   font-size:14px;
                   font-weight:700;
                   color:#16345B;
-                  margin-bottom:18px;
+                  margin-bottom:15px;
+                  margin-top: 0px;
                 ">Connect with us</h6>
               </div>
 
@@ -375,6 +368,15 @@
 
             </td>
           </tr>
+
+          <!-- <tr>
+            <td>
+              <div style=" content:''; position: absolute; bottom: 0; right: -55px; width: 273px; height: 410px; background-image: url('https://api.neohealthcard.com:9100/uploads/assets/asideDoctor.png'); background-size:cover;
+                background-position:right;
+                background-repeat:no-repeat;"></div>
+            </td>
+
+          </tr> -->
 
         </table>
 

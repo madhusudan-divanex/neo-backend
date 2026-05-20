@@ -16,26 +16,123 @@ export const CreateConversation = async (req, res) => {
     }
 
     let conversation = await Conversation.findOne({
-      participants: { $all: [myId, userId] }, type: "individual"
-    }).populate("participants", "name role profileImage");
+      participants: { $all: [myId, userId] },
+      type: "individual"
+    }).populate({
+      path: "participants",
+      select: "name role doctorId hospitalId patientId labId pharId",
+      populate: [
+        {
+          path: "doctorId",
+          select: "profileImage"
+        },
+        {
+          path: "hospitalId",
+          select: "logoFileId"
+        },
+        {
+          path: "patientId",
+          select: "profileImage"
+        },
+        {
+          path: "labId",
+          select: "logo"
+        },
+        {
+          path: "pharId",
+          select: "logo"
+        }
+      ]
+    });
 
     if (!conversation) {
       conversation = await Conversation.create({
         participants: [userId, myId]
       });
 
-      await conversation.populate(
-        "participants",
-        "name role profileImage"
-      );
+      await conversation.populate({
+        path: "participants",
+        select: "name role doctorId hospitalId patientId labId pharId",
+        populate: [
+          {
+            path: "doctorId",
+            select: "profileImage"
+          },
+          {
+            path: "hospitalId",
+            select: "logoFileId"
+          },
+          {
+            path: "patientId",
+            select: "profileImage"
+          },
+          {
+            path: "labId",
+            select: "logo"
+          },
+          {
+            path: "pharId",
+            select: "logo"
+          }
+        ]
+      });
+    }
+
+    const otherParticipant = conversation.participants.find(
+      (p) => p._id.toString() !== myId
+    );
+
+    let image = "";
+
+    if (otherParticipant) {
+      switch (otherParticipant.role) {
+
+        case "doctor":
+          image = otherParticipant.doctorId?.profileImage
+            ? process.env.BACKEND_URL + "/" + otherParticipant.doctorId.profileImage
+            : "";
+          break;
+
+        case "hospital":
+          image = otherParticipant.hospitalId?.logoFileId
+            ? process.env.BACKEND_URL + "/api/file/" + otherParticipant.hospitalId.logoFileId
+            : "";
+          break;
+
+        case "patient":
+          image = otherParticipant.patientId?.profileImage
+            ? process.env.BACKEND_URL + "/" + otherParticipant.patientId.profileImage
+            : "";
+          break;
+
+        case "lab":
+          image = otherParticipant.labId?.logo
+            ? process.env.BACKEND_URL + "/" + otherParticipant.labId.logo
+            : "";
+          break;
+
+        case "pharmacy":
+          image = otherParticipant.pharId?.logo
+            ? process.env.BACKEND_URL + "/" + otherParticipant.pharId.logo
+            : "";
+          break;
+
+        default:
+          image = "";
+      }
     }
 
     res.json({
       success: true,
-      data: conversation
+      data: {
+        ...conversation.toObject(),
+        image
+      }
     });
+
   } catch (err) {
     console.error("CreateConversation Error:", err);
+
     res.status(500).json({
       success: false,
       message: err.message

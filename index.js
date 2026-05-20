@@ -317,7 +317,15 @@ io.on("connection", (socket) => {
 
         const receiverSocket = onlineUsers.get(toUserId);
         const receiver = await User.findById(toUserId);
-
+        if (!receiverSocket) {
+            // Caller ko turant batao — activeCalls se bhi hata do
+            activeCalls.delete(callerId);
+            activeCalls.delete(toUserId);
+            io.to(socket.id).emit("call-user-offline", {
+                message: "User is offline"
+            });
+            return;
+        }
         if (receiver?.fcmToken) {
             const from = await User.findById(callerId);
             // await sendPush({
@@ -348,7 +356,6 @@ io.on("connection", (socket) => {
             } else if (caller.role == "hospital") {
                 callerPhoto = caller.hospitalId?.logoFileId ? process.env.BACKEND_URL + '/api/file/' + caller.hospitalId?.logoFileId : "";
             }
-            console.log("testing", callerName, callerPhoto);
             io.to(receiverSocket).emit("incoming-call", {
                 fromUserId: callerId,
                 offer,

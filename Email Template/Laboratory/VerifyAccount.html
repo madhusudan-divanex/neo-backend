@@ -7,12 +7,23 @@
     <title>Verify your account</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
         rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Jacques+Francois&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
         integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
-        @media only screen and (max-width:600px) {
+        .neo-mail-btn:hover {
+            background-color: #0E559C !important;
+            border-color: #0E559C !important;
+            color: #fff;
+        }
+
+        .neo-social-btn:hover {
+            background-color: #009899 !important;
+        }
+
+        @media only screen and (max-width:767px) {
 
             .container {
                 width: 100% !important;
@@ -22,9 +33,13 @@
                 padding: 25px 20px !important;
             }
 
-            .heading {
+            /* .heading {
                 font-size: 38px !important;
                 line-height: 44px !important;
+            } */
+
+            .heading h2 {
+                font-size: 28px !important;
             }
 
             .doctor-image {
@@ -42,16 +57,24 @@
             .social-icons td {
                 padding: 0 3px !important;
             }
+
+            .right-empty {
+                display: none;
+            }
+
+            .left-row {
+                width: 80px !important;
+            }
         }
     </style>
 </head>
 
 <body style="margin:0;padding:0;background:#f4f7fb;font-family: Plus Jakarta Sans, sans-serif;">
 
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
+    <table width="100%" style="min-height: 100vh;" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
 
         <tr>
-            <td align="center" style="padding:20px 10px;">
+            <td align="center" style="padding:15px">
 
                 <!-- Main Container -->
                 <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="
@@ -67,7 +90,7 @@
                         <td style="
                 background-image:url('https://api.neohealthcard.com:9100/uploads/assets/panelBg.png');
                 background-size:cover;
-                background-position:center;
+                background-position:right;
                 background-repeat:no-repeat;
                 padding:20px 20px 30px 20px;
               ">
@@ -75,38 +98,34 @@
                             <table width="100%" cellpadding="0" cellspacing="0" border="0">
 
                                 <tr>
-
                                     <!-- Left Logo -->
-                                    <td width="120" valign="top">
-
+                                    <td class="left-row" width="120" valign="top">
                                         <img src="https://api.neohealthcard.com:9100/uploads/assets/logo.png" width="90"
                                             alt="NeoHealth" class="logo" style="
-                        display:block;
-                        border:0;
-                        width:90px;
-                        max-width:100%;
-                      " />
+                                            display:block;
+                                            border:0;
+                                            width:90px;
+                                            max-width:100%;
+                                        " />
                                         <!-- Brand -->
-
-
                                     </td>
 
                                     <!-- Center Heading -->
                                     <td align="center" valign="middle">
 
-                                        <div class="heading" style="
-                        font-size:42px;
-                        color:#16345B;
-                        font-family:Georgia,serif;
-                        font-weight:500;
-                      ">
-                                            Verify Your Account
+                                        <div class="heading" style="">
+                                            <h2 style="font-size:32px;
+                        color:#052F59;
+                        letter-spacing: 2px;
+                        font-family:Jacques Francois, serif;
+                        line-height: 1.2;
+                        font-weight:500; margin: 0;">Verify Your Account</h2>
                                         </div>
 
                                     </td>
 
                                     <!-- Empty Right -->
-                                    <td width="120"></td>
+                                    <td width="120" class="right-empty"></td>
 
                                 </tr>
 
@@ -118,49 +137,52 @@
                     <!-- Body -->
                     <tr>
                         <td class="content-padding" style="
-                padding:35px 38px 40px 38px;
+                 padding:20px 38px 20px 38px;
                 position:relative;
               ">
 
                             <!-- Greeting -->
                             <div style="
-                  font-size:18px;
-                  line-height:100%;
-                  color:#5f6368;
-                  margin-bottom:25px;
+                 font-size:14x;
+                  line-height:1.4;
+                  color:#555555;
+                  margin-bottom:15px;
                   position:relative;
                   z-index:2;
-                ">
+                  font-family: Plus Jakarta Sans;">
 
-                                Dear Team,
-                                <br />
-                                Welcome to the NeoHealthCare.
+                                <span style="font-weight: 600;">Dear Team,</span>
+
+                                <p style="margin: 0;  font-size:14px; font-weight: 400; color:#555555;">Welcome to the
+                                    NeoHealthCare.</p>
 
                             </div>
 
-                            <div style="
-                  font-size:14px;
-                  line-height:100%;
-                  color:#5f6368;
-                  margin-bottom:35px;
-                  position:relative;
-                  z-index:2;
-                ">
+                            <div>
 
-                                To securely access the laboratory
-                                system, please use the One-Time Password
-                                (OTP) below to verify your identity
+                                <p style="
+                                font-size:14px;
+                                line-height:1.4;
+                                color:#555555;
+                                margin-bottom:15px;
+                                margin-top: 0;
+                                font-weight: 400;
+                                position:relative;
+                                font-family: Plus Jakarta Sans;
+                                z-index:2;
+                                ">To securely access the laboratory
+                                    system, please use the One-Time Password
+                                    (OTP) below to verify your identity</p>
 
                             </div>
 
                             <!-- OTP Label -->
-                            <div style="
-        font-size:20px;
-        font-weight:700;
-        color:#16345B;
-        margin-bottom:18px;
-      ">
-                                OTP
+                            <div>
+                                <h4 style="
+                                font-size:20px;
+                                font-weight:700;
+                                color:#16345B;
+                                margin-bottom:16px; margin-top: 0;">OTP</h4>
                             </div>
 
                             <!-- OTP Box -->
@@ -168,14 +190,14 @@
 
                                 <tr>
                                     <td style="
-            background:#f4f7fb;
-            border-radius:6px;
-            padding:18px 14px;
-            font-size:24px;
-            font-weight:600;
-            letter-spacing:4px;
-            color:#6b6b6b;
-          ">
+                                    background:#F4F9FB;
+                                    border-radius:6px;
+                                    padding:12px 10px;
+                                    font-size:16px;
+                                    font-weight:600;
+                                    letter-spacing:4px;
+                                    color:#888888;
+                                ">
 
                                         {{code}}
 
@@ -185,15 +207,16 @@
                             </table>
 
                             <!-- Team -->
-                            <div style="
+                            <div>
+                                <h6 style="
                   font-size:14px;
-                   margin-top:28px;
                   font-weight:700;
-                  color:#16345B;
+                  color:#052F59;
                   position:relative;
                   z-index:2;
-                ">
-                                Team NeoHealth
+                  margin-top: 20px;
+                  margin-bottom: 0;
+                ">Team NeoHealth</h6>
                             </div>
 
                         </td>
@@ -202,25 +225,26 @@
                     <!-- Footer -->
                     <tr>
                         <td align="center" style="
-                padding:35px 20px 30px 20px;
-                border-top:1px solid #ececec;
-                 position:relative;
+                padding:20px 20px 30px 20px;
+                position: relative;
               ">
                             <!-- Doctor Side Image -->
-                            <!-- <img src="/assets/pharSide.png" width="150" alt="Doctor" class="doctor-image" style="
+                            <!-- <img src="https://api.neohealthcard.com:9100/uploads/assets/asideDoctor.png" width="150" alt="Doctor"
+                class="doctor-image" style="
                   position:absolute;
                   right:0;
                   bottom:160px;
                   width:180px;
                 " /> -->
                             <!-- Connect -->
-                            <div style="
+                            <div>
+                                <h6 style="
                   font-size:14px;
-                  font-weight:600;
+                  font-weight:700;
                   color:#16345B;
-                  margin-bottom:18px;
-                ">
-                                Connect with us
+                  margin-bottom:15px;
+                  margin-top: 0px;
+                ">Connect with us</h6>
                             </div>
 
                             <!-- Social -->
@@ -229,74 +253,74 @@
                                 <tr>
 
                                     <td style="padding:0 5px;">
-                                        <a href="#" style="
+                                        <a class="neo-social-btn" href={{facebook}} style="
                         display:inline-block;
                         width:38px;
                         height:38px;
-                        line-height:45px;
+                        line-height:44px;
                         text-align:center;
-                        background:#11c5c9;
+                        background:#00B4B5;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
                         font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
-                                                style="margin-top: 10px;" alt>
+                                                style="margin-top: 10px;" alt="">
                                         </a>
                                     </td>
 
                                     <td style="padding:0 5px;">
-                                        <a href="#" style="
+                                        <a class="neo-social-btn" href="{{twitter}}" style="
                         display:inline-block;
                         width:38px;
                         height:38px;
-                        line-height:45px;
+                        line-height:44px;
                         text-align:center;
-                        background:#11c5c9;
+                        background:#00B4B5;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
                         font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png"
-                                                style="margin-top: 10px;" alt>
+                                                style="margin-top: 10px;" alt="">
                                         </a>
                                     </td>
 
                                     <td style="padding:0 5px;">
-                                        <a href="#" style="
+                                        <a class="neo-social-btn" href="{{instagram}}" style="
                         display:inline-block;
                         width:38px;
                         height:38px;
-                        line-height:45px;
+                        line-height:44px;
                         text-align:center;
-                        background:#11c5c9;
+                        background:#00B4B5;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
                         font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
-                                                style="margin-top: 10px;" alt>
+                                                style="margin-top: 10px;" alt="">
                                         </a>
                                     </td>
 
                                     <td style="padding:0 5px;">
-                                        <a href="#" style="
+                                        <a class="neo-social-btn" href="{{youtube}}" style="
                         display:inline-block;
                         width:38px;
                         height:38px;
-                        line-height:45px;
+                        line-height:44px;
                         text-align:center;
-                        background:#11c5c9;
+                        background:#00B4B5;
                         border-radius:8px;
                         color:#ffffff;
                         text-decoration:none;
                         font-size:14px;
                       ">
                                             <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png"
-                                                style="margin-top: 10px;" alt>
+                                                style="margin-top: 10px;" alt="">
                                         </a>
                                     </td>
 
@@ -304,40 +328,45 @@
 
                             </table>
 
-                            <!-- Contact -->
-                            <div style="
-                  margin-top:25px;
+                            <div>
+                                <h6 style="
+                  margin-top:15px;
                   font-size:13px;
+                  font-weight: 500;
                   line-height:24px;
-                  color:#8b8b8b;
-                ">
+                  color:#555555;
+                  margin-bottom: 0;
+                ">{{address}}</h6>
 
-                                {{address}}
-
-                                <br />
-
-                                {{email}} |
-                                {{phone}} |
-                                {{website}}
+                                <p style="
+                  margin: 0px;
+                  font-size:13px;
+                  font-weight: 500;
+                  line-height:24px;
+                  color:#555555;
+                  margin-bottom: 0;
+                ">{{email}} |
+                                    {{phone}} |
+                                    {{website}}</p>
 
                             </div>
 
                             <!-- Disclaimer -->
-                            <div style="
+                            <div>
+
+                                <p style="
                   margin-top:18px;
                   font-size:12px;
+                  font-weight: 500;
                   line-height:22px;
-                  color:#b1b1b1;
-                ">
+                  color:#888888;
+                  margin-bottom: 0;
+                ">This email was sent to you because
+                                    you created an account with NeoCare Hospital.
 
-                                This email was sent to you because
-                                you created an account with NeoCare
-                                Hospital.
-
-                                <br />
-
-                                If you did not create an account,
-                                please ignore this email.
+                                    <span style="display: block;">If you did not create an account,
+                                        please ignore this email.</span>
+                                </p>
 
                             </div>
 

@@ -41,6 +41,41 @@ Admin ->
     Pharmacy (pharma details,medicine request,sell orders)
     Lab (Lab details,appointments)
     Hospital (hospital details,doctors)
+Website->
+    Paitent Card Scan 
+    Doctor Card Scan
+    Pharmacy Card Scan
+    Lab Card Scan
+    Hospital Card Scan
+Hospital->
+    Paitent Card Scan 
+    Prescription Scan
+
+    Paitent 
+    Doctor 
+    Pharmacy 
+    Lab 
+    Hospital 
+
+    Paitent 
+    Doctor 
+    Pharmacy 
+    Lab 
+    Hospital 
+
+
+    Paitent 
+    Doctor 
+    Pharmacy 
+    Lab 
+    Hospital 
+Patient->
+    Doctor & Lab Filter 
+    Home User search 
+    Contct Query 
+All Panels->
+    Audio & Video Call for individual
+
 Email Template->
 Lab->
     Re Test Reqeust
