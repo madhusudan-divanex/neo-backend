@@ -20,11 +20,11 @@ export const getSocialLinks = async (req, res) => {
 
 export const saveSocialLinks = async (req, res) => {
   try {
-    const { facebook, instagram, youtube, twitter, linkedin ,email,contactNumber,address} = req.body;
+    const { facebook, instagram, youtube, twitter, linkedin, email, contactNumber, address, website } = req.body;
 
     const links = await SocialLinks.findOneAndUpdate(
       {},
-      { facebook, instagram, youtube, twitter, linkedin,email,contactNumber,address },
+      { facebook, instagram, youtube, twitter, linkedin, email, contactNumber, address, website },
       { new: true, upsert: true }
     );
 

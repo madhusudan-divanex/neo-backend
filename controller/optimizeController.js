@@ -16,6 +16,7 @@ import LabPerson from "../models/Laboratory/contactPerson.model.js";
 import LabAddress from "../models/Laboratory/labAddress.model.js";
 import LabImage from "../models/Laboratory/labImages.model.js";
 import LabLicense from "../models/Laboratory/labLicense.model.js";
+import Test from "../models/Laboratory/test.model.js";
 import PatientDemographic from "../models/Patient/demographic.model.js";
 import MedicalHistory from "../models/Patient/medicalHistory.model.js";
 import Patient from "../models/Patient/patient.model.js";
@@ -318,7 +319,8 @@ const getUserProfileData = async (req, res) => {
             const images = await LabImage.findOne({ userId: user._id }).lean()
             const contactPerson = await LabPerson.findOne({ userId: user._id }).lean()
             const slots = await TimeSlot.find({ userId: user._id }).lean()
-            return res.status(200).json({ success: true, data: { ...user, logo, address, slots, labLicense, labAddress, contactPerson, images } });
+            const tests = await Test.find({ labId: user._id }).populate("category subCatData.subCat", "")
+            return res.status(200).json({ success: true, data: { ...user, logo, tests, address, slots, labLicense, labAddress, contactPerson, images } });
         } else if (user.role == "pharmacy") {
             logo = user.pharId.logo ? process.env.BACKEND_URL + '/' + user.pharId.logo : null;
             const pharAddress = await PharAddress.findOne({ userId: user._id }).populate("cityId stateId countryId", "name")
@@ -354,7 +356,8 @@ const getUserProfileData = async (req, res) => {
             const contactPerson = await HospitalContact.findOne({ hospitalId: user.hospitalId?._id }).lean()
             const licenses = await HospitalCertificate.find({ hospitalId: user.hospitalId?._id }).lean()
             const images = await HospitalImage.find({ hospitalId: user.hospitalId?._id }).lean()
-            return res.status(200).json({ success: true, data: { ...user, logo, address, contactPerson, licenses, images, hospitalAddress } });
+            const tests = await Test.find({ hospitalId: user._id }).populate("category subCatData.subCat", "")
+            return res.status(200).json({ success: true, data: { ...user, logo, address, tests, contactPerson, licenses, images, hospitalAddress } });
         } else {
             return res.status(200).json({ success: false, message: "User not found", });
         }

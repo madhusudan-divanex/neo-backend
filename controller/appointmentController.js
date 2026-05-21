@@ -64,7 +64,11 @@ const bookDoctorAppointment = async (req, res) => {
         if (book) {
             res.status(200).json({ message: "Appointment book successfully", success: true })
             if (!hospitalId) {
-                console.log("for doctor")
+                await Notification.create({
+                    userId: isExist._id,
+                    title: "New Appointment",
+                    message: `${isPatient?.name} has booked an appointment with you on ${new Date(date)?.toLocaleString('en-GB')}`
+                })
                 sendDoctorEmail("Email Template/doctor/PatientApt.html",
                     {
                         aptId: book.customId,
@@ -109,7 +113,6 @@ const bookDoctorAppointment = async (req, res) => {
                 });
             }
             if (isPatient.fcmToken) {
-                console.log("for pateint")
                 await sendPush({
                     token: isPatient.fcmToken,
                     title: "New Appointment",
@@ -322,6 +325,11 @@ const cancelDoctorAppointment = async (req, res) => {
 
         const update = await DoctorAppointment.findByIdAndUpdate(appointmentId, { status: 'cancel', cancelMessage }, { new: true })
         if (update) {
+            await Notification.create({
+                userId: isPatient.doctorId,
+                title: "Appointment Cancelled!",
+                message: `${isExist?.name} has cancelled the doctor appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} for ${cancelMessage}.`
+            })
             return res.status(200).json({ message: "Appointment cancel successfully", success: true })
         } else {
             return res.status(200).json({ message: "Appointment not cancel", success: false })

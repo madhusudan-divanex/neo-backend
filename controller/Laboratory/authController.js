@@ -31,7 +31,9 @@ import Country from '../../models/Hospital/Country.js';
 import { assignNH12 } from '../../utils/nh12.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
 import Department from '../../models/Department.js';
-import { sendLabEmail } from '../../utils/sendTemplateEmail.js';
+import sendPatientEmail, { sendLabEmail } from '../../utils/sendTemplateEmail.js';
+import LabSample from '../../models/LabSample.js';
+import SubTestCat from '../../models/SubTestCategory.js';
 
 const signUpLab = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, labId, created_by_id } = req.body;
@@ -986,42 +988,33 @@ const deleteLabImage = async (req, res) => {
 const sendReport = async (req, res) => {
     const { type, appointmentId, email } = req.body;
     try {
-        const appointment = await LabAppointment.findById(appointmentId)
+        const appointment = await LabAppointment.findById(appointmentId).populate("patientId")
         if (!appointment) return res.status(200).json({ message: "Appointment not found", success: false })
-        const tests = await Test.find({
-            _id: { $in: appointment.testId }
-        });
-        const ptData = await User.findById(appointment?.patientId)
-        const labData = await Laboratory.findById(appointment?.labId)
+        const tests = appointment.tests.flatMap((test) =>
+            test.subCat.map((sub) => sub.subCatId)
+        );
 
-        const testReports = await TestReport.find({ appointmentId })
-        const pdfBuffer = await generateReportPDF(appointment, tests, testReports, ptData, labData);
-        const attachments = [
-            {
-                filename: "lab-report.pdf",
-                content: pdfBuffer,
-                contentType: "application/pdf",
-            }
-        ];
 
-        // uploaded reports attach karo
-        testReports.forEach(report => {
-            // if (Array.isArray(report.upload?.report)) {
-            // report.upload.report.forEach(filePath => {
-            attachments.push({
-                filename: path.basename(report.upload?.report), // extract file name from path
-                path: path.join(process.cwd(), report.upload?.report), // local file path
-            });
-            // });
-            // }
-        });
+        const subCatData = await SubTestCat.find({ _id: { $in: tests } }).populate('subCategory')
+        const sampleData = await LabSample.findOne({ appointmentId, forTestId: { $in: tests } })
+        const testReport = await TestReport.find({ appointmentId, subCatId: { $in: tests } })
+        if (type == "patient") {
 
-        await sendEmail({
-            to: email,
-            subject: "Your Lab Report",
-            html: "<p>Your lab report is attached.</p>",
-            attachments
-        });
+            sendPatientEmail("Email Template/patient/LabReport.html",
+                {
+                    name: appointment?.patientId?.name,
+                    reportId: testReport[0]?.customId,
+                    testName: subCatData[0]?.subCategory,
+                    reportDate: new Date(testReport[0]?.createdAt)?.toLocaleDateString('en-GB'),
+                    sampleDate: new Date(sampleData?.createdAt)?.toLocaleDateString('en-GB'),
+                    doctor: appointment?.staff?.name,
+                    btnLink: process.env.MAIN_URL + `/lab-report/${appointmentId}`,
+
+                },
+                "Lab Report", appointment?.patientId?._id,
+            )
+        }
+
 
 
         return res.status(200).json({

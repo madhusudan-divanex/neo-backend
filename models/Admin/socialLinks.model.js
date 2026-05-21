@@ -6,9 +6,10 @@ const socialSchema = new Schema({
   youtube: { type: String, default: "" },
   twitter: { type: String, default: "" }, // X
   linkedin: { type: String, default: "" },
-  email:String,
-  address:String,
-  contactNumber:String
+  website: String,
+  email: String,
+  address: String,
+  contactNumber: String
 });
 
 const SocialLinks = mongoose.model("social-links", socialSchema);

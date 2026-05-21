@@ -47,10 +47,14 @@ Website->
     Pharmacy Card Scan
     Lab Card Scan
     Hospital Card Scan
-Hospital->
+    Lab Report Scan
+Hospital,Pharmacy,Laboratory,Doctor->
     Paitent Card Scan 
-    Prescription Scan
 
+Pharmacy->
+    Patient Card Scan
+Laboratory->
+    Patient Card Scan 
     Paitent 
     Doctor 
     Pharmacy 

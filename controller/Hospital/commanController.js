@@ -42,6 +42,7 @@ import LabPayment from "../../models/LabPayment.js";
 import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
 import LabSample from "../../models/LabSample.js";
 import mongoose from "mongoose";
+import Doctor from "../../models/Doctor/doctor.model.js";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -1492,7 +1493,12 @@ export const pharmacyReturnPdf = async (req, res) => {
 export const prescriptionPdf = async (req, res) => {
   const id = req.params.id
   try {
-    const isPres = await Prescriptions.findById(id)
+    const query = [{ customId: id }];
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query.push({ _id: id });
+    }
+    const isPres = await Prescriptions.findOne({ $or: query })
     if (!isPres) {
       return res.status(404).json({ message: "Prescription data not found", success: false })
     }
@@ -1508,6 +1514,7 @@ export const prescriptionPdf = async (req, res) => {
       const hospital = await User.findById(aptData?.hospitalId)
       let address = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name')
       const doctorId = aptData?.doctorId || aptData?.primaryDoctorId
+      const hospitalBasic = await HospitalBasic.findOne({ userId: aptData?.hospitalId?._id })
       const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).select('specialty').populate('specialty', 'name')
       const dataToSend = {
         doctorName: doctorId?.name,
@@ -1521,24 +1528,32 @@ export const prescriptionPdf = async (req, res) => {
         orgEmail: aptData?.hospitalId?.email,
         orgContactNumber: aptData?.hospitalId?.contactNumber,
         paymentStatus: aptData?.paymentStatus,
+        logo: process.env.BACKEND_URL + '/api/file/' + hospitalBasic?.logoFileId,
         bookingId: aptData?.customId,
         status: aptData?.status
       }
 
       return res.status(200).json({ success: true, prescription: isPres, ptData: patientData, data: dataToSend })
     } else {
-      const hospital = await User.findById(aptData?.hospitalId)
-      let address = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name')
-      const doctorAbout = await DoctorAbout.findOne({ userId: aptData?.doctorId }).select('specialty').populate('specialty', 'name')
+      const doctoData = await Doctor.findOne({ userId: aptData?.doctorId?._id })
+      const doctorInfo = await DoctorAbout.findOne({ userId: aptData?.doctorId?._id }).populate('countryId stateId cityId specialty', 'name')
+      const addressParts = [
+        doctorInfo?.address,
+        doctorInfo?.cityId?.name,
+        doctorInfo?.stateId?.name,
+        doctorInfo?.countryId?.name,
+        doctorInfo?.pinCode
+      ].filter(Boolean).join(', ');
       const dataToSend = {
         doctorName: aptData?.doctorId?.name,
         doctorNh12: aptData?.doctorId?.nh12,
-        specialization: doctorAbout?.specialty?.name,
+        specialization: doctorInfo?.specialty?.name,
         bookedOn: aptData?.createdAt,
         appointmentDate: aptData?.date,
         orgName: aptData?.doctorId?.name,
         orgNh12: aptData?.doctorId?.nh12,
-        orgAddress: address?.fullAddress ? `${address?.fullAddress} ,${address?.city?.name}, ${address?.state?.name}, ${address?.country?.name}, ${address?.pinCode}` : '',
+        orgAddress: addressParts,
+        logo: doctoData?.profileImage ? process.env.BACKEND_URL + '/' + doctoData?.profileImage : null,
         orgEmail: aptData?.doctorId?.email,
         orgContactNumber: aptData?.doctorId?.contactNumber,
         paymentStatus: aptData?.paymentStatus,
@@ -1792,12 +1807,17 @@ export const labSamplePdf = async (req, res) => {
 export const labOrderPdf = async (req, res) => {
   const id = req.params.id
   try {
-    const aptData = await LabAppointment.findById(id).populate('labId patientId staff', 'name email contactNumber nh12')
-      .populate({ path: 'tests.subCat', populate: [{ path: 'category' }] }).lean()
+    const query = [{ customId: id }]
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query.push({ _id: id });
+    }
+    const aptData = await LabAppointment.findOne({ $or: query })
+      .populate('labId patientId staff', 'name email contactNumber nh12')
+      .populate({ path: 'tests.subCat.subCatId', populate: [{ path: 'category' }] }).lean()
     if (!aptData) {
       return res.status(404).json({ message: "Appointment data not found", success: false })
     }
-    const paymentData = await LabPayment.findOne({ appointmentId: id }).lean()
+    const paymentData = await LabPayment.findOne({ appointmentId: aptData?._id }).lean()
     const patientDemo = await PatientDemographic.findOne({ userId: aptData?.patientId?._id }).select('dob bloodGroup age gender address').lean()
     const ptBasic = await Patient.findOne({ userId: aptData?.patientId?._id })
     const patientData = {
@@ -1805,7 +1825,7 @@ export const labOrderPdf = async (req, res) => {
       contactNumber: aptData?.patientId?.contactNumber, gender: ptBasic?.gender
     }
 
-    const isUser = await User.findById(aptData?.labId)
+    const isUser = await User.findById(aptData?.labId?._id)
     if (isUser.role == "lab") {
 
       const labdata = await Laboratory.findOne({ userId: aptData?.labId?._id })
@@ -1819,6 +1839,10 @@ export const labOrderPdf = async (req, res) => {
       ];
       let orgData = {
         logo: labdata?.logo,
+        name: isUser?.name,
+        contactNumber: isUser?.contactNumber,
+        email: isUser?.email,
+        nh12: isUser?.nh12,
         address: addressParts.filter(Boolean).join(', '),
       }
 
@@ -1836,6 +1860,10 @@ export const labOrderPdf = async (req, res) => {
 
       // const doctorAbout = await DoctorAbout.findOne({ userId: aptData?.doctorId }).select('specialty').populate('specialty', 'name')
       let orgData = {
+        name: isUser?.name,
+        contactNumber: isUser?.contactNumber,
+        email: isUser?.email,
+        nh12: isUser?.nh12,
         logo: `api/file/${hospitaldata?.logoFileId}`,
         address: addressParts.filter(Boolean).join(', '),
       }

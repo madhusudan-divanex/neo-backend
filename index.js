@@ -685,16 +685,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/patient", ambulanceRoutes);
 
 
-// ── Enterprise Hospital routes (PDF-based additions) ──────────────────────
-const { default: encounterRoutes } = await import('./routes/Hospital/encounter.routes.js');
-const { default: serviceCatalogRoutes } = await import('./routes/Hospital/serviceCatalog.routes.js');
-const { default: hospitalInventoryRoutes } = await import('./routes/Hospital/inventory.routes.js');
-const { default: dischargeEnhRoutes } = await import('./routes/Hospital/discharge.routes.js');
 
-app.use('/api/encounters', encounterRoutes);
-app.use('/api/hospital-inventory/service-catalog', serviceCatalogRoutes);
-app.use('/api/hospital-inventory', hospitalInventoryRoutes);
-app.use('/api/discharge', dischargeEnhRoutes);
 
 
 server.listen(process.env.PORT, () => {

@@ -17,17 +17,18 @@ import { addInventry, addSupplier, completeReturn, createPO, createReturn, delet
 import { actionLabAppointment, bookLabAppointment, doctorAptPayment, doctorAptVitals, getDoctorAppointmentData, getLabAppointment, paymentLabAppointment } from "../../controller/appointmentController.js";
 import { checkPermission } from "../../middleware/permissionCheck.js";
 import { ChatList } from "../../controller/Hospital/chatController.js";
+import { sendReport } from "../../controller/Laboratory/authController.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const uploader = getUploader('hospital');
 
-router.get("",  profile.getHospitals);
-router.get("/list",  profile.getHospitalList);
+router.get("", profile.getHospitals);
+router.get("/list", profile.getHospitalList);
 router.get("/dashboard", auth, profile.hospitalDashboard);
-router.get("/profile-data/:id",  profile.getHospitalProfile);
-router.get("/profile-detail/:id",  profile.getProfileDetail);
-router.get("/doctor/:id",  profile.getHospitalDoctorList);
+router.get("/profile-data/:id", profile.getHospitalProfile);
+router.get("/profile-detail/:id", profile.getProfileDetail);
+router.get("/doctor/:id", profile.getHospitalDoctorList);
 // ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
 router.put("/update-hospital-profile", auth, profile.updateProfile);
@@ -83,28 +84,28 @@ router.get("/patient-lab-report/:hospitalId/:patientId", auth, basic.getHospital
 
 
 // ================= PERMISSIon =================
-router.post('/permission',auth,profile.addHospitalPermission)
-router.put('/permission',auth,profile.updateHospitalPermission)
-router.get('/permission/:id',auth,profile.getAllPermission)
-router.delete('/permission',auth,profile.deleteHospitalPermission)
+router.post('/permission', auth, profile.addHospitalPermission)
+router.put('/permission', auth, profile.updateHospitalPermission)
+router.get('/permission/:id', auth, profile.getAllPermission)
+router.delete('/permission', auth, profile.deleteHospitalPermission)
 
 
 
-router.post('/test',authMiddleware,checkPermission("lab","addTest"),addTest)
-router.put('/test',authMiddleware,checkPermission("lab","editTest"),updateTest)
-router.get('/test-data/:id',authMiddleware,getTestData)
-router.post('/test-report',authMiddleware,checkPermission("lab","addReport"),uploader.single('report'),saveReport)
-router.post('/test-report-data',authMiddleware,getTestReport)
-router.get('/test/:id',authMiddleware,getTest)
+router.post('/test', authMiddleware, checkPermission("lab", "addTest"), addTest)
+router.put('/test', authMiddleware, checkPermission("lab", "editTest"), updateTest)
+router.get('/test-data/:id', authMiddleware, getTestData)
+router.post('/test-report', authMiddleware, checkPermission("lab", "addReport"), uploader.single('report'), saveReport)
+router.post('/test-report-data', authMiddleware, getTestReport)
+router.get('/test/:id', authMiddleware, getTest)
 // router.delete('/test/:id',authMiddleware,checkPermission("lab","deleteTest"),deleteTest)
-router.post('/test-action',authMiddleware,labTestAction)
-router.put('/lab-action',authMiddleware,checkPermission("lab","appointmentStatus"),actionLabAppointment)
-router.put('/lab/payment-action',authMiddleware,checkPermission("lab","paymentStatus"),paymentLabAppointment)
+router.post('/test-action', authMiddleware, labTestAction)
+router.put('/lab-action', authMiddleware, checkPermission("lab", "appointmentStatus"), actionLabAppointment)
+router.put('/lab/payment-action', authMiddleware, checkPermission("lab", "paymentStatus"), paymentLabAppointment)
 
-router.post('/inventory', authMiddleware,checkPermission("pharmacy","addInventory"),addInventry);
-router.get('/inventory/:id', authMiddleware,checkPermission("pharmacy","listInventory"), inventoryList);
+router.post('/inventory', authMiddleware, checkPermission("pharmacy", "addInventory"), addInventry);
+router.get('/inventory/:id', authMiddleware, checkPermission("pharmacy", "listInventory"), inventoryList);
 router.get('/inventory-data/:id', authMiddleware, inventoryGetById);
-router.put('/inventory', authMiddleware,checkPermission("pharmacy","editInventory"),inventoryUpdate);
+router.put('/inventory', authMiddleware, checkPermission("pharmacy", "editInventory"), inventoryUpdate);
 // router.delete('/inventory/:id', authMiddleware,checkPermission("pharmacy","deleteInventory"),inventoryDelete);
 
 router.post("/supplier", authMiddleware, addSupplier);
@@ -113,8 +114,8 @@ router.get("/supplier/:id", authMiddleware, getSupplierById);
 router.put("/supplier", authMiddleware, updateSupplier);
 // router.delete("/supplier/:id", authMiddleware, deleteSupplier);
 
-router.post("/return", authMiddleware,createReturn);
-router.get("/return/:id", authMiddleware,listReturns);
+router.post("/return", authMiddleware, createReturn);
+router.get("/return/:id", authMiddleware, listReturns);
 router.get("/return-data/:id", authMiddleware, getReturnById);
 router.post("/return/:id/complete", authMiddleware, completeReturn);
 router.put("/return", authMiddleware, updateReturn);
@@ -122,12 +123,12 @@ router.put("/return", authMiddleware, updateReturn);
 
 router.get("/patient-allotment/:patientId/:hospitalId", authMiddleware, patientHospitalAllotment);
 router.get("/patient-prescriptions/:patientId/:hospitalId", authMiddleware, patientHospitalPrescriptions);
-router.get('/appointment-data/:id',authMiddleware,getDoctorAppointmentData)
-router.get("/conversations", authMiddleware,checkPermission("chat","access"), ChatList);
-router.post('/lab-appointment',authMiddleware,checkPermission("lab","addAppointment"),bookLabAppointment)
-router.get('/lab-appointment/:id',authMiddleware,getLabAppointment)
-router.post('/lab-payment',authMiddleware,saveLabInvoice)
-router.get('/audit-log',authMiddleware,profile.getAuditLog)
+router.get('/appointment-data/:id', authMiddleware, getDoctorAppointmentData)
+router.get("/conversations", authMiddleware, checkPermission("chat", "access"), ChatList);
+router.post('/lab-appointment', authMiddleware, checkPermission("lab", "addAppointment"), bookLabAppointment)
+router.get('/lab-appointment/:id', authMiddleware, getLabAppointment)
+router.post('/lab-payment', authMiddleware, saveLabInvoice)
+router.get('/audit-log', authMiddleware, profile.getAuditLog)
 router.post("/purchase-order", authMiddleware, createPO);
 router.get("/purchase-order/:id", authMiddleware, getPOList);
 router.get("/purchase-order/:id", authMiddleware, getPODetails);
@@ -135,13 +136,14 @@ router.get("/purchase-order/receive/:poId", authMiddleware, receivePO);
 router.put("/purchase-order/:id", authMiddleware, updatePO);
 router.delete("/purchase-order/:id", authMiddleware, deletePO);
 
-router.post('/service',auth,profile.addHospitalService)
-router.post('/doctor-appointment-payment',auth,checkPermission("billing","doctorPayment"),doctorAptPayment)
-router.post('/add-patient-vitals',auth,doctorAptVitals)
-router.post('/sell-medicine',authMiddleware,checkPermission('pharmacy',"sellMedicine"),uploader.fields([{ name: 'prescriptionFile' }]),sellMedicine)
+router.post('/service', auth, profile.addHospitalService)
+router.post('/doctor-appointment-payment', auth, checkPermission("billing", "doctorPayment"), doctorAptPayment)
+router.post('/add-patient-vitals', auth, doctorAptVitals)
+router.post('/sell-medicine', authMiddleware, checkPermission('pharmacy', "sellMedicine"), uploader.fields([{ name: 'prescriptionFile' }]), sellMedicine)
 
-router.get('/department/:id',auth,profile.getHospitalDepartments)
-router.get('/ipd-patient',auth,profile.IpdPatientsList)
-router.get('/transfer-data/:id',profile.getPatientTransferLetter)
-router.get('/staff-all/:id',auth,profile.getHospitalAllStaff)
+router.get('/department/:id', auth, profile.getHospitalDepartments)
+router.get('/ipd-patient', auth, profile.IpdPatientsList)
+router.get('/transfer-data/:id', profile.getPatientTransferLetter)
+router.get('/staff-all/:id', auth, profile.getHospitalAllStaff)
+router.post('/send-report', authMiddleware, sendReport)
 export default router;

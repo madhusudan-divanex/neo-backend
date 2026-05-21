@@ -1878,9 +1878,9 @@ const getPatientPrescriptionData = async (req, res) => {
     try {
         let user;
         if (userId?.length < 24) {
-            user = await User.findOne({ nh12: userId, role: 'patient' }).select('-passwordHash').lean();
+            user = await User.findOne({ nh12: userId, role: 'patient' }).select('name email nh12 contactNumber patientId').lean();
         } else {
-            user = await User.findById(userId).select('-passwordHash').lean();
+            user = await User.findById(userId).select('name email nh12 contactNumber patientId').lean();
         }
         if (!user) {
             return res.status(404).json({ success: false, message: 'Patient not found' });
@@ -1888,7 +1888,7 @@ const getPatientPrescriptionData = async (req, res) => {
         const fullId = await userId.length == 12 ? user._id : userId
         const patient = await Patient.findById(user.patientId).lean()
         const medicalHistory = await MedicalHistory.findOne({ userId: fullId }).sort({ createdAt: -1 })
-        const demographic = await PatientDemographic.findOne({ userId: fullId }).sort({ createdAt: -1 })
+        const demographic = await PatientDemographic.findOne({ userId: fullId }).populate('cityId countryId stateId', 'name').sort({ createdAt: -1 })
         const total = await Prescriptions.countDocuments({ patientId: fullId });
 
         const prescription = await Prescriptions.find({ patientId: fullId }).sort({ createdAt: -1 })
