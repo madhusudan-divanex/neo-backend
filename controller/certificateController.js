@@ -1,3 +1,4 @@
+import AuditLog from "../models/AuditLog.js";
 import BirthCertificate from "../models/Certificates/BirthCertificate.js";
 import CertCounter from "../models/Certificates/CertCounter.js";
 import DeathCertificate from "../models/Certificates/DeathCertificate.js";
@@ -56,6 +57,18 @@ export const createDeathCertificate = async (req, res) => {
         data.patientId = isPatient?._id
       }
       const cert = await DeathCertificate.create(data);
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "hospital",
+            shortDesc: "Death Certificate generated successfully",
+            description: `Death Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
 
       res.status(201).json({ cert, success: true });
     } else if (type == "doctor") {
@@ -68,6 +81,18 @@ export const createDeathCertificate = async (req, res) => {
         data.patientId = isPatient?._id
       }
       const cert = await DeathCertificate.create(data)
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "doctor",
+            shortDesc: "Death Certificate generated successfully",
+            description: `Death Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
       res.status(201).json({ cert, success: true });
     }
   } catch (err) {
@@ -217,6 +242,18 @@ export const createBirthCertificate = async (req, res) => {
         data.childId = isChild?._id
       }
       const cert = await BirthCertificate.create(data);
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "hospital",
+            shortDesc: "Birth Certificate generated successfully",
+            description: `Birth Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
 
       res.status(201).json({ cert, success: true });
     } else if (type == "doctor") {
@@ -243,6 +280,18 @@ export const createBirthCertificate = async (req, res) => {
         data.childId = isChild?._id
       }
       const cert = await BirthCertificate.create(data)
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "doctor",
+            shortDesc: "Birth Certificate generated successfully",
+            description: `Birth Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
       res.status(201).json({ cert, success: true });
     }
 
@@ -362,10 +411,33 @@ export const createFitnessCertificate = async (req, res) => {
         return res.status(404).json({ message: "Doctor is not staff of hospital", success: false })
       }
       const cert = await FitnessCertificate.create({ ...req.body, patientId: patient?._id, doctorId: doctor?._id, hospitalId: req.user.userId });
-
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "hospital",
+            shortDesc: "Fitness Certificate generated successfully",
+            description: `Fitness Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
       res.status(201).json({ cert, success: true });
     } else if (type == "doctor") {
       const cert = await FitnessCertificate.create({ ...req.body, doctorId: req.user.userId, patientId: patient?._id })
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "doctor",
+            shortDesc: "Fitness Certificate generated successfully",
+            description: `Fitness Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
       res.status(201).json({ cert, success: true });
     }
   } catch (err) {
@@ -487,7 +559,18 @@ export const createMedicalCertificate = async (req, res) => {
         return res.status(404).json({ message: "Doctor is not staff of hospital", success: false })
       }
       const cert = await MedicalCertificate.create({ ...req.body, patientId: patient?._id, doctorId: doctor?._id, hospitalId: req.user.userId });
-
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "hospital",
+            shortDesc: "Medical Certificate generated successfully",
+            description: `Medical Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
       sendPatientEmail(
         "Email Template/patient/MedicalCertificate.html",
         {
@@ -515,6 +598,18 @@ export const createMedicalCertificate = async (req, res) => {
         "Doctor Consultation Follow-up",
         patient?._id
       );
+      if (cert) {
+        await AuditLog.create([
+          {
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: "doctor",
+            shortDesc: "Medical Certificate generated successfully",
+            description: `Medical Certificate was generated successfully with ID ${cert?.customId}.`
+          }]
+        );
+      }
       return res.status(201).json({ cert, success: true });
     }
 

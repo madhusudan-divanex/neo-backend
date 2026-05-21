@@ -10,6 +10,7 @@ import Otp from "../models/Otp.js";
 import { generateOTP, sendEmailOtp, sendMobileOtp } from "../utils/globalFunction.js";
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import { sendDoctorEmail } from "../utils/sendTemplateEmail.js";
+import AuditLog from "../models/AuditLog.js";
 
 
 export const createStaffProfile = async (req, res) => {
@@ -95,6 +96,12 @@ export const createStaffProfile = async (req, res) => {
 
     });
     if (staff) {
+      await AuditLog.create({
+        orgId: req.user.id || req.user.userId, actorId: req.user.loginUser || req.user.id || req.user.userId, panel: req?.user?.type,
+        method: "CREATE",
+        shortDesc: "Staff added",
+        description: `Staff added for ${user.name} NHC id ${user.nh12}.`
+      })
       await User.findByIdAndUpdate(user._id, { staffId: staff._id }, { new: true })
     }
 
@@ -159,7 +166,12 @@ export const createStaffProffessional = async (req, res) => {
       education: education ? JSON.parse(education) : [],
       certificates
     }, { new: true });
-
+    await AuditLog.create({
+      orgId: req.user.id || req.user.userId, actorId: req.user.loginUser || req.user.id || req.user.userId, panel: req?.user?.type,
+      method: "UPDATE",
+      shortDesc: "Staff updated",
+      description: `Staff updated for ${staffData?.name} NHC id ${staffData?.nh12}.`
+    })
 
     return res.status(201).json({
       success: true,
@@ -242,6 +254,12 @@ export const createStaffEmployement = async (req, res) => {
       })
 
       if (empData) {
+        await AuditLog.create({
+          orgId: userData._id, actorId: req.user.loginUser || req.user.id || req.user.userId, panel: req?.user?.type,
+          method: "UPDATE",
+          shortDesc: "Employement Updated",
+          description: `Employement updated for ${staff?.name} NHC id ${staff?.nh12}.`
+        })
         return res.status(200).json({ message: "Employement updated", success: true })
       } else {
         return res.status(200).json({ message: "Error occure while createing employement updated", success: false })
@@ -257,6 +275,12 @@ export const createStaffEmployement = async (req, res) => {
       })
 
       if (empData) {
+        await AuditLog.create({
+          orgId: userData._id, actorId: req.user.loginUser || req.user.id || req.user.userId, panel: req?.user?.type,
+          method: "CREATE",
+          shortDesc: "Employement Created",
+          description: `Employement created for ${staff?.name} NHC id ${staff?.nh12}.`
+        })
         return res.status(200).json({ message: "Employement Created", success: true })
       } else {
         return res.status(200).json({ message: "Error occure while createing employement created", success: false })
@@ -378,6 +402,13 @@ export const staffAction = async (req, res) => {
   try {
     const data = await StaffEmployement.findByIdAndUpdate(empId, { status }, { new: true })
     if (data) {
+      const staffData = await User.findById(data.userId)
+      await AuditLog.create({
+        orgId: req.user.id || req.user.userId, actorId: req.user.loginUser || req.user.id || req.user.userId, panel: req?.user?.type,
+        method: "UPDATE",
+        shortDesc: "Staff action",
+        description: `Staff ${status} for ${staffData?.name} NHC id ${staffData?.nh12}.`
+      })
       return res.status(200).json({ message: "Staff employment status was updated", success: true })
     } else {
       return res.status(404).json({ message: "Staff employment not found", success: false })
@@ -409,7 +440,7 @@ export const staffLogin = async (req, res) => {
       if (withOtp) {
         const code = generateOTP()
         if (contactNumber) {
-          await sendMobileOtp(contactNumber, code)
+          // await sendMobileOtp(contactNumber, code)
         } else {
           sendDoctorEmail("Email Template/doctor/VerifyOtp.html", { code, name: staffUser?.name || "Staff" },
             "Verify Your Account", staffUser?._id)
@@ -517,7 +548,13 @@ export const verifyOtp = async (req, res) => {
         organizationId: panelData._id,
         userId: staffId, status: "active"
       })
-      console.log(staffEmployement)
+      const staffUser = await User.findById(staffId)
+      await AuditLog.create({
+        orgId: panelData._id, actorId: staffUser?._id, panel: panelData?.role,
+        method: "CREATE",
+        shortDesc: "Staff login",
+        description: `Staff login for ${staffUser?.name} NHC id ${staffUser?.nh12}.`
+      })
       const token = jwt.sign(
         {
           id: panelData._id,

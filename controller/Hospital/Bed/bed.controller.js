@@ -18,6 +18,8 @@ import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../../models/Staff/StaffEmployement.js";
 import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
 import sendPatientEmail, { sendHospitalEmail } from "../../../utils/sendTemplateEmail.js";
+import AuditLog from "../../../models/AuditLog.js";
+import Department from "../../../models/Department.js";
 /* ======================================================
    ADD BED
 ====================================================== */
@@ -65,11 +67,15 @@ export const addBed = async (req, res) => {
       bedName: bedName.trim(),
       pricePerDay: perDayFees
     });
-    if (req?.user?.loginUser && hospitalId) {
-      await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Add a ${bedName} bed.` })
-    } else {
-      await HospitalAudit.create({ hospitalId, note: `Add a ${bedName} bed.` })
-    }
+    const department = await Department.findById(departmentId).select("departmentName")
+    await AuditLog.create({
+      orgId: hospitalId,
+      actorId: req.user.loginUser || hospitalId,
+      panel: "hospital",
+      method: "CREATE",
+      shortDesc: "New bed added",
+      description: `New bed ${bedName} has been added in ${department?.departmentName} department with per day fee as ${perDayFees}₹.`,
+    })
 
     res.json({
       success: true,
@@ -170,11 +176,15 @@ export const updateBed = async (req, res) => {
         message: "Bed not found"
       });
     }
-    if (req?.user?.loginUser && bed?.hospitalId) {
-      await HospitalAudit.create({ hospitalId: bed?.hospitalId, actionUser: req?.user?.loginUser, note: `Update a ${bedName} bed.` })
-    } else {
-      await HospitalAudit.create({ hospitalId: bed?.hospitalId, note: `Update a ${bedName} bed.` })
-    }
+    const department = await Department.findById(departmentId).select("departmentName")
+    await AuditLog.create({
+      orgId: req.user.id,
+      actorId: req.user.loginUser || req.user.userId,
+      panel: "hospital",
+      method: "UPDATE",
+      shortDesc: "Bed updated",
+      description: `Bed ${bedName} has been updated in ${department?.departmentName} department with per day fee as ${perDayFees}₹.`,
+    })
     res.json({
       success: true,
       message: "Bed updated successfully",
@@ -376,6 +386,7 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
           },
           "Hospital Payment Invoice", isAllotment.patientId?._id
         )
+
       }
 
       if (!payment) {
@@ -384,16 +395,14 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
           message: "Payment not found"
         });
       }
-      if (req?.user?.loginUser && hospitalId) {
-        await HospitalAudit.create({
-          hospitalId, actionUser: req?.user?.loginUser,
-          note: `An allotment payment was updated of patient ${isAllotment?.patientId?.name}.`
-        })
-      } else if (hospitalId && !req.user?.loginUser) {
-        await HospitalAudit.create({
-          hospitalId, note: `An allotment payment was updated of patient ${isAllotment?.patientId?.name}.`
-        })
-      }
+      await AuditLog.create({
+        orgId: hospitalId,
+        actorId: req.user.loginUser || hospitalId,
+        panel: "hospital",
+        method: "UPDATE",
+        shortDesc: "Payment added",
+        description: `Payment has been added to patient ${isAllotment?.patientId?.name}.`,
+      })
       return res.status(200).json({
         success: true,
         message: "Payment updated successfully",
@@ -412,16 +421,14 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
 
       await payment.save();
       await BedAllotment.findByIdAndUpdate(allotmentId, { paymentId: payment._id }, { new: true })
-      if (req?.user?.loginUser && hospitalId) {
-        await HospitalAudit.create({
-          hospitalId, actionUser: req?.user?.loginUser,
-          note: `An allotment payment was created of patient ${isAllotment?.patientId?.name}.`
-        })
-      } else if (hospitalId && !req.user?.loginUser) {
-        await HospitalAudit.create({
-          hospitalId, note: `An allotment payment was created of patient ${isAllotment?.patientId?.name}.`
-        })
-      }
+      await AuditLog.create({
+        orgId: hospitalId,
+        actorId: req.user.loginUser || hospitalId,
+        panel: "hospital",
+        method: "CREATE",
+        shortDesc: "Payment added",
+        description: `Payment has been added to patient ${isAllotment?.patientId?.name}.`,
+      })
       if (payments?.length > 0) {
         sendPatientEmail("Email Template/patient/PaymentInvoice.html",
           {
@@ -610,14 +617,14 @@ export const addOrUpdateDischargePatient = async (req, res) => {
           message: "Discharge not found"
         });
       }
-      if (req?.user?.loginUser && hospitalId) {
-        await HospitalAudit.create({
-          hospitalId, actionUser: req?.user?.loginUser,
-          note: `An discharge data was updated of patient ${isAllotment?.patientId?.name}.`
-        })
-      } else if (hospitalId && !req.user?.loginUser) {
-        await HospitalAudit.create({ hospitalId, note: `An discharge data was updated of patient ${isAllotment?.patientId?.name}.` })
-      }
+      await AuditLog.create({
+        orgId: hospitalId,
+        actorId: req.user.loginUser || hospitalId,
+        panel: "hospital",
+        method: "UPDATE",
+        shortDesc: "Discharge updated",
+        description: `Discharge details has been updated for patient ${isAllotment?.patientId?.name}.`,
+      })
       return res.status(200).json({
         success: true,
         message: "Discharge updated successfully",
@@ -651,14 +658,14 @@ export const addOrUpdateDischargePatient = async (req, res) => {
 
         await HospitalBed.findByIdAndUpdate(bedAllotment?.bedId, { status: "Available" }, { new: true })
       }
-      if (req?.user?.loginUser && hospitalId) {
-        await HospitalAudit.create({
-          hospitalId, actionUser: req?.user?.loginUser,
-          note: `A discharge data was creaated of patient ${isAllotment?.patientId?.name}.`
-        })
-      } else if (hospitalId && !req.user?.loginUser) {
-        await HospitalAudit.create({ hospitalId, note: `A discharge data was creaated of patient ${isAllotment?.patientId?.name}.` })
-      }
+      await AuditLog.create({
+        orgId: hospitalId,
+        actorId: req.user.loginUser || hospitalId,
+        panel: "hospital",
+        method: "CREATE",
+        shortDesc: "Discharge created",
+        description: `Discharge details has been created for patient ${isAllotment?.patientId?.name}.`,
+      })
       sendPatientEmail("Email Template/patient/DischargeSummary.html",
         {
           name: isAllotment?.patientId?.name,
@@ -747,6 +754,14 @@ const allotmentPrescription = async (req, res) => {
     const add = await Prescriptions.create({ patientId, hospitalId: isAllotment.hospitalId, doctorId, medications, diagnosis, status, notes, allotmentId, reVisit, type: "allotment" })
     if (add) {
       await BedAllotment.findByIdAndUpdate(isAllotment._id, { prescriptionId: add._id }, { new: true })
+      await AuditLog.create({
+        orgId: isAllotment.hospitalId,
+        actorId: req.user.loginUser || isAllotment.hospitalId,
+        panel: "hospital",
+        method: "CREATE",
+        shortDesc: "Prescription created",
+        description: `Prescription has been created for patient ${isExist?.name} in bed allotment on ${new Date(isAllotment?.allotmentDate).toLocaleDateString('en-GB')}.`,
+      })
       return res.status(200).json({ message: "Presctiption add successfully", success: true })
     } else {
       return res.status(200).json({ message: "Presctiption not added", success: false })
@@ -806,12 +821,20 @@ const deleteAllotmentPrescription = async (req, res) => {
 const prescriptionAction = async (req, res) => {
   const { prescriptionId, status } = req.body;
   try {
-    const isExist = await Prescriptions.findById(prescriptionId);
+    const isExist = await Prescriptions.findById(prescriptionId).populate('patientId', 'name');
     if (!isExist) return res.status(200).json({ message: 'Prescription not exist' });
 
 
     const update = await Prescriptions.findByIdAndUpdate(prescriptionId, { status }, { new: true })
     if (update) {
+      await AuditLog.create({
+        orgId: isExist.hospitalId,
+        actorId: req.user.loginUser || isExist.hospitalId,
+        panel: "hospital",
+        method: "UPDATE",
+        shortDesc: "Prescription status updated",
+        description: `Prescription status has been updated to ${status} for patient ${isExist?.patientId?.name}.`,
+      })
       return res.status(200).json({ message: "Prescription updated successfully", success: true })
     } else {
       return res.status(200).json({ message: "Prescription not updated", success: false })
@@ -837,6 +860,14 @@ const editAllotmentPrescription = async (req, res) => {
 
     const add = await Prescriptions.findByIdAndUpdate(prescriptionId, { patientId, doctorId, reVisit, medications, diagnosis, status, notes, allotmentId }, { new: true })
     if (add) {
+      await AuditLog.create({
+        orgId: isExist.hospitalId,
+        actorId: req.user.loginUser || isExist.hospitalId,
+        panel: "hospital",
+        method: "UPDATE",
+        shortDesc: "Prescription updated",
+        description: `Prescription has been updated for patient ${isExist?.patientId?.name} for bed allotment on ${new Date(isAllotment?.allotmentDate).toLocaleDateString('en-GB')}.`,
+      })
       return res.status(200).json({ message: "Presctiption update successfully", success: true })
     } else {
       return res.status(200).json({ message: "Presctiption not added", success: false })
@@ -983,6 +1014,14 @@ const addTestForBedPatient = async (req, res) => {
       }
 
       await labAppointment.save({ validateBeforeSave: false })
+      await AuditLog.create({
+        orgId: allotment.hospitalId,
+        actorId: req.user.loginUser || allotment.hospitalId,
+        panel: "hospital",
+        method: "UPDATE",
+        shortDesc: "Lab appointment updated",
+        description: `Lab appointment has been updated for patient ${allotment?.patientId?.name} for bed allotment on ${new Date(allotment?.allotmentDate).toLocaleDateString('en-GB')}.`,
+      })
 
       return res.status(200).json({
         message: "Lab appointment updated successfully",
@@ -1007,6 +1046,14 @@ const addTestForBedPatient = async (req, res) => {
     })
 
     await labAppointment.save({ validateBeforeSave: false })
+    await AuditLog.create({
+      orgId: allotment.hospitalId,
+      actorId: req.user.loginUser || allotment.hospitalId,
+      panel: "hospital",
+      method: "CREATE",
+      shortDesc: "Lab appointment created",
+      description: `Lab appointment has been created for patient ${allotment?.patientId?.name} for bed allotment on ${new Date(allotment?.allotmentDate).toLocaleDateString('en-GB')}.`,
+    })
 
     allotment.labAppointment = labAppointment._id
     await allotment.save({ validateBeforeSave: false })
@@ -1083,7 +1130,7 @@ export const departmentTransfer = async (req, res) => {
 
   try {
     // ✅ Check allotment
-    const isAllotment = await BedAllotment.findById(allotmentId).session(session);
+    const isAllotment = await BedAllotment.findById(allotmentId).populate('patientId', 'name').session(session);
     if (!isAllotment) {
       await session.abortTransaction();
       return res.status(404).json({ message: "Allotment not found", success: false });
@@ -1126,7 +1173,7 @@ export const departmentTransfer = async (req, res) => {
       departmentTo,
       allotmentId,
       hospitalId,
-      patientId: isAllotment?.patientId
+      patientId: isAllotment?.patientId?._id
     }], { session });
 
     // ✅ Update allotment
@@ -1146,6 +1193,15 @@ export const departmentTransfer = async (req, res) => {
       { status: "Booked" },
       { new: true, session }
     );
+
+    await AuditLog.create([{
+      orgId: isAllotment.hospitalId,
+      actorId: req.user.loginUser || isAllotment.hospitalId,
+      panel: "hospital",
+      method: "CREATE",
+      shortDesc: "Department transfer created",
+      description: `Department transfer has been created for patient ${isAllotment?.patientId?.name} for bed allotment on ${new Date(isAllotment?.allotmentDate).toLocaleDateString('en-GB')}.`,
+    }], { session })
 
     // ✅ Commit transaction
     await session.commitTransaction();

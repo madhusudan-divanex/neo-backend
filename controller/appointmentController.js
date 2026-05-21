@@ -24,6 +24,7 @@ import Department from "../models/Department.js";
 import PatientDepartment from "../models/Hospital/PatientDepartment.js";
 import HospitalAddress from "../models/Hospital/HospitalAddress.js";
 import sendPatientEmail, { sendDoctorEmail, sendLabEmail } from "../utils/sendTemplateEmail.js";
+import AuditLog from "../models/AuditLog.js";
 
 const bookDoctorAppointment = async (req, res) => {
     const { patientId, doctorId, date, hospitalId, status, } = req.body;
@@ -96,11 +97,16 @@ const bookDoctorAppointment = async (req, res) => {
 
                     "Doctor Appointment Confirmation", isPatient._id)
             }
-            if (req?.user?.loginUser && hospitalId) {
-                await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Add an appointment with ${isExist?.name}.` })
-            } else if (hospitalId && !req?.user?.loginUser) {
-                await HospitalAudit.create({ hospitalId, note: `Add an appointment with ${isExist?.name}.` })
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req.user.id || req.user.userId, actorId: req?.user?.loginUser || req.user.id || req.user.userId,
+                    shortDesc: "New Appointment created",
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    description: `Add an appointment with ${isPatient?.name} appointment id ${book.customId}.`
+                })
             }
+
             if (isExist.fcmToken) {
                 await sendPush({
                     token: isExist.fcmToken,
@@ -147,6 +153,15 @@ const updateDoctorAppointment = async (req, res) => {
 
         const book = await DoctorAppointment.findByIdAndUpdate(appointmentId, { patientId, doctorId, date, fees, labTest }, { new: true })
         if (book) {
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type) && labTest) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Lab test added for an appointment`,
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    description: `Lab test added to an appointment for ${isPatient?.name} appointment id ${book?.customId}.`
+                })
+            }
             return res.status(200).json({ message: "Appointment updated successfully", success: true })
         } else {
             return res.status(200).json({ message: "Appointment not found", success: false })
@@ -253,7 +268,7 @@ const actionDoctorAppointment = async (req, res) => {
         const isExist = await User.findOne({ _id: doctorId, role: 'doctor' });
         if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
 
-        const isPatient = await DoctorAppointment.findById(appointmentId);
+        const isPatient = await DoctorAppointment.findById(appointmentId).populate('patientId');
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
 
         const update = await DoctorAppointment.findByIdAndUpdate(appointmentId, { status, note }, { new: true })
@@ -265,10 +280,14 @@ const actionDoctorAppointment = async (req, res) => {
             }, { status: 'Inactive' }, { new: true })
         }
         if (update) {
-            if (req?.user?.loginUser && update?.hospitalId) {
-                await HospitalAudit.create({ hospitalId: update.hospitalId, actionUser: req?.user?.loginUser, note: `${status} an appointment with ${isExist?.name}.` })
-            } else if (!req.user?.loginUser && update?.hospitalId) {
-                await HospitalAudit.create({ hospitalId: update.hospitalId, note: `${status} an appointment with ${isExist?.name}.` })
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: "Appointment status updated",
+                    method: "UPDATE",
+                    panel: req?.user?.type,
+                    description: `${status} an appointment with ${isPatient?.patientId?.name} appointment id ${isPatient.customId}.`
+                })
             }
             if (status == 'approved') {
                 if (isUser.fcmToken) {
@@ -413,10 +432,14 @@ const doctorPrescription = async (req, res) => {
                 },
                 "New Prescription", isPatient?._id
             )
-            if (req?.user?.loginUser && isAppointment?.hospitalId) {
-                await HospitalAudit.create({ hospitalId: isAppointment.hospitalId, actionUser: req?.user?.loginUser, note: `Add a prescription on a doctor appointment with ${isExist?.name} for ${diagnosis}.` })
-            } else if (isAppointment?.hospitalId) {
-                await HospitalAudit.create({ hospitalId: isAppointment.hospitalId, note: `Add a prescription on a doctor appointment with ${isExist?.name} for ${diagnosis}. ` })
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Add a prescription`,
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    description: `Add a prescription on a doctor appointment with ${isPatient?.name} appointment id ${isAppointment.customId}.`
+                })
             }
             await Notification.create({
                 userId: patientId,
@@ -483,12 +506,21 @@ const deleteDoctorPrescription = async (req, res) => {
 const prescriptionAction = async (req, res) => {
     const { prescriptionId, status } = req.body;
     try {
-        const isExist = await Prescriptions.findById(prescriptionId);
+        const isExist = await Prescriptions.findById(prescriptionId).populate("patientId appointmentId");
         if (!isExist) return res.status(200).json({ message: 'Prescription not exist' });
 
 
         const update = await Prescriptions.findByIdAndUpdate(prescriptionId, { status }, { new: true })
         if (update) {
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Prescription status updated`,
+                    method: "UPDATE",
+                    panel: req?.user?.type,
+                    description: `Prescription status updated ${update?.status} for ${isExist?.patientId?.name} with appointment id ${isExist?.appointmentId?.customId}.`
+                })
+            }
             return res.status(200).json({ message: "Prescription updated successfully", success: true })
         } else {
             return res.status(200).json({ message: "Prescription not updated", success: false })
@@ -514,10 +546,14 @@ const editDoctorPrescription = async (req, res) => {
 
         const add = await Prescriptions.findByIdAndUpdate(prescriptionId, { labTest, patientId, doctorId, reVisit, medications, diagnosis, status, notes, appointmentId }, { new: true })
         if (add) {
-            if (req?.user?.loginUser && isAppointment?.hospitalId) {
-                await HospitalAudit.create({ hospitalId: isAppointment.hospitalId, actionUser: req?.user?.loginUser, note: `Edit a prescription in doctor appointment with ${isExist?.name}.` })
-            } else if (isAppointment?.hospitalId && !req?.user?.loginUser) {
-                await HospitalAudit.create({ hospitalId: isAppointment.hospitalId, note: `Edit a prescription in doctor appointment with ${isExist?.name}.` })
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Edit a prescription`,
+                    method: "UPDATE",
+                    panel: req?.user?.type,
+                    description: `Edit a prescription in doctor appointment with ${isPatient?.name} appointment id ${isAppointment.customId}.`
+                })
             }
             await Notification.create({
                 userId: patientId,
@@ -928,16 +964,12 @@ const bookLabAppointment = async (req, res) => {
         })
 
         if (book) {
-            if (req?.user?.loginUser && req.user.id && req.user.type == "hospital") {
-                await HospitalAudit.create({
-                    hospitalId: req.user.id,
-                    actionUser: req?.user?.loginUser,
-                    note: `An lab appointment was created with patient ${isPatient?.name}.`
-                })
-            } else if (req.user.type == "hospital" && req.user.id) {
-                await HospitalAudit.create({
-                    hospitalId: req.user.id,
-                    note: `An lab appointment was created with patient ${isPatient?.name}.`
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Add a lab appointment`,
+                    method: "CREATE", panel: req?.user?.type,
+                    description: `Add a lab appointment with ${isPatient?.name} appointment id ${book.customId}.`
                 })
             }
 
@@ -1090,15 +1122,13 @@ const actionLabAppointment = async (req, res) => {
 
         // Only send notifications if the status is updated
         if (updateData.status) {
-            if (req?.user?.loginUser && req.user.id && req.user.type == "hospital") {
-                await HospitalAudit.create({
-                    hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                    note: `A lab appointment status was updated to ${status} with patient ${isPatient?.patientId?.name}.`
-                })
-            } else if (req.user.type == "hospital" && req.user.id) {
-                await HospitalAudit.create({
-                    hospitalId: req.user.id,
-                    note: `A lab appointment status was updated to ${status} with patient ${isPatient?.patientId?.name}.`
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Action on lab appointment`,
+                    method: "UPDATE",
+                    panel: req?.user?.type,
+                    description: `${updateData.status} an lab appointment with ${isPatient?.patientId?.name} appointment id ${isPatient.customId}.`
                 })
             }
             const isUser = await User.findById(isPatient.patientId);
@@ -1156,28 +1186,18 @@ const paymentLabAppointment = async (req, res) => {
         const isExist = await User.findById(labId);
         if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
 
-        const isPatient = await LabAppointment.findById(appointmentId);
+        const isPatient = await LabAppointment.findById(appointmentId).populate("patientId");
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
 
         const update = await LabAppointment.findByIdAndUpdate(appointmentId, { paymentStatus, note }, { new: true })
         if (update) {
-            if (req?.user?.loginUser && req.user.id && req.user.type == "hospital" && paymentStatus) {
-                await HospitalAudit.create({
-                    hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                    note: `A payment status of a lab appointment was updated to${paymentStatus}.`
-                })
-            }
-            if (status == 'approved') {
-                await Notification.create({
-                    userId: isPatient.patientId,
-                    title: "Appointment Approved!",
-                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been approved by ${isExist.name}`
-                })
-            } else if (status == 'rejected') {
-                await Notification.create({
-                    userId: isPatient.patientId,
-                    title: "Appointment Rejected!",
-                    message: `Your lab appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been rejected by ${isExist.name}`
+            if (['hospital', 'doctor', 'lab', 'pharmacy'].includes(req?.user?.type)) {
+                await AuditLog.create({
+                    orgId: req?.user?.id || req?.user?.userId, actorId: req?.user?.loginUser || req?.user?.id || req?.user?.userId,
+                    shortDesc: `Payment status on lab appointment`,
+                    method: "UPDATE",
+                    panel: req?.user?.type,
+                    description: `Payment status on lab appointment with ${isPatient?.patientId?.name} appointment id ${isPatient.customId}.`
                 })
             }
             return res.status(200).json({ message: "Appointment status updated", success: true })

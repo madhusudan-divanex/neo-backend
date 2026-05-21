@@ -1,4 +1,5 @@
 // controllers/Bed/floor.controller.js
+import AuditLog from "../../../models/AuditLog.js";
 import HospitalFloor from "../../../models/Hospital/HospitalFloor.js";
 
 export const addFloor = async (req, res) => {
@@ -17,6 +18,14 @@ export const addFloor = async (req, res) => {
       hospitalId,
       floorName
     });
+    await AuditLog.create({
+      orgId: hospitalId,
+      actorId: req.user.loginUser || hospitalId,
+      panel: "hospital",
+      method: "CREATE",
+      shortDesc: "Floor created",
+      description: `Floor name ${floor?.floorName} has been created for hospital on ${new Date(floor?.createdAt).toLocaleDateString('en-GB')}.`,
+    })
 
     res.json({
       success: true,
@@ -112,7 +121,14 @@ export const updateFloor = async (req, res) => {
         message: "Floor not found"
       });
     }
-
+    await AuditLog.create({
+      orgId: req.user.id,
+      actorId: req.user.loginUser || req.user.id,
+      panel: "hospital",
+      method: "UPDATE",
+      shortDesc: "Floor updated",
+      description: `Floor name ${floor?.floorName} has been updated for hospital on ${new Date(floor?.updatedAt).toLocaleDateString('en-GB')}.`,
+    })
     res.json({
       success: true,
       message: "Floor updated successfully",

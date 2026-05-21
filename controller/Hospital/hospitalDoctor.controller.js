@@ -16,6 +16,7 @@ import Country from "../../models/Hospital/Country.js";
 import { assignNH12 } from "../../utils/nh12.js";
 import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
+import AuditLog from "../../models/AuditLog.js";
 export const createHospitalDoctor = async (req, res) => {
   const image = req.file?.path;
   try {
@@ -114,11 +115,14 @@ export const createHospitalDoctor = async (req, res) => {
       if (contryData) {
         await assignNH12(pt._id, contryData?.phonecode)
       }
-      if (req.user.loginUser) {
-        await HospitalAudit.create({ hospitalId, actionUser: req.user.loginUser, note: "created a doctor personal information." })
-      } else {
-        await HospitalAudit.create({ hospitalId, note: "created a doctor personal information." })
-      }
+
+      await AuditLog.create({
+        orgId: hospitalId, actorId: req.user.loginUser || hospitalId, panel: "hospital",
+        method: "CREATE",
+        shortDesc: "Doctor added",
+        description: `Doctor personal information created for ${personal.name} NHC id ${pt.nh12}.`
+      })
+
       return res.status(201).json({
         success: true, doctorId: pt._id,
         message: "User created successfully",
@@ -181,7 +185,7 @@ export const getHospitalDoctorList = async (req, res) => {
     /* --------------------------------------------------
        1. Fetch doctors from EmpEmployement (source of truth)
     --------------------------------------------------- */
-    const empQuery = {organizationId: hospitalId,userRole:"doctor" };
+    const empQuery = { organizationId: hospitalId, userRole: "doctor" };
 
     if (doctorStatus) {
       const statusArray = Array.isArray(doctorStatus)
@@ -309,7 +313,7 @@ export const getHospitalDoctorList = async (req, res) => {
     --------------------------------------------------- */
     const doctorEmployements = await StaffEmployement.find({
       userId: { $in: staffIds },
-      organizationId:hospitalId
+      organizationId: hospitalId
     }).select('status userId');
     const totalPatientMap = new Map(
       totalPatientCounts.map(d => [
@@ -387,14 +391,14 @@ export const getHospitalDoctorByIdNew = async (req, res) => {
 
     const aboutDoctor = await DoctorAbout.findOne({ userId: id }).populate('cityId stateId countryId specialty treatmentAreas', 'name')
     const aboutDoctorEduWork = await DoctorEduWork.findOne({ userId: id })
-    const employmentDetails = await StaffEmployement.findOne({ userId: id, organizationId: hospitalId })?.populate('department','departmentName').populate('permissionId','name')
-   
+    const employmentDetails = await StaffEmployement.findOne({ userId: id, organizationId: hospitalId })?.populate('department', 'departmentName').populate('permissionId', 'name')
+
 
     const licenses = await MedicalLicense.findOne({ userId: id }) || [];
 
     return res.json({
       success: true, customId: user.nh12,
-      data: { doctor, aboutDoctor }, aboutDoctorEduWork, employmentDetails,  licenses
+      data: { doctor, aboutDoctor }, aboutDoctorEduWork, employmentDetails, licenses
     });
 
   } catch (err) {
@@ -685,11 +689,13 @@ export const saveDoctorProfessionalDetails = async (req, res) => {
         { upsert: true, new: true }
       );
     }
-    if (req.user.loginUser) {
-      await HospitalAudit.create({ hospitalId, actionUser: req.user.loginUser, note: "Doctor proffessional records saved." })
-    } else {
-      await HospitalAudit.create({ hospitalId, note: "Doctor proffessional records saved." })
-    }
+    const doctorData = await User.findById(doctorId)
+    await AuditLog.create({
+      orgId: req.user.id, actorId: req.user.loginUser || req.user.id, panel: "hospital",
+      method: "CREATE",
+      shortDesc: "Doctor professional details added",
+      description: `Doctor professional details added for ${doctorData.name} NHC id ${doctorData.nh12}.`
+    })
 
     return res.status(200).json({
       success: true,
@@ -729,19 +735,21 @@ export const doctorEmploymentDetails = async (req, res) => {
       salary,
       note,
       fees,
-      employmentType, status,userRole:"doctor",
+      employmentType, status, userRole: "doctor",
       department, organizationId: req.user._id
     };
-    await StaffEmployement.findOneAndUpdate(
+    const staffEmp = await StaffEmployement.findOneAndUpdate(
       { userId: doctorId },
       empPayload,
       { upsert: true, new: true }
     );
-    if (req.user.loginUser) {
-      await HospitalAudit.create({ hospitalId:req.user._id, actionUser: req.user.loginUser, note: "Doctor employment records saved." })
-    } else {
-      await HospitalAudit.create({ hospitalId:req.user._id, note: "Doctor employment records saved." })
-    }
+    const doctorData = await User.findById(doctorId)
+    await AuditLog.create({
+      orgId: req.user.id, actorId: req.user.loginUser || req.user.id, panel: "hospital",
+      method: staffEmp.new ? "CREATE" : "UPDATE",
+      shortDesc: staffEmp.new ? "Doctor employment details added" : "Doctor employment details updated",
+      description: `Doctor employment details ${staffEmp.new ? 'added' : 'updated'} for ${doctorData.name} NHC id ${doctorData?.nh12}.`
+    })
     return res.status(200).json({
       success: true,
       message: "Employment details saved successfully",
@@ -752,7 +760,7 @@ export const doctorEmploymentDetails = async (req, res) => {
   }
 }
 export const saveDoctorAccess = async (req, res) => {
-  const { userId, userName, email,contactNumber, password, permissionId, hospitalId } = req.body;
+  const { userId, userName, email, contactNumber, password, permissionId, hospitalId } = req.body;
   try {
     const employee = await User.findById(userId);
     if (!employee) return res.status(200).json({ success: false, message: "Employee not found" });
@@ -762,7 +770,7 @@ export const saveDoctorAccess = async (req, res) => {
     const emailExists = await StaffEmployement.findOne({
       email: email.toLowerCase(),
       userId: { $ne: userId },
-      organizationId:hospitalId
+      organizationId: hospitalId
     });
 
     if (emailExists) {
@@ -774,7 +782,7 @@ export const saveDoctorAccess = async (req, res) => {
     const numberExists = await StaffEmployement.findOne({
       contactNumber: contactNumber,
       userId: { $ne: userId },
-      organizationId:hospitalId
+      organizationId: hospitalId
     });
 
     if (numberExists) {
@@ -793,11 +801,13 @@ export const saveDoctorAccess = async (req, res) => {
       }
       data = await StaffEmployement.findOneAndUpdate({ userId: userId }, accessData, { new: true });
       if (!data) return res.status(200).json({ success: false, message: "Access record not found" });
-      if (req.user.loginUser) {
-        await HospitalAudit.create({ hospitalId, actionUser: req.user.loginUser, note: "Doctor access record updated." })
-      } else {
-        await HospitalAudit.create({ hospitalId, note: "Doctor access record updated." })
-      }
+      const doctorData = await User.findById(userId)
+      await AuditLog.create({
+        orgId: hospitalId, actorId: req.user.loginUser || hospitalId, panel: "hospital",
+        method: "UPDATE",
+        shortDesc: "Doctor access record updated",
+        description: `Doctor access record updated for ${doctorData.name} NHC id ${doctorData.nh12}.`
+      })
       return res.status(200).json({
         success: true,
         message: "Employee access updated",
@@ -810,11 +820,13 @@ export const saveDoctorAccess = async (req, res) => {
         accessData.password = hashPassword
       }
       data = await StaffEmployement.create(accessData);
-      if (req.user.loginUser) {
-        await HospitalAudit.create({ hospitalId, actionUser: req.user.loginUser, note: "Doctor access record created." })
-      } else {
-        await HospitalAudit.create({ hospitalId, note: "Doctor access record created." })
-      }
+      const doctorData = await User.findById(userId)
+      await AuditLog.create({
+        orgId: hospitalId, actorId: req.user.loginUser || hospitalId, panel: "hospital",
+        method: "CREATE",
+        shortDesc: "Doctor access record created",
+        description: `Doctor access record created for ${doctorData.name} NHC id ${doctorData.nh12}.`
+      })
       return res.status(200).json({
         success: true,
         message: "Employee access created",
@@ -838,8 +850,6 @@ export const getTimeSlots = async (req, res) => {
 };
 export const addTimeSlot = async (req, res) => {
   try {
-
-
     const { userId, day, startTime, endTime, hospitalId } = req.body;
 
     let doc = await TimeSlot.findOne({ userId, day, hospitalId });
@@ -862,6 +872,23 @@ export const addTimeSlot = async (req, res) => {
 
     doc.slots.push({ startTime, endTime });
     await doc.save();
+    const doctorData = await User.findById(userId)
+
+    if (doc.slots.length === 1) {
+      await AuditLog.create({
+        orgId: hospitalId || userId, actorId: req.user.loginUser || hospitalId || userId, panel: hospitalId ? "hospital" : "doctor",
+        method: "CREATE",
+        shortDesc: "Doctor time slot added",
+        description: `Doctor time slot added for ${doctorData.name} NHC id ${doctorData.nh12}.`
+      })
+    } else {
+      await AuditLog.create({
+        orgId: hospitalId || userId, actorId: req.user.loginUser || hospitalId || userId, panel: hospitalId ? "hospital" : "doctor",
+        method: "UPDATE",
+        shortDesc: "Doctor time slot updated",
+        description: `Doctor time slot updated for ${doctorData.name} NHC id ${doctorData.nh12}.`
+      })
+    }
 
     return res.json({ success: true, message: "Slot added successfully" });
   } catch (error) {
@@ -903,7 +930,7 @@ export const availableDoctor = async (req, res) => {
     }
 
     const doctorIds = doctorEmp.map(item => item.userId);
-    console.log(doctorIds,doctorEmp)
+    console.log(doctorIds, doctorEmp)
     // 2. Get today's day
     const today = new Date().toLocaleString("en-US", { weekday: "long" });
 
@@ -929,7 +956,7 @@ export const availableDoctor = async (req, res) => {
       hospitalId,
       time
     });
-    console.log(todayAppointments,availableDoctorIds,availableSlotDoctors)
+    console.log(todayAppointments, availableDoctorIds, availableSlotDoctors)
 
     const bookedDoctorIds = todayAppointments.map(a => a.doctorId.toString());
 
@@ -937,10 +964,10 @@ export const availableDoctor = async (req, res) => {
     const availableDoctors = availableDoctorIds.filter(
       id => !bookedDoctorIds.includes(id)
     );
-    if(availableDoctors?.length==0){
-      return res.status(404).json({message:"No doctor not available for at this movment"})
+    if (availableDoctors?.length == 0) {
+      return res.status(404).json({ message: "No doctor not available for at this movment" })
     }
-    const finalDoctors=await User.find({_id:{$in:availableDoctors}}).select('name email contactNumber nh12')
+    const finalDoctors = await User.find({ _id: { $in: availableDoctors } }).select('name email contactNumber nh12')
     return res.status(200).json({
       success: true,
       doctors: finalDoctors

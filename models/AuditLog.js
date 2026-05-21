@@ -7,9 +7,9 @@ const auditLogSchema = new Schema({
 
     // ── Organization context ─────────────────────────────────────────
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    panel: { type: String, enum: ["hospital", "pharmacy", "lab", "doctor"], required: true },
+    panel: { type: String, enum: ["hospital", "pharmacy", "lab", "doctor"] },
 
-    method: { type: String, enum: ["POST", "GET", "PUT", "DELETE"] },
+    method: { type: String, enum: ["CREATE", "READ", "UPDATE", "DELETE"] },
 
     shortDesc: { type: String },
     description: { type: String },

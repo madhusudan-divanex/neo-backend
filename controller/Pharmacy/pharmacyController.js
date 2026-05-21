@@ -23,6 +23,7 @@ import PaymentInfo from '../../models/PaymentInfo.js';
 import ScheduleMedicines from '../../models/Admin/ScheduleMedicines.js';
 import Country from '../../models/Hospital/Country.js';
 import { assignNH12 } from '../../utils/nh12.js';
+import AuditLog from '../../models/AuditLog.js';
 
 const addInventry = async (req, res) => {
     const { pharId } = req.body;
@@ -60,14 +61,14 @@ const addInventry = async (req, res) => {
                 note: `An inventory item ${req?.body?.medicineName} was added.`
             })
         }
-        const id = req.user.id || req.user.userId
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `${req?.body?.medicineName} medicine was added in inventory.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `${req?.body?.medicineName} medicine was added in inventory.` })
-            }
-        }
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: req?.user?.type,
+            shortDesc: "Inventory Added",
+            description: `${req?.body?.medicineName} was added to the inventory with ${req?.body?.quantity} quantity .`
+        })
 
         return res.status(200).json({ success: true, message: "Inventory added successfully" });
 
@@ -199,14 +200,14 @@ const inventoryUpdate = async (req, res) => {
                 note: `An inventory item ${req?.body?.medicineName} was updated.`
             })
         }
-        const id = req.user.id || req.user.userId
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `${req?.body?.medicineName} records was updated.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `${req?.body?.medicineName} records was updated.` })
-            }
-        }
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "UPDATE",
+            panel: req?.user?.type,
+            shortDesc: "Inventory Update",
+            description: `${req?.body?.medicineName} was updated to the inventory .`
+        })
         res.status(200).json({ success: true, message: "Inventory updated" });
 
     } catch (error) {
@@ -470,6 +471,16 @@ const sendMedicineRequest = async (req, res) => {
             message,
             success: 'Pending', type
         });
+        if (newRequest) {
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                panel: req?.user?.type,
+                method: "CREATE",
+                shortDesc: "Medicine Request",
+                description: `${medicine?.medicineName} was requested to the admin .`
+            })
+        }
 
 
         res.json({ success: true, message: "Request sent successfully" });
@@ -579,6 +590,16 @@ const createPO = async (req, res) => {
             note,
             products
         });
+        if (newPO) {
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                method: "CREATE",
+                panel: req?.user?.type,
+                shortDesc: "Purchase Order",
+                description: `Purchase Order was created with ${supplier?.name} supplier.`
+            })
+        }
 
         res.json({ success: true, message: "PO Created", data: newPO });
     } catch (error) {
@@ -710,6 +731,17 @@ const updatePO = async (req, res) => {
             { new: true }
         );
 
+        if (updatedPO) {
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                method: "UPDATE",
+                panel: req?.user?.type,
+                shortDesc: "Purchase Order",
+                description: `Purchase Order was updated.`
+            })
+        }
+
         res.status(200).json({ success: true, message: "PO updated successfully", data: updatedPO });
 
     } catch (error) {
@@ -784,13 +816,15 @@ const addSupplier = async (req, res) => {
         const isExist = await Supplier.findOne({ email: req.body.email, pharId: req.user.userId || req.user.id })
         if (isExist) return res.status(200).json({ message: "Already exists", success: false })
         const supplier = await Supplier.create(req.body);
-        const id = req.user.id || req.user.userId
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `${req.body.name} supplier added.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `${req.body.name} supplier added.` })
-            }
+        if (supplier) {
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                method: "CREATE",
+                panel: req?.user?.type,
+                shortDesc: "Supplier Added",
+                description: `${req?.body?.name} supplier was added.`
+            })
         }
 
         return res.status(200).json({ success: true, message: "Supplier added successfully", supplier });
@@ -906,14 +940,15 @@ const updateSupplier = async (req, res) => {
         if (!supplier) {
             return res.status(200).json({ success: false, message: "Supplier not found" });
         }
-        const id = req.user.id || req.user.userId
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `${req.body.name} supplier records updated.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `${req.body.name} supplier recores updated.` })
-            }
-        }
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "UPDATE",
+            panel: req?.user?.type,
+            shortDesc: "Supplier Updated",
+            description: `${req?.body?.name} supplier was updated.`
+        })
+
 
         res.status(200).json({ success: true, message: "Supplier updated" });
 
@@ -1034,6 +1069,15 @@ const createReturn = async (req, res) => {
             status,
             type,
             hospitalId
+        }], { session });
+
+        await AuditLog.create([{
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: req?.user?.type,
+            shortDesc: "Return Created",
+            description: `Return was created for reason ${reason}.`
         }], { session });
 
         // ✅ Commit
@@ -1228,14 +1272,16 @@ const updateReturn = async (req, res) => {
         if (status) ret.status = status;
 
         await ret.save();
-        const id = req.user.id || req.user.userId
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `A return was updated for reason ${reason}.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `A return was updated for reason ${reason}.` })
-            }
-        }
+
+
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "UPDATE",
+            panel: req?.user?.type,
+            shortDesc: "Return Updated",
+            description: `Return status was updated to ${status}.`
+        });
         return res.status(200).json({ success: true, data: ret, message: "Return Updated" });
     } catch (err) {
         console.error("updateReturn:", err);
@@ -1605,20 +1651,15 @@ const sellMedicine = async (req, res) => {
                 },
                 { new: true }
             );
-            if (id && req.user.type == "pharmacy") {
-                if (req.user.loginUser) {
-                    await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `A sell reocrd was updated  ${ptData?.name}.` })
-                } else {
-                    await PharmacyAudit.create({ pharId: id, note: `A sell record was updated for patient  ${ptData?.name}.` })
-                }
-            }
-            if (id && req.user.type == "hospital") {
-                if (req.user.loginUser) {
-                    await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `A sell record was updated for patient ${ptData?.name}.` })
-                } else {
-                    await HospitalAudit.create({ hospitalId, note: `A sell record was updated for patient ${ptData?.name}.` })
-                }
-            }
+            const patientData = await User.findById(patientId)
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                method: "UPDATE",
+                panel: req?.user?.type,
+                shortDesc: "Sell updated",
+                description: `A sell was updated for patient  ${patientData?.name}.`
+            })
 
             return res.status(200).json({ success: true, message: "Sell updated successfully" });
         }
@@ -1631,21 +1672,16 @@ const sellMedicine = async (req, res) => {
         await updateInventoryStock(products, "decrease");
 
         await Sell.create(data);
-        const id = req.user.id || req.user.userId
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `A new sell was created  ${ptData?.name}.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `A new sell was created for patient  ${ptData?.name}.` })
-            }
-        }
-        if (id && req.user.type == "hospital") {
-            if (req.user.loginUser) {
-                await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `A new sell record was created for patient ${ptData?.name}.` })
-            } else if (hospitalId) {
-                await HospitalAudit.create({ hospitalId, note: `A new sell record was created for patient ${ptData?.name}.` })
-            }
-        }
+
+        const patientData = await User.findById(patientId)
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: req?.user?.type,
+            shortDesc: "Sell Created",
+            description: `A sell was created for patient  ${patientData?.name}.`
+        })
 
         return res.status(201).json({ success: true, message: "Sell created successfully" });
 
@@ -2115,6 +2151,14 @@ export const addPatient = async (req, res) => {
             await Patient.findByIdAndUpdate(patient._id, { userId: pt._id }, { new: true })
             const countryData = await Country.findById(countryId)
             const data = await assignNH12(pt?._id, countryData?.phonecode)
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                method: "CREATE",
+                panel: req?.user?.type,
+                shortDesc: "Patient added",
+                description: `A patient with name ${name} and contact number ${contactNumber} was added.`
+            })
             return res.status(200).json({
                 success: true,
                 message: "Patient added successfully",
@@ -2386,20 +2430,15 @@ export const customerReturn = async (req, res) => {
             { returnProducts: [...existingReturnProducts, ...returnProducts], refundStatus, refundMode, returnDate },
             { new: true, session }
         );
-        if (id && req.user.type == "pharmacy") {
-            if (req.user.loginUser) {
-                await PharmacyAudit.create({ pharId: id, actionUser: req.user.loginUser, note: `A return record was updated for patient ${ptData?.name}.` })
-            } else {
-                await PharmacyAudit.create({ pharId: id, note: `A return was created for patient ${ptData?.name}.` })
-            }
-        }
-        // if (id && req.user.type == "hospital") {
-        //     if (req.user.loginUser) {
-        //         await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `A return record was created for patient ${ptData?.name}.` })
-        //     } else {
-        //         await HospitalAudit.create({ hospitalId, note: `A return was created for patient ${ptData?.name}.` })
-        //     }
-        // }
+
+        await AuditLog.create([{
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user,
+            method: "CREATE",
+            panel: req?.user?.type,
+            shortDesc: "Sell Return Created",
+            description: `A sell return was created for patient ${ptData?.name}.`
+        }], { session })
 
         await session.commitTransaction();
         session.endSession();

@@ -18,7 +18,6 @@ export const checkPermission = (module, action) => {
     }
 
     const permission = await Permission.findById(payload.permissionId);
-
     if (!permission) {
       return res.status(200).json({ message: "Permission not found" });
     }

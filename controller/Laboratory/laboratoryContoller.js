@@ -28,6 +28,8 @@ import { assignNH12 } from "../../utils/nh12.js";
 import LabSample from "../../models/LabSample.js";
 import sendPatientEmail from "../../utils/sendTemplateEmail.js";
 import SubTestCat from "../../models/SubTestCategory.js";
+import TestCategory from "../../models/TestCategory.js";
+import AuditLog from "../../models/AuditLog.js";
 const getAllLaboratory = async (req, res) => {
     const { page, limit } = req.query
     try {
@@ -62,6 +64,8 @@ const addTest = async (req, res) => {
             const subCatData = JSON.parse(req.body.subCatData)
 
             const baseUrl = `api/file/`;
+            const catData = await TestCategory.findById(category)
+            const subCategoryData = await SubTestCat.find({ _id: { $in: subCatData } })
 
             // ===============================
             // CASE 1 : HOSPITAL ADDING TEST
@@ -191,18 +195,15 @@ const addTest = async (req, res) => {
                     category, subCatData,
                     type,
                 }], { session });
-                if (req.user.id && req.user.type == "hospital") {
-                    if (req?.user?.loginUser) {
-                        await HospitalAudit.create({
-                            hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                            note: `An lab test was added.`
-                        })
-                    } else {
-                        await HospitalAudit.create({
-                            hospitalId: req.user.id, note: `An lab test  was added.`
-                        })
-                    }
-                }
+
+                await AuditLog.create([{
+                    orgId: req.user.id || req.user.userId,
+                    actorId: req.user.loginUser || req.user,
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    shortDesc: "Lab Test Added",
+                    description: `An lab test ${catData.name} ${subCategoryData.map((item) => item.subCategory).join(', ')}  was added.`
+                }], { session })
                 return res.status(200).json({
                     success: true,
                     message: "Test added successfully"
@@ -227,6 +228,15 @@ const addTest = async (req, res) => {
                     category, subCatData,
                     type,
                 }], { session });
+
+                await AuditLog.create([{
+                    orgId: labId,
+                    actorId: req.user.loginUser || req.user,
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    shortDesc: "Lab Test Added",
+                    description: `An lab test ${catData.name} ${subCategoryData.map((item) => item.subCategory).join(', ')}  was added.`
+                }], { session })
 
                 return res.status(200).json({
                     success: true,
@@ -261,24 +271,26 @@ const updateTest = async (req, res) => {
         const isExist = await Test.findById(testId);
         if (!isExist) return res.status(200).json({ message: "Test  not found", success: false })
 
+        const catData = await TestCategory.findById(category)
+        const subCategoryData = await SubTestCat.find({ _id: { $in: subCatData } })
+
         const update = await Test.findByIdAndUpdate(testId, {
             category, subCatData, totalAmount
         }, { new: true });
 
         if (update) {
-            if (req.user.id && req.user.type == "hospital") {
-                if (req?.user?.loginUser) {
-                    await HospitalAudit.create({
-                        hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                        note: `An lab test  details was updated.`
-                    })
-                } else {
-                    await HospitalAudit.create({
-                        hospitalId: req.user.id, note: `An lab test  details was updated.`
-                    })
-                }
 
-            }
+            await AuditLog.create([
+                {
+                    orgId: req.user.id || req.user.userId,
+                    actorId: req.user.loginUser || req.user,
+                    method: "UPDATE",
+                    panel: req?.user?.type,
+                    shortDesc: "Lab Test Details Updated",
+                    description: `An lab test ${catData.name} ${subCategoryData.map((item) => item.subCategory).join(', ')} details was updated.`
+                }]
+            );
+
             return res.status(200).json({
                 success: true,
                 message: "Test updated"
@@ -464,7 +476,6 @@ const saveReport = async (req, res) => {
             // if (report) {
             //     safeUnlink(isExist.upload.report)
             // }
-            console.log(component)
             await TestReport.findByIdAndUpdate(isExist._id, {
                 labId,
                 patientId,
@@ -516,6 +527,16 @@ const saveReport = async (req, res) => {
                 },
                 "Lab Report", isAppointment?.patientId?._id,
             )
+            await AuditLog.create([
+                {
+                    orgId: req.user.id || req.user.userId,
+                    actorId: req.user.loginUser || req.user,
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    shortDesc: "Lab Report Created",
+                    description: `An lab report was created in appointment ${isAppointment?.customId} id for patient ${isAppointment?.patientId?.name}.`
+                }]
+            );
             return res.status(201).json({
                 success: true,
                 message: "Test report created successfully",
@@ -562,6 +583,7 @@ export const collectSample = async (req, res) => {
     try {
         const data = await LabAppointment.findByIdAndUpdate(appointmentId, { collectionDate: new Date(), status: "pending-report" }, { new: true })
         if (data) {
+
             return res.status(200).json({ message: "Collection updated", success: true })
         }
         return res.status(404).json({ message: "Appointment not found", success: false })
@@ -602,6 +624,16 @@ export const addPatient = async (req, res) => {
             const data = await assignNH12(pt?._id, countryData?.phonecode)
             if (data) {
                 const patient = await User.findById(pt?._id)
+                await AuditLog.create([
+                    {
+                        orgId: req.user.id || req.user.userId,
+                        actorId: req.user.loginUser || req.user,
+                        method: "CREATE",
+                        panel: req?.user?.type,
+                        shortDesc: "Patient added successfully",
+                        description: `Patient ${patient?.name} was added successfully with NHC ID ${patient?.nh12}.`
+                    }]
+                );
                 return res.status(200).json({
                     success: true,
                     message: "Patient added successfully",
@@ -631,7 +663,7 @@ const saveLabInvoice = async (req, res) => {
         if (!patientId || !labId || !appointmentId) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
-        const isApt = await LabAppointment.findById(appointmentId)
+        const isApt = await LabAppointment.findById(appointmentId).populate("patientId")
         if (!isApt) {
             return res.status(200).json({ message: "Appointment not found", success: false })
         }
@@ -651,8 +683,18 @@ const saveLabInvoice = async (req, res) => {
         isApt.invoiceId = invoice._id
         await isApt.save()
 
+        await AuditLog.create([
+            {
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user,
+                method: "CREATE",
+                panel: req?.user?.type,
+                shortDesc: "Invoice generated successfully",
+                description: `Invoice was generated successfully for appointment ${isApt?.customId} id for patient ${isApt?.patientId?.name}.`
+            }]
+        );
         res.status(201).json({
-            message: 'Invoice saved successfully',
+            message: 'Invoice generated successfully',
             invoice, success: true
         });
     } catch (error) {
@@ -685,7 +727,7 @@ const addSample = async (req, res) => {
         if (!patientId || !appointmentId || !forTestId || !sampleContainer || !storageDetail) {
             return res.status(400).json({ message: "Please fill all requuired fileds" })
         }
-        const isApt = await LabAppointment.findById(appointmentId)
+        const isApt = await LabAppointment.findById(appointmentId).populate("patientId")
         if (!isApt) {
             return res.status(404).json({ message: "Appointment data not found" })
         }
@@ -693,10 +735,22 @@ const addSample = async (req, res) => {
         if (isAlready) {
             return res.status(400).json({ message: "Sample already exists", success: false })
         }
+        const subCatData = await SubTestCat.findById(forTestId)
         const data = await LabSample.create({ patientId, appointmentId, forTestId, sampleContainer, condition, resultExpected, storageDetail, labId })
         if (data) {
             isApt.samples = [...isApt.samples, data?.forTestId]
             await isApt.save()
+
+            await AuditLog.create([
+                {
+                    orgId: req.user.id || req.user.userId,
+                    actorId: req.user.loginUser || req.user,
+                    method: "CREATE",
+                    panel: req?.user?.type,
+                    shortDesc: "Sample added successfully",
+                    description: `${subCatData?.subCategory} sample was added successfully for appointment ${isApt?.customId} id for patient ${isApt?.patientId?.name}.`
+                }]
+            );
             return res.status(200).json({ message: "Sample saved", success: true })
         }
         return res.status(400).json({ message: "Sample data not saved", success: false })

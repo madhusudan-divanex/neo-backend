@@ -1,4 +1,5 @@
 // controllers/Bed/room.controller.js
+import AuditLog from "../../../models/AuditLog.js";
 import HospitalRoom from "../../../models/Hospital/HospitalRoom.js";
 
 /* ======================================================
@@ -37,6 +38,14 @@ export const addRoom = async (req, res) => {
       departmentId,
       roomName: roomName.trim()
     });
+    await AuditLog.create({
+      orgId: hospitalId,
+      actorId: req.user.loginUser || hospitalId,
+      panel: "hospital",
+      method: "CREATE",
+      shortDesc: "Room created",
+      description: `Room name ${room?.roomName} has been created for hospital on ${new Date(room?.createdAt).toLocaleDateString('en-GB')}.`,
+    })
 
     res.json({
       success: true,
@@ -154,6 +163,14 @@ export const updateRoom = async (req, res) => {
         message: "Room not found"
       });
     }
+    await AuditLog.create({
+      orgId: req.user.id,
+      actorId: req.user.loginUser || req.user.id,
+      panel: "hospital",
+      method: "UPDATE",
+      shortDesc: "Room updated",
+      description: `Room name ${room?.roomName} has been updated for hospital on ${new Date(room?.updatedAt).toLocaleDateString('en-GB')}.`,
+    })
 
     res.json({
       success: true,

@@ -138,16 +138,14 @@ export const createHospitalStaff = async (req, res) => {
       await assignNH12(user._id, contryData?.phonecode)
     }
     const staff = await Staff.create(data);
-    if (req?.user?.loginUser && req.user.id) {
-      await HospitalAudit.create({
-        hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-        note: `A staff ${data.personalInfo.name} was created .`
+    if (staff) {
+      await AuditLog.create({
+        orgId: data.hospitalId, actorId: req.user.loginUser || data.hospitalId, panel: "hospital",
+        method: "CREATE",
+        shortDesc: "Staff added",
+        description: `Staff added for ${user.name} NHC id ${user.nh12}.`
       })
-    }else if(req.user.id && !req.user?.loginUser){
-      await HospitalAudit.create({
-        hospitalId: req.user.id, note: `A staff ${data.personalInfo.name} was created .`
-       })
-     }
+    }
     return res.json({
       success: true,
       message: "Staff created successfully",
@@ -470,16 +468,12 @@ export const updateHospitalStaff = async (req, res) => {
     // if(countryData?.phonecode){
     //   await assignNH12(user._id,countryData?.phonecode)
     // }
-    if (req?.user?.loginUser && hospitalId) {
-      await HospitalAudit.create({
-        hospitalId, actionUser: req?.user?.loginUser,
-        note: `A staff ${data.personalInfo.name} details was updated.`
-      })
-    }else if(hospitalId && !req.user?.loginUser){
-      await HospitalAudit.create({
-        hospitalId, note: `A staff ${data.personalInfo.name} details was updated.`
-      })
-    }
+    await AuditLog.create({
+      orgId: data.hospitalId, actorId: req.user.loginUser || data.hospitalId, panel: "hospital",
+      method: "UPDATE",
+      shortDesc: "Staff updated",
+      description: `Staff updated for ${user.name} NHC id ${user.nh12}.`
+    })
     return res.json({
       success: true,
       message: "Staff updated successfully",
