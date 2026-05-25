@@ -31,8 +31,8 @@ router.get("/profile-detail/:id", profile.getProfileDetail);
 router.get("/doctor/:id", profile.getHospitalDoctorList);
 // ================= PROFILE =================
 router.get("/get-hospital-profile", auth, profile.getProfile);
-router.put("/update-hospital-profile", auth, profile.updateProfile);
-router.post("/edit-request", auth, profile.sendEditRequest);
+router.put("/update-hospital-profile", auth, checkPermission("hospital", "updateProfile"), profile.updateProfile);
+router.post("/edit-request", auth, checkPermission("hospital", "updateProfile"), profile.sendEditRequest);
 router.post(
   "/edit-request/:requestId/approve",
   auth,
@@ -40,7 +40,7 @@ router.post(
 );
 
 // ================= STEP 1 : BASIC =================
-router.post("/basic", auth, upload.single("logo"), basic.saveBasic);
+router.post("/basic", auth, checkPermission("hospital", "updateProfile"), upload.single("logo"), basic.saveBasic);
 
 // ================= STEP 2 : IMAGES =================
 router.post(
@@ -49,32 +49,32 @@ router.post(
     { name: "thumbnail", maxCount: 1 },
     { name: "gallery", maxCount: 5 }
   ]),
-  auth,
+  auth, checkPermission("hospital", "updateProfile"),
   images.uploadImages
 );
 
 // ================= STEP 3 : ADDRESS =================
-router.post("/address", auth, address.saveAddress);
+router.post("/address", auth, checkPermission("hospital", "updateProfile"), address.saveAddress);
 
 // ================= STEP 4 : CONTACT =================
 router.post(
   "/contact",
-  auth,
+  auth, checkPermission("hospital", "updateProfile"),
   upload.single("profilePhoto"),
   contact.saveContact
 );
 
 // ================= STEP 5 : CERTIFICATE =================
 router.post(
-  "/certificate",
+  "/certificate", checkPermission("hospital", "updateProfile"),
   upload.single("file"),
   auth,
   cert.uploadCertificate
 );
 
 // ================= KYC =================
-router.post("/submit-kyc", auth, kyc.submitKyc);
-router.post("/change-password", auth, profile.changePassword);
+router.post("/submit-kyc", auth, checkPermission("hospital", "updateProfile"), kyc.submitKyc);
+router.post("/change-password", auth, checkPermission("hospital", "updateProfile"), profile.changePassword);
 
 // ================= LISTS =================
 router.get("/patient-list", auth, basic.PatientList);
@@ -128,7 +128,6 @@ router.get("/conversations", authMiddleware, checkPermission("chat", "access"), 
 router.post('/lab-appointment', authMiddleware, checkPermission("lab", "addAppointment"), bookLabAppointment)
 router.get('/lab-appointment/:id', authMiddleware, getLabAppointment)
 router.post('/lab-payment', authMiddleware, saveLabInvoice)
-router.get('/audit-log', authMiddleware, profile.getAuditLog)
 router.post("/purchase-order", authMiddleware, createPO);
 router.get("/purchase-order/:id", authMiddleware, getPOList);
 router.get("/purchase-order/:id", authMiddleware, getPODetails);

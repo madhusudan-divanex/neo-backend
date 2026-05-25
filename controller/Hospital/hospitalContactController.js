@@ -46,7 +46,7 @@ export const saveContact = async (req, res) => {
       sendHospitalEmail(
         "Email Template/Hospital/Welcome.html",
         { btnLink: process.env.HOSPITAL_URL + "/dashboard" },
-        "Welcome to NeoHealthCare",
+        "Welcome to NeoHealthCard",
         req.user.id
       );
     }

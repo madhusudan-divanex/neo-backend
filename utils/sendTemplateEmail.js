@@ -18,6 +18,7 @@ const generateTemplate = async (
         twitter: siteData?.twitter || "",
         instagram: siteData?.instagram || "",
         youtube: siteData?.youtube || "",
+        linkedin: siteData?.linkedin || "",
     };
 
     return renderTemplate(templatePath, {
@@ -69,6 +70,7 @@ const sendDoctorEmail = async (path, data, subject, userId) => {
             console.log("User or email not found");
             return;
         }
+        console.log("this is testing")
         const transporter = nodemailer.createTransport({
             service: "gmail",
             secure: true,
@@ -194,6 +196,69 @@ const sendHospitalEmail = async (path, data, subject, userId) => {
         console.log(error);
     }
 };
+const sendEmpEmail = async (path, data, subject, userId) => {
+    try {
 
+
+        const html = await generateTemplate(path, data);
+        let user = await User.findById(userId);
+        if (!user || !user.email) {
+            console.log("User or email not found");
+            return;
+        }
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            secure: true,
+            port: 465,
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASS
+            },
+            tls: {
+                rejectUnauthorized: false,
+            }
+        });
+
+        await transporter.sendMail({
+            from: process.env.EMAIL,
+            to: user.email,
+            subject: subject,
+            html
+        });
+    } catch (error) {
+        console.log(error);
+    }
+};
+const sendEmpOtpEmail = async (path, data, subject, email) => {
+    try {
+
+        const html = await generateTemplate(path, data);
+        if (!email) {
+            console.log("User or email not found");
+            return;
+        }
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            secure: true,
+            port: 465,
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASS
+            },
+            tls: {
+                rejectUnauthorized: false,
+            }
+        });
+
+        await transporter.sendMail({
+            from: process.env.EMAIL,
+            to: email,
+            subject: subject,
+            html
+        });
+    } catch (error) {
+        console.log(error);
+    }
+};
 export default sendPatientEmail;
-export { sendDoctorEmail, sendLabEmail, sendPharEmail, sendHospitalEmail }
+export { sendDoctorEmail, sendLabEmail, sendPharEmail, sendHospitalEmail, sendEmpEmail, sendEmpOtpEmail }

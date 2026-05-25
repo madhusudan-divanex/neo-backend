@@ -1,9 +1,8 @@
-<<<<<<< HEAD
 node_modules
 uploads
-=======
 node_modules/
 uploads/
 .env
 config/firebaseServiceAccount.json
->>>>>>> b713c835766befb4237882bf56579e2ed72947be
+Backend.rar
+*.rar

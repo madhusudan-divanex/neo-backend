@@ -61,7 +61,7 @@ export const createDeathCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "hospital",
             shortDesc: "Death Certificate generated successfully",
@@ -85,7 +85,7 @@ export const createDeathCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "doctor",
             shortDesc: "Death Certificate generated successfully",
@@ -171,6 +171,7 @@ export const getDeathCertificatesData = async (req, res) => {
       const hospitalAddress = await HospitalAddress.findOne({ hospitalId: hospital?.hospitalId }).populate('country state city', 'name').lean()
       const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('specialty').populate('specialty', 'name')
       dataToSend.organization = hospital
+      dataToSend.logo = `api/file/${hospitalBasic?.logoFileId}`
       dataToSend.nh12 = hospital.nh12;
       dataToSend.address = hospitalAddress
       dataToSend.license = hospitalBasic?.licenseId
@@ -178,11 +179,14 @@ export const getDeathCertificatesData = async (req, res) => {
       return res.status(200).json({ data: dataToSend, success: true });
     }
     if (data.type == "doctor") {
-      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber').lean()
-      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId', 'name').lean()
-      dataToSend.organization = doctor
+      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber doctorId').lean()
+      const doct = await Doctor.findById(doctor?.doctorId)?.select('profileImage')
+      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId specialty', 'name').lean()
+      dataToSend.organization = doctor;
+      dataToSend.logo = doct?.profileImage
       dataToSend.nh12 = doctor.nh12;
       dataToSend.address = doctorAddress
+      dataToSend.specialty = doctorAddress?.specialty?.name
       return res.status(200).json({ data: dataToSend, success: true });
     }
 
@@ -246,7 +250,7 @@ export const createBirthCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "hospital",
             shortDesc: "Birth Certificate generated successfully",
@@ -284,7 +288,7 @@ export const createBirthCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "doctor",
             shortDesc: "Birth Certificate generated successfully",
@@ -378,11 +382,15 @@ export const getBirthCertificatesData = async (req, res) => {
       return res.status(200).json({ data: dataToSend, success: true });
     }
     if (data.type == "doctor") {
-      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber').lean()
-      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId', 'name').lean()
+      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber doctorId').lean()
+      const doct = await Doctor.findById(doctor?.doctorId)?.select('profileImage')
+      const medicalLicense = await MedicalLicense.findOne({ userId: data?.doctorId?._id })
+      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId specialty', 'name').lean()
       dataToSend.organization = doctor
+      dataToSend.logo = doct?.profileImage
       dataToSend.nh12 = doctor.nh12;
       dataToSend.address = doctorAddress
+      dataToSend.specialty = doctorAddress?.specialty?.name
       return res.status(200).json({ data: dataToSend, success: true });
     }
 
@@ -412,15 +420,15 @@ export const createFitnessCertificate = async (req, res) => {
       }
       const cert = await FitnessCertificate.create({ ...req.body, patientId: patient?._id, doctorId: doctor?._id, hospitalId: req.user.userId });
       if (cert) {
-        await AuditLog.create([
+        await AuditLog.create(
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "hospital",
             shortDesc: "Fitness Certificate generated successfully",
             description: `Fitness Certificate was generated successfully with ID ${cert?.customId}.`
-          }]
+          }
         );
       }
       res.status(201).json({ cert, success: true });
@@ -430,7 +438,7 @@ export const createFitnessCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "doctor",
             shortDesc: "Fitness Certificate generated successfully",
@@ -526,13 +534,14 @@ export const getFitnessCertificatesData = async (req, res) => {
       return res.status(200).json({ data: dataToSend, success: true });
     }
     if (data.type == "doctor") {
-      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber').lean()
+      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber doctorId').lean()
       const doct = await Doctor.findById(doctor?.doctorId).select('profileImage')
-      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId', 'name').lean()
+      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId specialty', 'name').lean()
       dataToSend.organization = doctor
       dataToSend.nh12 = doctor.nh12;
-      dataToSend.logo = doct.profileImage
+      dataToSend.logo = doct?.profileImage
       dataToSend.address = doctorAddress
+      dataToSend.specialty = doctorAddress?.specialty?.name
       return res.status(200).json({ data: dataToSend, success: true });
     }
 
@@ -563,7 +572,7 @@ export const createMedicalCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "hospital",
             shortDesc: "Medical Certificate generated successfully",
@@ -602,7 +611,7 @@ export const createMedicalCertificate = async (req, res) => {
         await AuditLog.create([
           {
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: "doctor",
             shortDesc: "Medical Certificate generated successfully",
@@ -698,11 +707,14 @@ export const getMedicalCertificatesData = async (req, res) => {
       return res.status(200).json({ data: dataToSend, success: true });
     }
     if (data.type == "doctor") {
-      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber').lean()
-      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId', 'name').lean()
+      const doctor = await User.findById(data.doctorId?._id).select('name nh12 email contactNumber doctorId').lean()
+      const doct = await Doctor.findById(doctor?.doctorId)?.select('profileImage')
+      const doctorAddress = await DoctorAbout.findOne({ userId: doctor?._id }).populate('countryId stateId cityId specialty', 'name').lean()
       dataToSend.organization = doctor
       dataToSend.nh12 = doctor.nh12;
+      dataToSend.logo = doct?.profileImage
       dataToSend.address = doctorAddress
+      dataToSend.specialty = doctorAddress?.specialty?.name
       return res.status(200).json({ data: dataToSend, success: true });
     }
 
@@ -733,13 +745,14 @@ export const getCertificateDataByCertId = async (req, res) => {
         return res.status(200).json({ data: dataToSend, type, success: true });
       }
       else if (data.type == "doctor") {
-        const hospital = await User.findById(data.doctorId).select('name nh12  email contactNumber').lean()
-        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty').populate('countryId stateId cityId specialty', 'name')
-        dataToSend.organization = hospital
-        dataToSend.nh12 = hospital.nh12;
+        const doctorUser = await User.findById(data.doctorId).select('name nh12  email contactNumber doctorId').lean()
+        const doct = await Doctor.findById(doctorUser?.doctorId).select('profileImage')
+        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty fulladdress pinCode').populate('countryId stateId cityId specialty', 'name')
+        dataToSend.organization = { ...doctorUser, logo: doct?.profileImage }
+        dataToSend.nh12 = doctorUser.nh12;
         dataToSend.address = {
-          country: staffEmp?.countryId?.name, state: staffEmp?.stateId?.name,
-          city: staffEmp?.cityId?.name, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
+          country: staffEmp?.countryId, state: staffEmp?.stateId,
+          city: staffEmp?.cityId, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
         }
         dataToSend.specialty = staffEmp?.specialty?.name
         return res.status(200).json({ data: dataToSend, type, success: true });
@@ -763,13 +776,14 @@ export const getCertificateDataByCertId = async (req, res) => {
         return res.status(200).json({ data: dataToSend, type, success: true });
       }
       else if (data.type == "doctor") {
-        const hospital = await User.findById(data.doctorId).select('name nh12  email contactNumber').lean()
-        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty').populate('countryId stateId cityIdspecialty', 'name')
-        dataToSend.organization = hospital
-        dataToSend.nh12 = hospital.nh12;
+        const doctorUser = await User.findById(data.doctorId).select('name nh12  email contactNumber doctorId').lean()
+        const doct = await Doctor.findById(doctorUser?.doctorId).select('profileImage')
+        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty fullAddress pinCode').populate('countryId stateId cityId specialty', 'name')
+        dataToSend.organization = { ...doctorUser, logo: doct?.profileImage }
+        dataToSend.nh12 = doctorUser.nh12;
         dataToSend.address = {
-          country: staffEmp?.countryId?.name, state: staffEmp?.stateId?.name,
-          city: staffEmp?.cityId?.name, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
+          country: staffEmp?.countryId, state: staffEmp?.stateId,
+          city: staffEmp?.cityId, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
         }
         dataToSend.specialty = staffEmp?.specialty?.name
         return res.status(200).json({ data: dataToSend, type, success: true });
@@ -793,13 +807,14 @@ export const getCertificateDataByCertId = async (req, res) => {
         return res.status(200).json({ data: dataToSend, type, success: true });
       }
       else if (data.type == "doctor") {
-        const hospital = await User.findById(data.doctorId).select('name nh12 email contactNumber').lean()
-        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty').populate('countryId stateId cityId specialty', 'name')
-        dataToSend.organization = hospital
+        const hospital = await User.findById(data.doctorId).select('name nh12 email contactNumber doctorId').lean()
+        const doct = await Doctor.findById(hospital?.doctorId).select('profileImage')
+        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty fullAddress pinCode').populate('countryId stateId cityId specialty', 'name')
+        dataToSend.organization = { ...hospital, logo: doct?.profileImage }
         dataToSend.nh12 = hospital.nh12;
         dataToSend.address = {
-          country: staffEmp?.countryId?.name, state: staffEmp?.stateId?.name,
-          city: staffEmp?.cityId?.name, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
+          country: staffEmp?.countryId, state: staffEmp?.stateId,
+          city: staffEmp?.cityId, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
         }
         dataToSend.specialty = staffEmp?.specialty?.name
         return res.status(200).json({ data: dataToSend, type, success: true });
@@ -823,13 +838,14 @@ export const getCertificateDataByCertId = async (req, res) => {
         return res.status(200).json({ data: dataToSend, type, success: true });
       }
       else if (data.type == "doctor") {
-        const hospital = await User.findById(data.doctorId).select('name nh12 email contactNumber').lean()
-        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty').populate('countryId stateId cityId specialty', 'name')
-        dataToSend.organization = hospital
+        const hospital = await User.findById(data.doctorId).select('name nh12 email contactNumber doctorId').lean()
+        const doct = await Doctor.findById(hospital?.doctorId).select('profileImage')
+        const staffEmp = await DoctorAbout.findOne({ userId: data.doctorId }).select('countryId stateId cityId specialty fullAddress pinCode').populate('countryId stateId cityId specialty', 'name')
+        dataToSend.organization = { ...hospital, logo: doct?.profileImage }
         dataToSend.nh12 = hospital.nh12;
         dataToSend.address = {
-          country: staffEmp?.countryId?.name, state: staffEmp?.stateId?.name,
-          city: staffEmp?.cityId?.name, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
+          country: staffEmp?.countryId, state: staffEmp?.stateId,
+          city: staffEmp?.cityId, pinCode: staffEmp?.pinCode, fullAddress: staffEmp?.fullAddress
         }
         dataToSend.specialty = staffEmp?.specialty?.name
         return res.status(200).json({ data: dataToSend, type, success: true });

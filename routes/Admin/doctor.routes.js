@@ -68,5 +68,4 @@ router.get("/:id/appointments", adminAuth, getDoctorAppointments);
 router.patch("/:doctorId/status", adminAuth, toggleDoctorStatus);
 router.patch("/:id/approve-reject", adminAuth, approveRejectDoctor);
 router.delete("/:id", adminAuth, deleteDoctor);
-
 export default router;

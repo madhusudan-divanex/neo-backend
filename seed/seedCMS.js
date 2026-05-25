@@ -3,8 +3,8 @@
  * Usage: node seed/seedCMS.js
  */
 import mongoose from "mongoose";
-import dotenv   from "dotenv";
-import path     from "path";
+import dotenv from "dotenv";
+import path from "path";
 import { fileURLToPath } from "url";
 
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env") });
@@ -18,8 +18,8 @@ const pages = [
     slug: "about-us",
     title: "About Us",
     status: "active",
-    content: `<h2>About NeoHealth</h2>
-<p>NeoHealth is India's premier digital healthcare platform connecting patients with doctors, laboratories, and pharmacies across the country.</p>
+    content: `<h2>About NeoHealthCard</h2>
+<p>NeoHealthCard is India's premier digital healthcare platform connecting patients with doctors, laboratories, and pharmacies across the country.</p>
 <h3>Our Mission</h3>
 <p>To make quality healthcare accessible, affordable, and convenient for every Indian citizen through technology.</p>
 <h3>Our Vision</h3>
@@ -34,7 +34,7 @@ const pages = [
   <li>24/7 Emergency Ambulance Booking</li>
 </ul>
 <h3>Our Team</h3>
-<p>Founded by healthcare professionals and technology experts, NeoHealth is committed to transforming how India accesses healthcare services.</p>`
+<p>Founded by healthcare professionals and technology experts, NeoHealthCard is committed to transforming how India accesses healthcare services.</p>`
   },
   {
     slug: "terms-conditions",
@@ -43,19 +43,19 @@ const pages = [
     content: `<h2>Terms and Conditions</h2>
 <p><strong>Last Updated:</strong> March 2025</p>
 <h3>1. Acceptance of Terms</h3>
-<p>By accessing or using NeoHealth services, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our services.</p>
+<p>By accessing or using NeoHealthCard services, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our services.</p>
 <h3>2. Use of Services</h3>
-<p>NeoHealth provides a platform for connecting patients with healthcare providers. We do not provide direct medical advice or treatment.</p>
+<p>NeoHealthCard provides a platform for connecting patients with healthcare providers. We do not provide direct medical advice or treatment.</p>
 <h3>3. User Accounts</h3>
 <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account.</p>
 <h3>4. Medical Disclaimer</h3>
-<p>Information provided on NeoHealth is for informational purposes only. Always consult a qualified healthcare professional for medical advice.</p>
+<p>Information provided on NeoHealthCard is for informational purposes only. Always consult a qualified healthcare professional for medical advice.</p>
 <h3>5. Privacy</h3>
-<p>Your use of NeoHealth is subject to our Privacy Policy, which is incorporated into these Terms by reference.</p>
+<p>Your use of NeoHealthCard is subject to our Privacy Policy, which is incorporated into these Terms by reference.</p>
 <h3>6. Prohibited Activities</h3>
-<p>You may not use NeoHealth for any unlawful purpose, to harm others, or to misrepresent your identity or qualifications.</p>
+<p>You may not use NeoHealthCard for any unlawful purpose, to harm others, or to misrepresent your identity or qualifications.</p>
 <h3>7. Limitation of Liability</h3>
-<p>NeoHealth shall not be liable for any indirect, incidental, or consequential damages arising from use of our platform.</p>
+<p>NeoHealthCard shall not be liable for any indirect, incidental, or consequential damages arising from use of our platform.</p>
 <h3>8. Changes to Terms</h3>
 <p>We reserve the right to modify these terms at any time. Continued use after changes constitutes acceptance.</p>
 <h3>9. Contact</h3>
@@ -93,7 +93,7 @@ const pages = [
     slug: "contact-us",
     title: "Contact Us",
     status: "active",
-    content: `<h2>Contact NeoHealth</h2>
+    content: `<h2>Contact NeoHealthCard</h2>
 <p>We're here to help! Reach out to us through any of the following channels:</p>
 <h3>Customer Support</h3>
 <p><strong>Email:</strong> support@neohealth.com<br>
@@ -103,7 +103,7 @@ const pages = [
 <p><strong>Email:</strong> tech@neohealth.com<br>
 <strong>Response Time:</strong> Within 24 hours</p>
 <h3>Head Office</h3>
-<p>NeoHealth Technologies Pvt. Ltd.<br>
+<p>NeoHealthCard Technologies Pvt. Ltd.<br>
 Plot No. 42, Tech Park, Malviya Nagar<br>
 Jaipur, Rajasthan – 302017<br>
 India</p>
@@ -135,15 +135,15 @@ India</p>
     title: "Disclaimer",
     status: "active",
     content: `<h2>Medical Disclaimer</h2>
-<p>The information provided on NeoHealth is for general informational and educational purposes only.</p>
+<p>The information provided on NeoHealthCard is for general informational and educational purposes only.</p>
 <h3>Not Medical Advice</h3>
 <p>Content on this platform does not constitute medical advice, diagnosis, or treatment. Always seek guidance from a qualified healthcare professional.</p>
 <h3>Emergency Situations</h3>
 <p>In case of a medical emergency, call 112 or go to the nearest emergency room immediately. Do not rely solely on this platform.</p>
 <h3>Accuracy of Information</h3>
-<p>While we strive to provide accurate information, NeoHealth makes no warranties about completeness or accuracy of content.</p>
+<p>While we strive to provide accurate information, NeoHealthCard makes no warranties about completeness or accuracy of content.</p>
 <h3>Third Party Links</h3>
-<p>NeoHealth may contain links to third-party websites. We are not responsible for content on external sites.</p>`
+<p>NeoHealthCard may contain links to third-party websites. We are not responsible for content on external sites.</p>`
   }
 ];
 

@@ -63,7 +63,7 @@ const addInventry = async (req, res) => {
         }
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: req?.user?.type,
             shortDesc: "Inventory Added",
@@ -202,7 +202,7 @@ const inventoryUpdate = async (req, res) => {
         }
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "UPDATE",
             panel: req?.user?.type,
             shortDesc: "Inventory Update",
@@ -261,7 +261,7 @@ const medicineData = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const [items, total] = await Promise.all([
-            Inventory.find({ medicineName: name, pharId })
+            Inventory.find({ medicineName: name, pharId }).populate('schedule')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -474,7 +474,7 @@ const sendMedicineRequest = async (req, res) => {
         if (newRequest) {
             await AuditLog.create({
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 panel: req?.user?.type,
                 method: "CREATE",
                 shortDesc: "Medicine Request",
@@ -593,7 +593,7 @@ const createPO = async (req, res) => {
         if (newPO) {
             await AuditLog.create({
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 method: "CREATE",
                 panel: req?.user?.type,
                 shortDesc: "Purchase Order",
@@ -734,7 +734,7 @@ const updatePO = async (req, res) => {
         if (updatedPO) {
             await AuditLog.create({
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 method: "UPDATE",
                 panel: req?.user?.type,
                 shortDesc: "Purchase Order",
@@ -819,7 +819,7 @@ const addSupplier = async (req, res) => {
         if (supplier) {
             await AuditLog.create({
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 method: "CREATE",
                 panel: req?.user?.type,
                 shortDesc: "Supplier Added",
@@ -942,7 +942,7 @@ const updateSupplier = async (req, res) => {
         }
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "UPDATE",
             panel: req?.user?.type,
             shortDesc: "Supplier Updated",
@@ -1073,7 +1073,7 @@ const createReturn = async (req, res) => {
 
         await AuditLog.create([{
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: req?.user?.type,
             shortDesc: "Return Created",
@@ -1276,7 +1276,7 @@ const updateReturn = async (req, res) => {
 
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "UPDATE",
             panel: req?.user?.type,
             shortDesc: "Return Updated",
@@ -1654,7 +1654,7 @@ const sellMedicine = async (req, res) => {
             const patientData = await User.findById(patientId)
             await AuditLog.create({
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 method: "UPDATE",
                 panel: req?.user?.type,
                 shortDesc: "Sell updated",
@@ -1676,7 +1676,7 @@ const sellMedicine = async (req, res) => {
         const patientData = await User.findById(patientId)
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: req?.user?.type,
             shortDesc: "Sell Created",
@@ -2153,7 +2153,7 @@ export const addPatient = async (req, res) => {
             const data = await assignNH12(pt?._id, countryData?.phonecode)
             await AuditLog.create({
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 method: "CREATE",
                 panel: req?.user?.type,
                 shortDesc: "Patient added",
@@ -2433,7 +2433,7 @@ export const customerReturn = async (req, res) => {
 
         await AuditLog.create([{
             orgId: req.user.id || req.user.userId,
-            actorId: req.user.loginUser || req.user,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
             method: "CREATE",
             panel: req?.user?.type,
             shortDesc: "Sell Return Created",

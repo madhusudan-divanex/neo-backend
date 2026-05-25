@@ -253,7 +253,12 @@ export const getAllotmentHistory = async (req, res) => {
     let filter = { hospitalId: id };
 
     if (doctorId && mongoose.Types.ObjectId.isValid(doctorId)) {
-      filter.primaryDoctorId = new mongoose.Types.ObjectId(doctorId);
+      const doctorObjectId = new mongoose.Types.ObjectId(doctorId);
+
+      filter.$or = [
+        { primaryDoctorId: doctorObjectId },
+        { "attendingStaff.staffId": doctorObjectId }
+      ];
     }
 
     if (bedStatus) {

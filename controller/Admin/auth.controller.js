@@ -81,7 +81,7 @@ export const adminForgotPassword = async (req, res) => {
 
     await transporter.sendMail({
       to: email,
-      subject: "NeoHealth Admin OTP",
+      subject: "NeoHealthCard Admin OTP",
       text: `Your OTP is: ${otp}  (valid 10 minutes)`
     });
 

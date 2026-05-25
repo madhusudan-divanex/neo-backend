@@ -43,6 +43,7 @@ import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
 import LabSample from "../../models/LabSample.js";
 import mongoose from "mongoose";
 import Doctor from "../../models/Doctor/doctor.model.js";
+import AuditLog from "../../models/AuditLog.js";
 
 // ================= SAVE FCM TOKEN =================
 export const saveFcmToken = async (req, res) => {
@@ -435,6 +436,14 @@ export const addPermission = async (req, res) => {
         { ...permissions },
         { new: true }
       );
+      await AuditLog.create({
+        orgId: ownerId,
+        actorId: req.user.loginUser || ownerId,
+        method: "UPDATE",
+        panel: req.user.type,
+        shortDesc: `Permission updated: ${name}`,
+        description: `Permission updated: ${name}`
+      })
 
       return res.status(200).json({
         success: true,
@@ -449,6 +458,15 @@ export const addPermission = async (req, res) => {
       type,
       ...permissions
     });
+
+    await AuditLog.create({
+      orgId: ownerId,
+      actorId: req.user.loginUser || ownerId,
+      method: "CREATE",
+      panel: req.user.type,
+      shortDesc: `Permission created: ${name}`,
+      description: `Permission created: ${name}`
+    })
 
     return res.status(200).json({
       success: true,
@@ -536,6 +554,14 @@ export const updatePermission = async (req, res) => {
       { name, staffEmp, ...permissions },
       { new: true }
     );
+    await AuditLog.create({
+      orgId: ownerId,
+      actorId: req.user.loginUser || ownerId,
+      method: "UPDATE",
+      panel: req.user.type,
+      shortDesc: `Permission updated: ${name}`,
+      description: `Permission updated: ${name}`
+    })
 
     return res.status(200).json({
       success: true,
@@ -622,6 +648,14 @@ export const assignPermission = async (req, res) => {
       { staffEmp, },
       { new: true }
     );
+    await AuditLog.create({
+      orgId: ownerId,
+      actorId: req.user.loginUser || ownerId,
+      method: "UPDATE",
+      panel: req.user.type,
+      shortDesc: `Permission assigned: ${permission.name}`,
+      description: `Permission assigned: ${permission.name}`
+    })
 
     return res.status(200).json({
       success: true,
@@ -666,6 +700,15 @@ export const deletePermission = async (req, res) => {
     }
 
     await Permission.findByIdAndDelete(permissionId);
+
+    await AuditLog.create({
+      orgId: ownerId,
+      actorId: req.user.loginUser || ownerId,
+      panel: req.user.type,
+      method: "DELETE",
+      shortDesc: `Permission deleted: ${permission.name}`,
+      description: `Permission deleted: ${permission.name}`
+    })
 
     return res.status(200).json({
       success: true,
@@ -1140,6 +1183,9 @@ export const addOrUpatePaymentInfo = async (req, res) => {
   let qr = req?.file ? req.file.path : null;
 
   try {
+    if (!req.user.isOwner) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
     const isUser = await User.findById(userId);
     if (!isUser) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -1957,3 +2003,48 @@ export const getMyTestCat = async (req, res) => {
     return res.status(500).json({ message: error?.message, success: false })
   }
 }
+export const getAuditLog = async (req, res) => {
+  try {
+    const panelId = req.user.userId;
+
+    // Get page & limit from query (defaults)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const query = {
+      orgId: panelId
+    }
+    if (req.query.search) {
+      const actor = await User.findOne({ nh12: req.query.search })
+      if (!actor) {
+        return res.status(404).json({ message: "Actor data not exist", success: false })
+      }
+      query.actorId = actor?._id
+    }
+    const skip = (page - 1) * limit;
+
+    // Fetch paginated data
+    const audit = await AuditLog
+      .find(query).populate('actorId', 'name nh12 role')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Total count for frontend pagination
+    const total = await AuditLog.countDocuments({ orgId: panelId });
+
+    res.status(200).json({
+      message: 'Audit fetched successfully',
+      data: audit,
+      success: true,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

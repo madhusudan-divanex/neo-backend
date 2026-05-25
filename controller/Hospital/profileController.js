@@ -864,42 +864,7 @@ export const getProfileDetail = async (req, res) => {
     return res.status(500).json({ message: "Server Error" });
   }
 };
-export const getAuditLog = async (req, res) => {
-  try {
-    const hospitalId = req.user.id;
 
-    // Get page & limit from query (defaults)
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const skip = (page - 1) * limit;
-
-    // Fetch paginated data
-    const audit = await HospitalAudit
-      .find({ hospitalId }).populate('actionUser')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    // Total count for frontend pagination
-    const total = await HospitalAudit.countDocuments({ hospitalId });
-
-    res.status(200).json({
-      message: 'Audit fetched successfully',
-      data: audit,
-      success: true,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 export const addHospitalService = async (req, res) => {
   const hospitalId = req.user.id || req.user.userId
   const { services } = req.body

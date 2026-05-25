@@ -5,6 +5,7 @@ import HospitalDoctor from "../../../models/Hospital/HospitalDoctor.js";
 import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import User from "../../../models/Hospital/User.js";
 import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
+import AuditLog from "../../../models/AuditLog.js";
 
 /* =====================================================
    ADD BED ALLOTMENT
@@ -28,7 +29,7 @@ export const addAllotment = async (req, res) => {
       allotmentDate,
       expectedDischargeDate,
       reason,
-      note,patientDepartment
+      note, patientDepartment
     } = allotmentDetails;
 
     /* ---------- VALIDATION ---------- */
@@ -95,7 +96,7 @@ export const addAllotment = async (req, res) => {
       bedId: bed._id,
       departmentId,
       primaryDoctorId: doctorId,
-      allotmentDate,patientDepartment,
+      allotmentDate, patientDepartment,
       expectedDischargeDate,
       admissionReason: reason,
       note,
@@ -107,11 +108,16 @@ export const addAllotment = async (req, res) => {
     if (perDayFees !== undefined) {
       bed.pricePerDay = perDayFees;
     }
-    await PatientDepartment.findOneAndUpdate({patientId,hospitalId},{allotmentId:allotment?._id},{new:true})
+    await PatientDepartment.findOneAndUpdate({ patientId, hospitalId }, { allotmentId: allotment?._id }, { new: true })
     await bed.save();
-    if (req?.user?.loginUser && hospitalId) {
-      await HospitalAudit.create({ hospitalId, actionUser: req?.user?.loginUser, note: `Added an allotment for patient ${isPatient?.name}.` })
-    }
+    await AuditLog.create({
+      orgId: hospitalId,
+      actorId: req.user.loginUser || hospitalId,
+      panel: "hospital",
+      method: "POST",
+      shortDesc: "Allotment created",
+      description: `Bed allotted for patient ${isPatient?.name}`
+    })
     res.json({
       success: true,
       message: "Bed allotted successfully",
@@ -179,8 +185,8 @@ export const getAllotmentById = async (req, res) => {
     const allotment = await BedAllotment.findById(req.params.id)
       .populate("patientId", "name email unique_id nh12")
       .populate("primaryDoctorId", "name unique_id nh12")
-      .populate({path:'labAppointment',populate:[{path:'tests.subCat.subCatId',select:'subCategory'}]})
-      .populate('departmentId','departmentName')
+      .populate({ path: 'labAppointment', populate: [{ path: 'tests.subCat.subCatId', select: 'subCategory' }] })
+      .populate('departmentId', 'departmentName')
       .populate({
         path: "bedId",
         populate: [
@@ -232,7 +238,7 @@ export const updateAllotment = async (req, res) => {
         message: "Allotment not found"
       });
     }
-    const isPatient = await User.findOne({_id:allotmentDetails?.patientId,role:"patient"});
+    const isPatient = await User.findOne({ _id: allotmentDetails?.patientId, role: "patient" });
     if (!isPatient) {
       return res.status(404).json({
         success: false,
@@ -257,9 +263,14 @@ export const updateAllotment = async (req, res) => {
       }));
 
     await allotment.save();
-    if (req?.user?.loginUser && allotment?.hospitalId) {
-      await HospitalAudit.create({ hospitalId: allotment.hospitalId, actionUser: req?.user?.loginUser, note: `An allotment details was updated of patient ${isPatient?.name}.` })
-    }
+    await AuditLog.create({
+      orgId: allotment?.hospitalId,
+      actorId: req.user.loginUser || allotment?.hospitalId,
+      panel: "hospital",
+      method: "UPDATE",
+      shortDesc: "Allotment updated",
+      description: `Allotment updated for patient ${isPatient?.name}`
+    })
     res.json({
       success: true,
       message: "Allotment updated successfully"

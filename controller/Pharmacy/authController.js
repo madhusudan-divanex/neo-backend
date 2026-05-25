@@ -891,7 +891,7 @@ const pharLicense = async (req, res) => {
         });
         sendPharEmail("Email Template/Pharmacy/Welcome.html",
             { btnLink: process.env.PHARMACY_URL + '/dashboard', name: user.name },
-            "Welcome to NeoHealthCare", userId)
+            "Welcome to NeoHealthCard", userId)
 
         return res.status(200).json({
             success: true,

@@ -68,6 +68,11 @@ import staff from './routes/staff.js'
 import department from './routes/departmentRoutes.js'
 import certificate from './routes/certificate.js'
 import './utils/sendTemplateEmail.js'
+import DoctorAbout from './models/Doctor/addressAbout.model.js'
+import MedicalLicense from './models/Doctor/medicalLicense.model.js'
+import DoctorEduWork from './models/Doctor/eduWork.js'
+import DoctorKyc from './models/Doctor/kyc.model.js'
+import DoctorClinic from './models/Doctor/Clinic.model.js'
 dotenv.config()
 const app = express()
 app.use(cors())
@@ -622,6 +627,38 @@ app.use('/user/:id', async (req, res) => {
                 nextStep = "/medical-history";
             } else if (!familyHistory) {
                 nextStep = "/family-medical-history";
+            }
+            return res.status(200).json({
+                success: true,
+                data: user, nextStep
+            });
+        } else if (user.role == "doctor") {
+            const finalUserId = user._id
+            const [
+                kyc,
+                education,
+                license,
+                about, clinic
+            ] = await Promise.all([
+                DoctorKyc.findOne({ userId: finalUserId }),
+                DoctorEduWork.findOne({ userId: finalUserId }),
+                MedicalLicense.findOne({ userId: finalUserId }),
+                DoctorAbout.findOne({ userId: finalUserId }),
+                DoctorClinic.findOne({ userId: finalUserId }),
+            ]);
+
+            let nextStep = null;
+
+            if (!kyc) {
+                nextStep = "/kyc";
+            } else if (!education) {
+                nextStep = "/education-work";
+            } else if (!license) {
+                nextStep = "/medical-license";
+            } else if (!about) {
+                nextStep = "/address-about";
+            } else if (!clinic && about?.clinic) {
+                nextStep = "/clinic";
             }
             return res.status(200).json({
                 success: true,

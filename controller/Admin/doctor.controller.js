@@ -8,6 +8,7 @@ import MedicalLicense from '../../models/Doctor/medicalLicense.model.js';
 import DoctorEduWork from '../../models/Doctor/eduWork.js';
 import Patient from "../../models/Patient/patient.model.js";
 import PatientDemographic from "../../models/Patient/demographic.model.js";
+import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 
 
 export const getDoctorDetail = async (req, res) => {
@@ -96,7 +97,7 @@ export const getDoctors = async (req, res) => {
       {
         $lookup: {
           from: "doctor-abouts",               // users collection
-          localField: "userId",
+          localField: "_id",
           foreignField: "userId",
           as: "about"
         }

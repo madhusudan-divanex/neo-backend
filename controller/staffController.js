@@ -9,7 +9,7 @@ import StaffEmployement from "../models/Staff/StaffEmployement.js";
 import Otp from "../models/Otp.js";
 import { generateOTP, sendEmailOtp, sendMobileOtp } from "../utils/globalFunction.js";
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
-import { sendDoctorEmail } from "../utils/sendTemplateEmail.js";
+import { sendDoctorEmail, sendEmpEmail, sendEmpOtpEmail } from "../utils/sendTemplateEmail.js";
 import AuditLog from "../models/AuditLog.js";
 
 
@@ -250,7 +250,7 @@ export const createStaffEmployement = async (req, res) => {
 
         organizationType: userData?.role, fees,
         department, role, note, joinDate, salary, status, contactNumber, email,
-        password: passwordHash, permissionId, contractStart, contractEnd
+        password: password ? passwordHash : staffEmp?.password, permissionId, contractStart, contractEnd
       })
 
       if (empData) {
@@ -273,8 +273,28 @@ export const createStaffEmployement = async (req, res) => {
         department, role, note, joinDate, salary, status, contactNumber, email,
         password: passwordHash, permissionId, contractStart, contractEnd
       })
+      sendEmpEmail("Email Template/Employee/Welcome.html",
+        {
+          role: role,
+          contractStart: new Date(contractStart)?.toLocaleDateString('en-GB'),
+          contractEnd: new Date(contractEnd)?.toLocaleDateString('en-GB'),
+          status: status?.charAt(0)?.toUpperCase() + status?.slice(1)?.toLowerCase(),
+          joinDate: new Date(joinDate)?.toLocaleDateString('en-GB'),
+          name: staff?.name,
+          btnLink: userData?.role == 'hospital' ?
+            process.env.HOSPITAL_URL + '/login' :
+            userData?.role == "doctor" ? process.env.DOCTOR_URL + '/login' :
+              userData?.role == "pharmacy" ? process.env.PHARMACY_URL + '/login'
+                : userData?.role == "lab" ? process.env.LABORATORY_URL + '/login'
+                  : ""
+
+        },
+        "Welcome to NeoHealthCard",
+        staff._id
+      )
 
       if (empData) {
+
         await AuditLog.create({
           orgId: userData._id, actorId: req.user.loginUser || req.user.id || req.user.userId, panel: req?.user?.type,
           method: "CREATE",
@@ -440,10 +460,10 @@ export const staffLogin = async (req, res) => {
       if (withOtp) {
         const code = generateOTP()
         if (contactNumber) {
-          // await sendMobileOtp(contactNumber, code)
+          await sendMobileOtp(contactNumber, code)
         } else {
-          sendDoctorEmail("Email Template/doctor/VerifyOtp.html", { code, name: staffUser?.name || "Staff" },
-            "Verify Your Account", staffUser?._id)
+          sendEmpOtpEmail("Email Template/Employee/VerifyOtp.html", { code, name: staffUser?.name || "Staff" },
+            "Verify Your Account", isStaff?.email)
           // await sendEmailOtp(email, code)
         }
         const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
@@ -555,6 +575,9 @@ export const verifyOtp = async (req, res) => {
         shortDesc: "Staff login",
         description: `Staff login for ${staffUser?.name} NHC id ${staffUser?.nh12}.`
       })
+      sendEmpOtpEmail("Email Template/Employee/NewLogin.html", {
+        name: staffUser?.name || "Staff",
+      }, "New Device Login Detected", staffEmployement.email)
       const token = jwt.sign(
         {
           id: panelData._id,
@@ -608,3 +631,36 @@ export const verifyOtp = async (req, res) => {
     return res.status(500).json({ message: error?.message, success: false })
   }
 }
+export const staffResendOtp = async (req, res) => {
+  const { contactNumber, email } = req.body;
+  try {
+    const isExist = contactNumber ? await StaffEmployement.findOne({ contactNumber, status: "active" }) : await StaffEmployement.findOne({ email, status: "active" });
+    if (!isExist) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+    const code = generateOTP()
+    if (contactNumber) {
+
+      await sendMobileOtp(contactNumber, code)
+    } else {
+      const staffData = await User.findById(isExist?.userId)
+      // await sendEmailOtp(email, code)
+      sendEmpOtpEmail("Email Template/Employee/VerifyOtp.html", { code, name: staffData?.name || "Staff" },
+        "Verify Your Account", isExist?.email)
+    }
+    const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
+    if (isOtpExist) {
+      await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+      const otp = await Otp.create({ phone: contactNumber, email, code })
+    } else {
+      const otp = await Otp.create({ phone: contactNumber, email, code })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent!"
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

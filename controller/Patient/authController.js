@@ -46,6 +46,8 @@ const signUpPatient = async (req, res) => {
         if (newPatient) {
             const code = generateOTP()
             await sendMobileOtp(contactNumber, code)
+            sendPatientEmail("Email Template/patient/otp.html", { code, name: name || "Patient" },
+                "Verify Your Account", user._id)
             const isOtpExist = await Otp.findOne({ phone: contactNumber })
             if (isOtpExist) {
                 await Otp.findByIdAndDelete(isOtpExist._id)
@@ -688,7 +690,7 @@ const patientKyc = async (req, res) => {
         } else {
             await PatientKyc.create({ frontImage, backImage, userId, type })
             sendPatientEmail("Email Template/patient/welcome.html", { btnLink: process.env.PATIENT_URL + '/my-appointment' },
-                "Welcome to NeoHealthCare", userId)
+                "Welcome to NeoHealthCard", userId)
 
             return res.status(200).json({
                 success: true,

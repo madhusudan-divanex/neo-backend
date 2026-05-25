@@ -826,7 +826,7 @@ const labLicense = async (req, res) => {
         });
         sendLabEmail("Email Template/Laboratory/Welcome.html",
             { btnLink: process.env.LABORATORY_URL + '/dashboard' },
-            "Welcome to NeoHealthCare", userId)
+            "Welcome to NeoHealthCard", userId)
 
         return res.status(200).json({
             success: true,

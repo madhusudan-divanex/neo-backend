@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Patient Appointment</title>
+    <title>Employee Welcome</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
@@ -114,7 +114,7 @@
                                             color:#052F59;
                                             letter-spacing: 2px;
                                             font-family:Jacques Francois, serif;
-                                            font-weight:500; margin: 0;"> Patient Appointment</h2>
+                                            font-weight:500; margin: 0;"> Welcome!</h2>
                                         </div>
 
                                     </td>
@@ -143,6 +143,8 @@
                             z-index:2;
                             font-family: Plus Jakarta Sans;">
                                 <span style="font-weight: 600;">Hi {{name}},</span>
+                                <br />
+                                Welcome to NeoHealthCard.
                             </div>
 
                             <!-- Description -->
@@ -156,10 +158,20 @@
                                 font-weight: 400;
                                 position:relative;
                                 font-family: Plus Jakarta Sans;
-                                z-index:2;">A new patient appointment has been
-                                    successfully assigned to your schedule.
-                                    Please review the appointment details below
-                                    and prepare for the upcoming consultation</p>
+                                z-index:2;">Your employee onboarding process has been successfully completed, and your
+                                    account is now active in the NeoHealthCard. </p>
+                                <p style="
+                                font-size:14px;
+                                line-height:1.4;
+                                color:#555555;
+                                margin-bottom:25px;
+                                margin-top: 0;
+                                font-weight: 400;
+                                position:relative;
+                                font-family: Plus Jakarta Sans;
+                                z-index:2;">
+                                    We’re excited to have you join our healthcare team and contribute to delivering
+                                    exceptional patient care and medical support services.</p>
 
                             </div>
                             <!-- Section Title -->
@@ -168,7 +180,7 @@
                                 font-size:20px;
                                 font-weight:700;
                                 color:#16345B;
-                                margin-bottom:16px; margin-top: 0;"> Appointment Details</h4>
+                                margin-bottom:16px; margin-top: 0;"> Employee Information</h4>
                             </div>
 
 
@@ -185,39 +197,52 @@
                                             color:#6b6b6b;
                                     ">
 
-                                        <span
-                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Patient
-                                            Name:</span>
+                                        <!-- <span
+                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Specialization:</span>
                                         <span
                                             style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">
-                                            {{patientName}}
+                                            {{specialization}}
+                                        </span> -->
+                                        <br />
+
+                                        <span
+                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Role:
+                                        </span>
+                                        <span
+                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">
+                                            {{role}}
+                                        </span>
+                                        <br />
+
+
+                                        <span
+                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Contract
+                                            Start:</span>
+                                        <span
+                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">
+                                            {{contractStart}}
                                         </span>
                                         <br />
 
                                         <span
-                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Appointment
-                                            ID:</span>
+                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Contract
+                                            End:</span>
                                         <span
-                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">
-                                            {{aptId}}
-                                        </span>
+                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">{{contractEnd}}</span>
                                         <br />
-
-
                                         <span
-                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Date:</span>
+                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Join
+                                            Date:</span>
                                         <span
-                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">
-                                            {{date}}
-                                        </span>
+                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">{{joinDate}}</span>
                                         <br />
 
                                         <span
-                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Time:</span>
+                                            style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Employee
+                                            Status:</span>
                                         <span
-                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">{{time}}</span>
+                                            style="color: #555555; line-height: 1.5; font-weight: 400;font-size: 14px;">{{status}}</span>
                                         <br />
-
                                     </td>
                                 </tr>
 
@@ -248,7 +273,7 @@
                                         letter-spacing: 1px;
                                     ">
 
-                                            View Patient Profile <i class="fa-solid fa-arrow-right-long"></i>
+                                            Login NeoHealthCard Account <i class="fa-solid fa-arrow-right-long"></i>
 
                                         </a>
 

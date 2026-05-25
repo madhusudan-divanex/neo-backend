@@ -644,7 +644,8 @@ async function getPatientPrescriptions(req, res) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("doctorId", "-passwordHash");
+      .populate("doctorId", "name email nh12 contactNumber doctorId")
+      .populate("hospitalId", "name email nh12 contactNumber ");
 
     const finalData = await Promise.all(
       prescriptions.map(async (item) => {

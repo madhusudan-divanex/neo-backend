@@ -311,7 +311,7 @@ const actionDoctorAppointment = async (req, res) => {
                     await sendPush({
                         token: isUser.fcmToken,
                         title: "Doctor Appointment Rejected",
-                        body: `Your appointment with ${isExist?.name} on ${new Date(date)?.toLocaleTimeString('en-GB')} was rejected.`,
+                        body: `Your appointment with ${isExist?.name} on ${new Date(isPatient?.date)?.toLocaleTimeString('en-GB')} was rejected.`,
                         data: {
                             type: "Doctor Appointment Rejected",
                             time: Date.now().toString()
@@ -424,7 +424,7 @@ const doctorPrescription = async (req, res) => {
                 {
                     doctorName: isExist.name,
                     name: isPatient.name,
-                    date: isAppointment.date,
+                    appointmentDate: isAppointment.date,
                     specialization: doctorAbout?.specialty?.name || 'General',
                     presId: add.customId,
                     createdAt: new Date(add.createdAt).toLocaleDateString('en-GB'),
@@ -444,7 +444,7 @@ const doctorPrescription = async (req, res) => {
             await Notification.create({
                 userId: patientId,
                 title: "New Prescription Added",
-                message: `Dr. ${isExist.name} has added a new prescription (id ${add?.customId}) for ${diagnosis}.`
+                message: `${isExist.name} has added a new prescription (id ${add?.customId}) for ${diagnosis}.`
             })
             await DoctorAppointment.findByIdAndUpdate(isAppointment._id, { prescriptionId: add._id }, { new: true })
             return res.status(200).json({ message: "Presctiption add successfully", success: true })
@@ -1684,7 +1684,6 @@ const getHospitalDoctorAppointment = async (req, res) => {
 
         let filter = { doctorId, hospitalId };
         if (status) {
-
             filter.status = status;
         }
         if (statuses) {
@@ -1757,7 +1756,7 @@ const doctorAptPayment = async (req, res) => {
             return res.status(400).json({ message: 'User not exist', success: false });
         }
 
-        const isApt = await DoctorAppointment.findById(appointmentId);
+        const isApt = await DoctorAppointment.findById(appointmentId).populate('patientId', 'name nh12');
         if (!isApt) {
             return res.status(400).json({ message: 'Appointment not exist', success: false });
         }
@@ -1778,7 +1777,6 @@ const doctorAptPayment = async (req, res) => {
         }
 
         let calculatedTotal = subTotal;
-        console.log(subTotal, typeof (discountValue))
 
         // ✅ DISCOUNT VALIDATION
         if (discountType === "Fixed") {
@@ -1847,6 +1845,14 @@ const doctorAptPayment = async (req, res) => {
                 { paymentStatus: 'paid', invoiceId: payment._id },
                 { new: true }
             );
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
+                method: "CREATE",
+                panel: req.user.type,
+                shortDesc: "Payment added for Appointment",
+                description: `Payment added for  Appointment Id ${isApt.customId} for patient ${isApt.patientId?.name} with amount ₹ ${calculatedTotal}`
+            })
 
             return res.status(200).json({
                 message: 'Payment successful',
@@ -1889,8 +1895,16 @@ const doctorAptVitals = async (req, res) => {
         if (!isUser) {
             return res.status(400).json({ message: 'User not exist', success: false });
         }
-        const isApt = await DoctorAppointment.findByIdAndUpdate(appointmentId, { vitals: req.body }, { new: true })
+        const isApt = await DoctorAppointment.findByIdAndUpdate(appointmentId, { vitals: req.body }, { new: true }).populate('patientId', 'name')
         if (!isApt) return res.status(200).json({ message: 'Appointment  not exist' })
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
+            panel: req.user.type,
+            method: "CREATE",
+            shortDesc: "Vitals added",
+            description: `Added vitals in doctor appointment no. ${isApt?.customId} of patient ${isApt?.patientId?.name}`
+        })
         return res.status(200).json({ message: 'Vitals add in doctor appointment', success: true, data: isApt })
 
 

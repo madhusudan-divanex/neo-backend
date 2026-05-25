@@ -40,7 +40,8 @@ import {
   consentLetterPdf,
   labInvoicePdf,
   pharmacyReturnPdf,
-  searchAllUsers
+  searchAllUsers,
+  getAuditLog
 } from "../../controller/Hospital/commanController.js";
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
@@ -98,4 +99,7 @@ router.get('/test-category', getTestCatAndSub)
 router.get('/my-test-category', authMiddleware, getMyTestCat)
 router.get('/sub-test-category/:id', getSubTestCatById)
 router.get('/sub-test-category-data/:id', getSubTestCatDataById)
+
+router.get('/audit-log', authMiddleware, getAuditLog)
+
 export default router;

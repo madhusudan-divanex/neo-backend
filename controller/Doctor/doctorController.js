@@ -18,8 +18,9 @@ import { assignNH12 } from "../../utils/nh12.js"
 import Department from "../../models/Department.js"
 import StaffEmployement from "../../models/Staff/StaffEmployement.js"
 import Staff from "../../models/Staff/Staff.js"
+import AuditLog from "../../models/AuditLog.js"
 const doctorDashboard = async (req, res) => {
-  const id = req.params.id
+  const id = req.user.id || req.user.userId
   try {
     const isExist = await User.findById(id)
     if (!isExist) {
@@ -39,17 +40,17 @@ const doctorDashboard = async (req, res) => {
     const pendingRequest = 0
     const uniquePatientIds = await DoctorAppointment.distinct('patientId', { doctorId: id })
     const totalPatient = uniquePatientIds.length
-    const totalStaff = await Staff.countDocuments({ userId: id })
+    const totalStaff = await StaffEmployement.countDocuments({ organizationId: id, })
     const totalDoctors = await StaffEmployement.countDocuments({ organizationId: id, role: "doctor" })
     const totalDepartments = await Department.countDocuments({ userId: id })
-    const appointmentRequest = await DoctorAppointment.find({ doctorId: id, status: 'pending' })
+    const appointmentRequest = await DoctorAppointment.find({ doctorId: id, status: 'pending', hospitalId: null })
       .populate({
         path: 'patientId', select: '-passwordHash', populate: {
           path: 'patientId',
           select: 'profileImage'
         }
       }).sort({ createdAt: -1 }).limit(10)
-    const pendingAppointment = await DoctorAppointment.find({ doctorId: id, status: 'approved' })
+    const pendingAppointment = await DoctorAppointment.find({ doctorId: id, status: 'approved', hospitalId: null })
       .populate({
         path: 'patientId', select: '-passwordHash', populate: {
           path: 'patientId',
@@ -354,6 +355,15 @@ export const addTimeSlot = async (req, res) => {
     doc.slots.push({ startTime, endTime });
     await doc.save();
 
+    await AuditLog.create({
+      panel: req.user.type,
+      orgId: req.user.id || req.user.userId,
+      actorId: req.user.loginUser || req.user.id || req.user.userId,
+      method: "CREATE",
+      shortDesc: `Added a new time slot`,
+      description: `Added a new time slot for ${day} from ${startTime} to ${endTime}`
+    })
+
     return res.json({ success: true, message: "Slot added successfully" });
   } catch (error) {
     console.log(error)
@@ -381,6 +391,14 @@ export const updateTimeSlot = async (req, res) => {
     slot.endTime = endTime;
 
     await doc.save();
+    await AuditLog.create({
+      panel: req.user.type,
+      orgId: req.user.id || req.user.userId,
+      actorId: req.user.loginUser || req.user.id || req.user.userId,
+      method: "UPDATE",
+      shortDesc: `Updated a time slot`,
+      description: `Updated a time slot for ${day} from ${startTime} to ${endTime}`
+    })
 
     return res.json({ success: true, message: "Slot updated" });
   } catch (error) {
@@ -396,6 +414,14 @@ export const updateDaySlot = async (req, res) => {
     if (!doc) return res.status(404).json({ success: false, message: "Time slot not found" });
     doc.slots = slots
     await doc.save();
+    await AuditLog.create({
+      panel: req.user.type,
+      orgId: req.user.id || req.user.userId,
+      actorId: req.user.loginUser || req.user.id || req.user.userId,
+      method: "UPDATE",
+      shortDesc: `Updated a time slot`,
+      description: `Updated a time slot for ${day}`
+    })
     return res.json({ success: true, message: "Slot updated" });
 
   } catch (error) {

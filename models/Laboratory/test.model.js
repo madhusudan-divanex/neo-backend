@@ -16,7 +16,7 @@ const requestSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubTestCat', index: true
       },
-      price: { type: Number, required: true },
+      price: { type: Number, required: true, default: 0 },
       status: { type: String, enum: ['active', 'inactive'], default: 'inactive' },
     }
   ],
@@ -26,7 +26,7 @@ const requestSchema = new Schema({
   },
   type: { type: String, enum: ['lab', 'hospital'], default: 'lab' },
   customId: { type: String },
-  totalAmount:{type:Number,required:true}
+  totalAmount: { type: Number, required: true }
 
 
 }, { timestamps: true })

@@ -65,7 +65,11 @@ const addTest = async (req, res) => {
 
             const baseUrl = `api/file/`;
             const catData = await TestCategory.findById(category)
-            const subCategoryData = await SubTestCat.find({ _id: { $in: subCatData } })
+            const subCatIds = subCatData.map(item => item.subCat);
+
+            const subCategoryData = await SubTestCat.find({
+                _id: { $in: subCatIds }
+            });
 
             // ===============================
             // CASE 1 : HOSPITAL ADDING TEST
@@ -198,7 +202,7 @@ const addTest = async (req, res) => {
 
                 await AuditLog.create([{
                     orgId: req.user.id || req.user.userId,
-                    actorId: req.user.loginUser || req.user,
+                    actorId: req.user.loginUser || req.user.id || req.user.userId,
                     method: "CREATE",
                     panel: req?.user?.type,
                     shortDesc: "Lab Test Added",
@@ -231,7 +235,7 @@ const addTest = async (req, res) => {
 
                 await AuditLog.create([{
                     orgId: labId,
-                    actorId: req.user.loginUser || req.user,
+                    actorId: req.user.loginUser || req.user.id || req.user.userId,
                     method: "CREATE",
                     panel: req?.user?.type,
                     shortDesc: "Lab Test Added",
@@ -264,45 +268,72 @@ const addTest = async (req, res) => {
 };
 
 const updateTest = async (req, res) => {
-    const { testId, category, totalAmount, } = req.body
-    const subCatData = JSON.parse(req.body.subCatData)
+    const { testId, category, totalAmount } = req.body;
+
+    const subCatData = JSON.parse(req.body.subCatData);
 
     try {
+
         const isExist = await Test.findById(testId);
-        if (!isExist) return res.status(200).json({ message: "Test  not found", success: false })
 
-        const catData = await TestCategory.findById(category)
-        const subCategoryData = await SubTestCat.find({ _id: { $in: subCatData } })
+        if (!isExist) {
+            return res.status(200).json({
+                message: "Test not found",
+                success: false
+            });
+        }
 
-        const update = await Test.findByIdAndUpdate(testId, {
-            category, subCatData, totalAmount
-        }, { new: true });
+        const catData = await TestCategory.findById(category);
+
+        // extract ids only
+        const subCategoryIds = subCatData.map(item => item.subCat);
+
+        const subCategoryData = await SubTestCat.find({
+            _id: { $in: subCategoryIds }
+        });
+
+        const update = await Test.findByIdAndUpdate(
+            testId,
+            {
+                category,
+                subCatData,
+                totalAmount
+            },
+            { new: true }
+        );
 
         if (update) {
 
             await AuditLog.create([
                 {
                     orgId: req.user.id || req.user.userId,
-                    actorId: req.user.loginUser || req.user,
+                    actorId: req.user.loginUser || req.user.id || req.user.userId,
                     method: "UPDATE",
                     panel: req?.user?.type,
                     shortDesc: "Lab Test Details Updated",
-                    description: `An lab test ${catData.name} ${subCategoryData.map((item) => item.subCategory).join(', ')} details was updated.`
-                }]
-            );
+                    description: `An lab test ${catData.name} ${subCategoryData
+                        .map((item) => item.subCategory)
+                        .join(", ")} details was updated.`
+                }
+            ]);
 
             return res.status(200).json({
                 success: true,
                 message: "Test updated"
             });
-        } else {
-            return res.status(200).json({
-                success: true,
-                message: "Test not updated"
-            });
+
         }
+
+        return res.status(200).json({
+            success: false,
+            message: "Test not updated"
+        });
+
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };
 const labTestAction = async (req, res) => {
@@ -530,7 +561,7 @@ const saveReport = async (req, res) => {
             await AuditLog.create([
                 {
                     orgId: req.user.id || req.user.userId,
-                    actorId: req.user.loginUser || req.user,
+                    actorId: req.user.loginUser || req.user.id || req.user.userId,
                     method: "CREATE",
                     panel: req?.user?.type,
                     shortDesc: "Lab Report Created",
@@ -627,7 +658,7 @@ export const addPatient = async (req, res) => {
                 await AuditLog.create([
                     {
                         orgId: req.user.id || req.user.userId,
-                        actorId: req.user.loginUser || req.user,
+                        actorId: req.user.loginUser || req.user.id || req.user.userId,
                         method: "CREATE",
                         panel: req?.user?.type,
                         shortDesc: "Patient added successfully",
@@ -686,7 +717,7 @@ const saveLabInvoice = async (req, res) => {
         await AuditLog.create([
             {
                 orgId: req.user.id || req.user.userId,
-                actorId: req.user.loginUser || req.user,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
                 method: "CREATE",
                 panel: req?.user?.type,
                 shortDesc: "Invoice generated successfully",
@@ -744,7 +775,7 @@ const addSample = async (req, res) => {
             await AuditLog.create([
                 {
                     orgId: req.user.id || req.user.userId,
-                    actorId: req.user.loginUser || req.user,
+                    actorId: req.user.loginUser || req.user.id || req.user.userId,
                     method: "CREATE",
                     panel: req?.user?.type,
                     shortDesc: "Sample added successfully",

@@ -41,6 +41,15 @@ Admin ->
     Pharmacy (pharma details,medicine request,sell orders)
     Lab (Lab details,appointments)
     Hospital (hospital details,doctors)
+
+Doctor,Pharmacy,Hospital,Laboratory->
+    Audit Logs 
+Employee Email Template->
+    Welcome,Login OTP,Login detected
+
+Audit Log
+
+
 Website->
     Paitent Card Scan 
     Doctor Card Scan

@@ -25,6 +25,45 @@ import ScheduleMedicines from "../../models/Admin/ScheduleMedicines.js"
 import Queries from "../../models/Admin/Queries.js"
 import CardGenerate from "../../models/Admin/CardGenerate.js"
 import SubTestCat from "../../models/SubTestCategory.js"
+import StaffEmployement from "../../models/Staff/StaffEmployement.js"
+import DoctorAppointment from "../../models/DoctorAppointment.js"
+import LabAppointment from "../../models/LabAppointment.js"
+import DoctorAptPayment from "../../models/DoctoAptPayment.js"
+import LabPayment from "../../models/LabPayment.js"
+import PatientPrescriptions from "../../models/Patient/prescription.model.js"
+import MedicalHistory from "../../models/Patient/medicalHistory.model.js"
+import PatientKyc from "../../models/Patient/kyc.model.js"
+import FitnessCertificate from "../../models/Certificates/FitnessCertificate.js"
+import MedicalCertificate from "../../models/Certificates/MedicalCertificate.js"
+import HospitalTransfer from "../../models/Hospital/HospitalTransfer.js"
+import DepartmentTransfer from "../../models/Hospital/DepartmentTransfer.js"
+import BedAllotment from "../../models/Hospital/BedAllotment.js"
+import PatientDepartment from "../../models/Hospital/PatientDepartment.js"
+import Prescriptions from "../../models/Prescriptions.js"
+import LabSample from "../../models/LabSample.js"
+import TestReport from "../../models/testReport.js"
+import Favorite from "../../models/Patient/favorite.model.js"
+import Conversation from "../../models/Hospital/Conversation.js"
+import Message from "../../models/Hospital/Message.js"
+import DischargePatient from "../../models/Hospital/DischargePatient.js"
+import IPDAssessment from "../../models/Hospital/IPD Daily Notes/Assessment.js"
+import IPDHeader from "../../models/Hospital/IPD Daily Notes/Header.js"
+import IPDLabImaging from "../../models/Hospital/IPD Daily Notes/LabsImaging.js"
+import IPDObjective from "../../models/Hospital/IPD Daily Notes/Objective.js"
+import IPDSubjective from "../../models/Hospital/IPD Daily Notes/Subjective.js"
+import EditRequest from "../../models/EditRequest.js"
+import HospitalPayment from "../../models/Hospital/HospitalPayment.js"
+import DoctorEduWork from "../../models/Doctor/eduWork.js"
+import DoctorKyc from "../../models/Doctor/kyc.model.js"
+import MedicalLicense from "../../models/Doctor/medicalLicense.model.js"
+import Sell from "../../models/Pharmacy/sell.model.js"
+import TimeSlot from "../../models/TimeSlot.js"
+import AuditLog from "../../models/AuditLog.js"
+import PaymentInfo from "../../models/PaymentInfo.js"
+import HospitalContact from "../../models/Hospital/HospitalContact.js"
+import Department from "../../models/Department.js"
+import BirthCertificate from "../../models/Certificates/BirthCertificate.js"
+import DeathCertificate from "../../models/Certificates/DeathCertificate.js"
 export const addSpecialty = async (req, res) => {
     const icon = req?.file?.path
     const { name } = req.body
@@ -841,3 +880,223 @@ export const updateSubTestCategory = async (req, res) => {
         return res.status(200).json({ message: error?.message, success: false })
     }
 }
+export const getPanelStaff = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+
+        const panelStaff = await StaffEmployement.find({ organizationId: id, userRole: "staff" })
+            .populate({ path: "userId", select: "name email nh12 contactNumber staffId", populate: [{ path: "staffId", select: "profileImage" }] }).skip(skip).limit(limit)
+
+        const total = await StaffEmployement.countDocuments({ organizationId: id, userRole: "staff" })
+        res.json({
+            success: true,
+            data: panelStaff,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+export const getBirthCertificates = async (req, res) => {
+    try {
+        const { page, limit, search } = req.query;
+        const skip = (page - 1) * limit;
+        let filter = {}
+        if (search) {
+            filter.customId = search
+        }
+        const data = await BirthCertificate.find(filter)
+            .populate({ path: "fatherId", select: "name email nh12 contactNumber patientId", populate: [{ path: "patientId", select: "profileImage" }] })
+            .populate({ path: "motherId", select: "name email nh12 contactNumber patientId", populate: [{ path: "patientId", select: "profileImage" }] })
+            .populate({ path: "doctorId", select: "name email nh12 contactNumber doctorId", populate: [{ path: "doctorId", select: "profileImage" }] })
+            .sort({ createdAt: -1 }).skip(skip).limit(limit);
+        const total = await BirthCertificate.countDocuments();
+        return res.status(200).json({ message: "Birth certificates", data, totalPages: Math.ceil(total / limit), currentPage: page, success: true })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const getFitnessCertificates = async (req, res) => {
+    try {
+        const { page, limit, search } = req.query;
+        const skip = (page - 1) * limit;
+        let filter = {}
+        if (search) {
+            filter.customId = search
+        }
+        const data = await FitnessCertificate.find(filter)
+            .populate({ path: "patientId", select: "name email nh12 contactNumber patientId", populate: [{ path: "patientId", select: "profileImage" }] })
+            .populate({ path: "doctorId", select: "name email nh12 contactNumber doctorId", populate: [{ path: "doctorId", select: "profileImage" }] })
+            .sort({ createdAt: -1 }).skip(skip).limit(limit);
+        const total = await FitnessCertificate.countDocuments(filter);
+        return res.status(200).json({ message: "Birth certificates", data, totalPages: Math.ceil(total / limit), currentPage: page, success: true })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const getMedicalCertificates = async (req, res) => {
+    try {
+        const { page, limit, search } = req.query;
+        const skip = (page - 1) * limit;
+        let filter = {}
+        if (search) {
+            filter.customId = search
+        }
+        const data = await MedicalCertificate.find(filter)
+            .populate({ path: "patientId", select: "name email nh12 contactNumber patientId", populate: [{ path: "patientId", select: "profileImage" }] })
+            .populate({ path: "doctorId", select: "name email nh12 contactNumber doctorId", populate: [{ path: "doctorId", select: "profileImage" }] })
+            .sort({ createdAt: -1 }).skip(skip).limit(limit);
+        const total = await MedicalCertificate.countDocuments(filter);
+        return res.status(200).json({ message: "Birth certificates", data, totalPages: Math.ceil(total / limit), currentPage: page, success: true })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const getDeathCertificates = async (req, res) => {
+    try {
+        const { page, limit, search } = req.query;
+        const skip = (page - 1) * limit;
+        let filter = {}
+        if (search) {
+            filter.customId = search
+        }
+        const data = await DeathCertificate.find(filter)
+            .populate({ path: "patientId", select: "name email nh12 contactNumber patientId", populate: [{ path: "patientId", select: "profileImage" }] })
+            .populate({ path: "doctorId", select: "name email nh12 contactNumber doctorId", populate: [{ path: "doctorId", select: "profileImage" }] })
+            .sort({ createdAt: -1 }).skip(skip).limit(limit);
+        const total = await DeathCertificate.countDocuments();
+        return res.status(200).json({ message: "Birth certificates", data, totalPages: Math.ceil(total / limit), currentPage: page, success: true })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+}
+export const deleteUser = async (req, res) => {
+    try {
+        const { id, role } = req.params
+        const data = await User.findById(id)
+        if (!data) {
+            return res.status(200).json({ message: "User not found", success: false })
+        }
+        if (role == "patient") {
+            await Patient.findOneAndDelete({ userId: id })
+            await DoctorAppointment.deleteMany({ patientId: id })
+            await LabAppointment.deleteMany({ patientId: id })
+            await DoctorAptPayment.deleteMany({ patientId: id })
+            await LabPayment.deleteMany({ patientId: id })
+            await PatientPrescriptions.findOneAndDelete({ userId: id })
+            await MedicalHistory.findOneAndDelete({ userId: id })
+            await PatientKyc.findOneAndDelete({ userId: id })
+            await PatientDemographic.findOneAndDelete({ userId: id })
+            await FitnessCertificate.deleteMany({ patientId: id })
+            await MedicalCertificate.deleteMany({ patientId: id })
+            await HospitalTransfer.deleteMany({ patientId: id })
+            await DepartmentTransfer.deleteMany({ patientId: id })
+            await BedAllotment.deleteMany({ patientId: id })
+            await PatientDepartment.deleteMany({ patientId: id })
+            await Prescriptions.deleteMany({ patientId: id })
+            await LabSample.deleteMany({ patientId: id })
+            await TestReport.deleteMany({ patientId: id })
+            await Favorite.deleteMany({ userId: id })
+            await Conversation.deleteMany({ participants: { $in: [id] } })
+            await Message.deleteMany({ sender: id })
+            await Notification.deleteMany({ userId: id })
+            await DischargePatient.deleteMany({ userId: id })
+            await HospitalPayment.deleteMany({ patientId: id })
+
+            await IPDHeader.deleteMany({ patientId: id })
+            await IPDLabImaging.deleteMany({ patientId: id })
+            await IPDObjective.deleteMany({ patientId: id })
+            await IPDSubjective.deleteMany({ patientId: id })
+            await IPDAssessment.deleteMany({ patientId: id })
+            await IPDSignOff.deleteMany({ patientId: id })
+            await EditRequest.deleteMany({ userId: id })
+            await Sell.deleteMany({ patientId: id })
+
+            await User.findByIdAndDelete(id)
+
+
+        }
+        if (role == "doctor") {
+            await Doctor.findOneAndDelete({ userId: id })
+            await DoctorAppointment.deleteMany({ doctorId: id })
+            await LabAppointment.deleteMany({ doctorId: id })
+            await DoctorAptPayment.deleteMany({ doctorId: id })
+            await LabPayment.deleteMany({ doctorId: id })
+            await DoctorEduWork.findOneAndDelete({ userId: id })
+            await DoctorAbout.findOneAndDelete({ userId: id })
+            await DoctorKyc.findOneAndDelete({ userId: id })
+            await MedicalLicense.findOneAndDelete({ userId: id })
+            await FitnessCertificate.deleteMany({ doctorId: id })
+            await MedicalCertificate.deleteMany({ doctorId: id })
+            await HospitalTransfer.deleteMany({ doctorId: id })
+            await DepartmentTransfer.deleteMany({ doctorId: id })
+            await BedAllotment.deleteMany({
+                $or: [{ primaryDoctorId: id }, { "attendingStaff.staffId": id }]
+            })
+
+            await StaffEmployement.deleteMany({ userId: id })
+            await Prescriptions.deleteMany({ doctorId: id })
+            await LabSample.deleteMany({ doctorId: id })
+            await TestReport.deleteMany({ doctorId: id })
+            await Favorite.deleteMany({ userId: id })
+            await Conversation.deleteMany({ participants: { $in: [id] } })
+            await Message.deleteMany({ sender: id })
+            await Notification.deleteMany({ userId: id })
+            await DischargePatient.deleteMany({ doctorId: id })
+            await HospitalPayment.deleteMany({ doctorId: id })
+
+            await IPDHeader.deleteMany({ doctorId: id })
+            await IPDLabImaging.deleteMany({ doctorId: id })
+            await IPDObjective.deleteMany({ doctorId: id })
+            await IPDSubjective.deleteMany({ doctorId: id })
+            await IPDAssessment.deleteMany({ doctorId: id })
+            await IPDSignOff.deleteMany({ doctorId: id })
+            await EditRequest.deleteMany({ userId: id })
+
+            await TimeSlot.deleteMany({ userId: id })
+            await Sell.deleteMany({ doctorId: id })
+            await AuditLog.deleteMany({ $or: [{ orgId: id }, { userId: id }] })
+            await PaymentInfo.deleteMany({ userId: id })
+
+            await User.findByIdAndDelete(id)
+
+        }
+        if (role == "staff") {
+            await Staff.findByIdAndUpdate(data.staffId, { status: "inactive" })
+        }
+        if (role == "hospital") {
+            await HospitalBasic.findOne({ hospitalId: data.hospitalId })
+            await BedAllotment.deleteMany({ hospitalId: data.hospitalId })
+            await HospitalPayment.deleteMany({ hospitalId: data.hospitalId })
+            await IPDHeader.deleteMany({ hospitalId: data.hospitalId })
+            await IPDLabImaging.deleteMany({ hospitalId: data.hospitalId })
+            await IPDObjective.deleteMany({ hospitalId: data.hospitalId })
+            await IPDSubjective.deleteMany({ hospitalId: data.hospitalId })
+            await IPDAssessment.deleteMany({ hospitalId: data.hospitalId })
+            await IPDSignOff.deleteMany({ hospitalId: data.hospitalId })
+            await EditRequest.deleteMany({ userId: id })
+
+            await HospitalContact.deleteMany({ hospitalId: data.hospitalId })
+            await Department.deleteMany({ hospitalId: id })
+            await HospitalAddress.deleteMany({ hospitalId: data.hospitalId })
+            await HospitalPayment.deleteMany({ hospitalId: id })
+
+            await User.findByIdAndDelete(id)
+        }
+        if (role == "lab") {
+            await Lab.findByIdAndUpdate(data.labId, { status: "inactive" })
+        }
+        if (role == "pharmacy") {
+            await Pharmacy.findByIdAndUpdate(data.pharmacyId, { status: "inactive" })
+        }
+        return res.status(200).json({ message: "User deleted", success: true })
+    } catch (error) {
+        return res.status(200).json({ message: error?.message, success: false })
+    }
+} 
