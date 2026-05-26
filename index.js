@@ -46,6 +46,7 @@ import notificationRoutes from "./routes/Admin/notification.routes.js";
 import CmsPageRoutes from "./routes/Admin/cms.routes.js";
 import AdminDoctorRoutes from "./routes/Admin/doctor.routes.js";
 import AdminLabRoutes from "./routes/Admin/lab.routes.js";
+import AdminStaffRoutes from "./routes/Admin/staff.routes.js";
 import AdminPharmacyRoutes from "./routes/Admin/pharmacy.routes.js";
 import { sendPush } from "./utils/sendPush.js";
 
@@ -697,6 +698,7 @@ app.use("/api/admin/notifications", notificationRoutes);
 app.use("/api/admin/doctor", AdminDoctorRoutes);
 app.use("/api/admin/cms", CmsPageRoutes);
 app.use("/api/admin/lab", AdminLabRoutes);
+app.use("/api/admin/staff", AdminStaffRoutes);
 app.use("/api/admin/pharmacy", AdminPharmacyRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/hospital-doctor", doctorRoutes);

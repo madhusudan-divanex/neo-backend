@@ -46,8 +46,7 @@ const signUpPatient = async (req, res) => {
         if (newPatient) {
             const code = generateOTP()
             await sendMobileOtp(contactNumber, code)
-            sendPatientEmail("Email Template/patient/otp.html", { code, name: name || "Patient" },
-                "Verify Your Account", user._id)
+
             const isOtpExist = await Otp.findOne({ phone: contactNumber })
             if (isOtpExist) {
                 await Otp.findByIdAndDelete(isOtpExist._id)
@@ -66,6 +65,8 @@ const signUpPatient = async (req, res) => {
                     passwordHash: hashedPassword
                 },
             )
+            sendPatientEmail("Email Template/patient/otp.html", { code, name: name || "Patient" },
+                "Verify Your Account", user._id)
 
             await Patient.findByIdAndUpdate(newPatient._id, { userId: user._id }, { new: true })
             return res.status(200).json({ success: true, userId: user._id });

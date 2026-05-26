@@ -14,7 +14,6 @@ import TimeSlot from "../../models/TimeSlot.js";
 import mongoose from "mongoose";
 import Country from "../../models/Hospital/Country.js";
 import { assignNH12 } from "../../utils/nh12.js";
-import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 import AuditLog from "../../models/AuditLog.js";
 export const createHospitalDoctor = async (req, res) => {

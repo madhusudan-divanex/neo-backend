@@ -6,7 +6,6 @@ import Staff from "../../models/Hospital/Staff.js";
 import User from "../../models/Hospital/User.js";
 import bcrypt from "bcryptjs";
 import { assignNH12 } from "../../utils/nh12.js";
-import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 
 export const createHospitalStaff = async (req, res) => {
   try {

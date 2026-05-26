@@ -22,7 +22,6 @@ import HospitalImage from "../../models/Hospital/HospitalImage.js";
 import LabAppointment from "../../models/LabAppointment.js";
 import LabPayment from "../../models/LabPayment.js";
 import PaymentInfo from "../../models/PaymentInfo.js";
-import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import Country from "../../models/Hospital/Country.js";
 import { assignNH12 } from "../../utils/nh12.js";
 import LabSample from "../../models/LabSample.js";
@@ -110,7 +109,7 @@ const addTest = async (req, res) => {
                         contactNumber: hospital.contactNumber,
                         gstNumber: basic.gstNumber,
                         about: basic.about,
-                        logo: basic.logoFieldId ? baseUrl + basic.logoFieldId : '',
+                        logo: basic.logoFileId ? baseUrl + basic.logoFileId : '',
                         allowEdit: true,
                         status: basic.kycStatus
                     }], { session });
@@ -343,20 +342,7 @@ const labTestAction = async (req, res) => {
         if (!isExist) return res.status(200).json({ message: "test  not found", success: false })
 
         const testData = await Test.findByIdAndUpdate(testId, { status }, { new: true })
-        if (testData) {
-            if (req.user.id && req.user.type == "hospital") {
-                if (req?.user?.loginUser) {
-                    await HospitalAudit.create({
-                        hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                        note: `A lab test status was updated  .`
-                    })
-                } else {
-                    await HospitalAudit.create({
-                        hospitalId: req.user.id, note: `A lab test  status was updated.`
-                    })
-                }
-            }
-        }
+
         return res.status(200).json({
             success: true,
             message: "Staff status updated"
@@ -517,12 +503,14 @@ const saveReport = async (req, res) => {
             }, { new: true })
             isAppointment.status = "deliver-report"
             await isAppointment.save()
-            if (req?.user?.loginUser && req.user.id && req.user.type == "hospital") {
-                await HospitalAudit.create({
-                    hospitalId: req.user.id, actionUser: req?.user?.loginUser,
-                    note: `An lab report was add in appointment ${isAppointment?.customId} id.`
-                })
-            }
+            await AuditLog.create({
+                orgId: req.user.id || req.user.userId,
+                panel: req.user.type,
+                actorId: req.user.loginUser || req.user.id || req.user.userId,
+                method: 'CREATE',
+                shortDesc: "Lab report added",
+                description: `Lab report added in appointment ${isAppointment?.customId} id.`,
+            })
             return res.status(200).json({
                 success: true,
                 message: "Test report saved successfully"

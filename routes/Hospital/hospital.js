@@ -145,4 +145,5 @@ router.get('/ipd-patient', auth, profile.IpdPatientsList)
 router.get('/transfer-data/:id', profile.getPatientTransferLetter)
 router.get('/staff-all/:id', auth, profile.getHospitalAllStaff)
 router.post('/send-report', authMiddleware, sendReport)
+router.get('/check-patient-ipd/:id', auth, profile.getIsInIpd)
 export default router;

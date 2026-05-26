@@ -17,8 +17,6 @@ import User from '../../models/Hospital/User.js';
 import bcrypt from 'bcryptjs';
 import Doctor from '../../models/Doctor/doctor.model.js';
 import BedAllotment from '../../models/Hospital/BedAllotment.js';
-import HospitalAudit from '../../models/Hospital/HospitalAudit.js';
-import PharmacyAudit from '../../models/Pharmacy/PharmacyAudit.model.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
 import ScheduleMedicines from '../../models/Admin/ScheduleMedicines.js';
 import Country from '../../models/Hospital/Country.js';
@@ -55,12 +53,7 @@ const addInventry = async (req, res) => {
             data.type = 'pharmacy'
         }
         const item = await Inventory.create(data);
-        if (req?.user?.loginUser && data?.hospitalId) {
-            await HospitalAudit.create({
-                hospitalId: data?.hospitalId, actionUser: req?.user?.loginUser,
-                note: `An inventory item ${req?.body?.medicineName} was added.`
-            })
-        }
+
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
             actorId: req.user.loginUser || req.user.id || req.user.userId,
@@ -194,12 +187,7 @@ const inventoryUpdate = async (req, res) => {
             return res.status(200).json({ success: false, message: "Inventory item not found" });
         }
 
-        if (req?.user?.loginUser && isExist?.hospitalId) {
-            await HospitalAudit.create({
-                hospitalId: isExist?.hospitalId, actionUser: req?.user?.loginUser,
-                note: `An inventory item ${req?.body?.medicineName} was updated.`
-            })
-        }
+
         await AuditLog.create({
             orgId: req.user.id || req.user.userId,
             actorId: req.user.loginUser || req.user.id || req.user.userId,
@@ -1034,13 +1022,7 @@ const createReturn = async (req, res) => {
 
         // ✅ Audit log
         const id = req.user.id || req.user.userId;
-        if (id && req.user.type === "pharmacy") {
-            await PharmacyAudit.create([{
-                pharId: id,
-                actionUser: req.user.loginUser || undefined,
-                note: `A new return created for reason ${reason}.`
-            }], { session });
-        }
+
 
         // 🔥 Deduct inventory safely
         for (const p of products) {
@@ -2216,43 +2198,6 @@ export const getPrescriptionMedicine = async (req, res) => {
             message: "Internal Server error",
             success: false
         });
-    }
-};
-export const getAuditLog = async (req, res) => {
-    try {
-        const pharId = req.user.id || req.user.userId;
-
-        // Get page & limit from query (defaults)
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-
-        const skip = (page - 1) * limit;
-
-        // Fetch paginated data
-        const audit = await PharmacyAudit
-            .find({ pharId }).populate('actionUser')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        // Total count for frontend pagination
-        const total = await PharmacyAudit.countDocuments({ pharId });
-
-        res.status(200).json({
-            message: 'Audit fetched successfully',
-            data: audit,
-            success: true,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit)
-            }
-        });
-
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ error: error.message });
     }
 };
 export const getEODSale = async (req, res) => {

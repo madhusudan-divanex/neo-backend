@@ -2,7 +2,6 @@ import BedAllotment from "../../../models/Hospital/BedAllotment.js";
 import HospitalBed from "../../../models/Hospital/HospitalBed.js";
 import HospitalPatient from "../../../models/Hospital/HospitalPatient.js";
 import HospitalDoctor from "../../../models/Hospital/HospitalDoctor.js";
-import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import User from "../../../models/Hospital/User.js";
 import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
 import AuditLog from "../../../models/AuditLog.js";

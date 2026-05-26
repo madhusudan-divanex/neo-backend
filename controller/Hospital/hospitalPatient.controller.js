@@ -8,9 +8,9 @@ import Patient from "../../models/Patient/patient.model.js";
 import PatientDemographic from "../../models/Patient/demographic.model.js";
 import Country from "../../models/Hospital/Country.js";
 import { assignNH12 } from "../../utils/nh12.js";
-import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import Department from "../../models/Department.js";
 import HospitalBed from "../../models/Hospital/HospitalBed.js";
+import AuditLog from "../../models/AuditLog.js";
 
 const generatePatientId = async (hospitalId) => {
   const counter = await Counter.findOneAndUpdate(
@@ -53,12 +53,14 @@ export const addPatient = async (req, res) => {
       if (pt && countryData?.phonecode) {
         await assignNH12(pt._id, countryData?.phonecode)
       }
-      if (req?.user?.loginUser && hospitalId) {
-        await HospitalAudit.create({
-          hospitalId, actionUser: req?.user?.loginUser,
-          note: `A patient ${addPatient} was created.`
-        })
-      }
+      await AuditLog.create({
+        orgId: hospitalId,
+        panel: req.user.type,
+        actorId: req.user.loginUser || hospitalId,
+        method: 'CREATE',
+        shortDesc: "Patient created",
+        description: `Patient details ${name} was created department ${departmentActive?.departmentName} and status ${status}`,
+      })
     }
 
     return res.status(200).json({
@@ -88,21 +90,23 @@ export const admitPatient = async (req, res) => {
     }
     const user = await User.findOne({ _id: patientId, role: "patient" })
     if (!user) return res.status(404).json({ success: false, message: "Patient not found" })
-    const isAlready = await PatientDepartment.findOne({ patientId: patientId,hospitalId, status: "Active" }).populate('departmentId')
+    const isAlready = await PatientDepartment.findOne({ patientId: patientId, hospitalId, status: "Active" }).populate('departmentId')
     if (isAlready) return res.status(200).json({ success: false, message: `Patient already active in ${isAlready?.departmentId?.type}` })
     const department = await Department.findOne({ _id: departmentId, userId: hospitalId })
     if (!department) return res.status(404).json({ success: false, message: "Department not found" })
-    const isBedAvailable=await HospitalBed.findOne({departmentId,hospitalId,status:'Available'})  
-    if(!isBedAvailable){
+    const isBedAvailable = await HospitalBed.findOne({ departmentId, hospitalId, status: 'Available' })
+    if (!isBedAvailable) {
       return res.status(404).json({ success: false, message: "Bed not available in this department" })
     }
     const data = await PatientDepartment.create({ patientId, departmentId, hospitalId, status: "Active" })
-    if (req?.user?.loginUser && hospitalId) {
-      await HospitalAudit.create({
-        hospitalId, actionUser: req?.user?.loginUser,
-        note: `A patient ${user?.name} was added in ${department?.departmentName}.`
-      })
-    }
+    await AuditLog.create({
+      orgId: hospitalId,
+      panel: req.user.type,
+      actorId: req.user.loginUser || hospitalId,
+      method: 'CREATE',
+      shortDesc: "Patient admitted",
+      description: `Patient ${user?.name} was admitted in ${department?.departmentName} department.`,
+    })
     return res.status(200).json({
       success: true,
       message: "Patient added successfully",
@@ -374,7 +378,7 @@ export const getPatientById = async (req, res) => {
 };
 
 export const updatePatient = async (req, res) => {
-  const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact, patientId ,ptDeptId} = req.body
+  const { name, dob, gender, contactNumber, email, department, address, countryId, stateId, cityId, pinCode, status, contact, patientId, ptDeptId } = req.body
   try {
     const hospitalId = req.user._id || req.user.id;
     const patient = await User.findByIdAndUpdate(patientId, { name, email }, { new: true })
@@ -384,9 +388,9 @@ export const updatePatient = async (req, res) => {
         message: "Patient not found"
       });
     }
-    const isAlready=await PatientDepartment.findOne({patientId:patient?._id,departmentId:{$ne:department},hospitalId,status:"Active"}).populate('departmentId','type')
-    if(status=="Active" && isAlready){
-      return res.status(200).json({message:`Patient already active in ${isAlready?.departmentId?.type}`,success:false})
+    const isAlready = await PatientDepartment.findOne({ patientId: patient?._id, departmentId: { $ne: department }, hospitalId, status: "Active" }).populate('departmentId', 'type')
+    if (status == "Active" && isAlready) {
+      return res.status(200).json({ message: `Patient already active in ${isAlready?.departmentId?.type}`, success: false })
     }
     const departmentActive = await Department.findById(department)
     if (departmentActive && !departmentActive?.status) {
@@ -394,22 +398,24 @@ export const updatePatient = async (req, res) => {
     }
     await Patient.findByIdAndUpdate(patient.patientId, { name, gender, contactNumber, email }, { new: true })
     await PatientDemographic.findOneAndUpdate({ userId: patient.patientId }, { dob, contact, address, pinCode, countryId, stateId, cityId }, { new: true })
-    if(ptDeptId){
-      const isExist = await PatientDepartment.findByIdAndUpdate(ptDeptId,{status},{new:true})
+    if (ptDeptId) {
+      const isExist = await PatientDepartment.findByIdAndUpdate(ptDeptId, { status }, { new: true })
       // if (isExist) {
       //   const de=await PatientDepartment.find({ patientId: patient._id, hospitalId }, { departmentId: department, status }, { new: true })
-        
+
       // } else {
       //   await PatientDepartment.create({ patientId: patient._id, hospitalId, departmentId: department, status })
       // }
 
     }
-    if (req?.user?.loginUser && hospitalId) {
-      await HospitalAudit.create({
-        hospitalId, actionUser: req?.user?.loginUser,
-        note: `A patient ${name} was updated.`
-      })
-    }
+    await AuditLog.create({
+      orgId: hospitalId,
+      panel: req.user.type,
+      actorId: req.user.loginUser || hospitalId,
+      method: 'UPDATE',
+      shortDesc: "Patient details updated",
+      description: `Patient details ${name} was updated department ${departmentActive?.departmentName} and status ${status}`,
+    })
     res.json({
       success: true,
       message: "Patient updated successfully",

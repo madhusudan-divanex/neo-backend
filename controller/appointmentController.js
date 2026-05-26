@@ -16,7 +16,7 @@ import Prescriptions from "../models/Prescriptions.js";
 import Rating from "../models/Rating.js";
 import TestReport from "../models/testReport.js";
 import { sendPush } from "../utils/sendPush.js";
-import HospitalAudit from "../models/Hospital/HospitalAudit.js";
+
 import DoctorAptPayment from "../models/DoctoAptPayment.js";
 import PaymentInfo from "../models/PaymentInfo.js";
 import StaffEmployement from "../models/Staff/StaffEmployement.js";
@@ -273,7 +273,7 @@ const actionDoctorAppointment = async (req, res) => {
 
         const update = await DoctorAppointment.findByIdAndUpdate(appointmentId, { status, note }, { new: true })
         const isUser = await User.findById(update.patientId)
-        if (isPatient.hospitalId && status == "completed") {
+        if (isPatient.hospitalId && (status == "completed" || status == "rejected")) {
             const ptDept = await PatientDepartment.findOneAndUpdate({
                 departmentId: isPatient.department,
                 patientId: isPatient.patientId, status: 'Active', hospitalId: isPatient.hospitalId

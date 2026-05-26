@@ -1,32 +1,52 @@
+import AuditLog from "../models/AuditLog.js"
 import Department from "../models/Department.js"
 
-async function createDepartment(req,res) {
-    const userId=req.user.id || req.user.userId
+async function createDepartment(req, res) {
+    const userId = req.user.id || req.user.userId
     try {
-        const {departmentName,type,headOfDepartment,employees,otherData}=req.body
-        const deptData=await Department.create({userId,departmentName,type,headOfDepartment,employees,
-            otherData:(type=="IPD" || type=="OPD")?otherData:{floorId:null,roomId:null}})
-        if(deptData){
-            return res.status(200).json({message:"Department created",success:true})
+        const { departmentName, type, headOfDepartment, employees, otherData } = req.body
+        const deptData = await Department.create({
+            userId, departmentName, type, headOfDepartment, employees,
+            otherData: (type == "IPD" || type == "OPD") ? otherData : { floorId: null, roomId: null }
+        })
+        if (deptData) {
+            await AuditLog.create({
+                orgId: userId,
+                actorId: req.user.loginUser || userId,
+                panel: req.user.type,
+                method: "CREATE",
+                shortDesc: "Department Created",
+                description: `New Department ${departmentName} created .`
+            })
+            return res.status(200).json({ message: "Department created", success: true })
         }
-        return res.status(400).json({message:"Department not created",success:false}) 
+        return res.status(400).json({ message: "Department not created", success: false })
     } catch (error) {
-        return res.status(200).json({message:error?.message,success:false})
+        return res.status(200).json({ message: error?.message, success: false })
     }
 }
-async function updateDepartment(req,res) {
-    const userId=req.user.id || req.user.userId
+async function updateDepartment(req, res) {
+    const userId = req.user.id || req.user.userId
     try {
-        const {departmentId,departmentName,type,headOfDepartment,employees,otherData}=req.body
-        const deptData=await Department.findByIdAndUpdate(departmentId,{userId,departmentName,type,headOfDepartment,employees,
-            otherData:(type=="IPD" || type=="OPD")?otherData:{floorId:null,roomId:null}
-        },{new:true})
-        if(deptData){
-            return res.status(200).json({message:"Department updated",success:true})
+        const { departmentId, departmentName, type, headOfDepartment, employees, otherData } = req.body
+        const deptData = await Department.findByIdAndUpdate(departmentId, {
+            userId, departmentName, type, headOfDepartment, employees,
+            otherData: (type == "IPD" || type == "OPD") ? otherData : { floorId: null, roomId: null }
+        }, { new: true })
+        if (deptData) {
+            await AuditLog.create({
+                orgId: userId,
+                actorId: req.user.loginUser || userId,
+                panel: req.user.type,
+                method: "UPDATE",
+                shortDesc: "Department Updated",
+                description: `Department ${departmentName} updated .`
+            })
+            return res.status(200).json({ message: "Department updated", success: true })
         }
-        return res.status(400).json({message:"Department not updated",success:false}) 
+        return res.status(400).json({ message: "Department not updated", success: false })
     } catch (error) {
-        return res.status(200).json({message:error?.message,success:false})
+        return res.status(200).json({ message: error?.message, success: false })
     }
 }
 async function getDepartment(req, res) {
@@ -51,7 +71,7 @@ async function getDepartment(req, res) {
         const skip = (page - 1) * limit;
 
         // Fetch data with pagination
-        const deptData = await Department.find(filter).sort({createdAt:-1}).populate("headOfDepartment","name")
+        const deptData = await Department.find(filter).sort({ createdAt: -1 }).populate("headOfDepartment", "name")
             .skip(skip)
             .limit(limit);
 
@@ -74,4 +94,4 @@ async function getDepartment(req, res) {
         return res.status(500).json({ message: error?.message, success: false });
     }
 }
-export {getDepartment,createDepartment,updateDepartment}
+export { getDepartment, createDepartment, updateDepartment }

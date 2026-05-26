@@ -21,7 +21,6 @@ import { capitalizeFirst } from "../../utils/globalFunction.js";
 import Notification from "../../models/Notifications.js";
 import PaymentInfo from "../../models/PaymentInfo.js";
 import EditRequest from "../../models/EditRequest.js";
-import HospitalAudit from "../../models/Hospital/HospitalAudit.js";
 import PatientDepartment from "../../models/Hospital/PatientDepartment.js";
 import Department from "../../models/Department.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
@@ -1240,5 +1239,19 @@ export const getHospitalAllStaff = async (req, res) => {
       success: false,
       message: err.message
     });
+  }
+}
+export const getIsInIpd = async (req, res) => {
+  const id = req.params.id
+  try {
+    const dept = await Department.find({ userId: req.user.id, type: "IPD" })
+    const depId = dept.map((item) => item._id)
+    const ptDept = await PatientDepartment.findOne({ patientId: id, departmentId: { $in: depId }, status: 'Active' })
+    if (!ptDept) {
+      return res.status(200).json({ message: "Patient is not in Ipd", success: false })
+    }
+    return res.status(200).json({ message: "Patient is in Ipd", success: true, data: ptDept })
+  } catch (error) {
+    return res.status(500).json({ message: error?.message, success: false })
   }
 }

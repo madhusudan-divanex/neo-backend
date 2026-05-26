@@ -43,32 +43,33 @@ export const saveBasic = async (req, res) => {
     await hospital.save();
     if (hospital) {
       const baseUrl = `api/file/`;
-      if(req.body.country){
-        const {state,city,pinCode,fullAddress}=req.body
-        await HospitalAddress.findOneAndUpdate({hospitalId:hospital?._id},{country:req.body.country,state,city,pinCode,fullAddress},{new:true,upsert:true})
-        const countryData=await Country.findById(req.body.country)
-        await assignNH12(userId,countryData?.phonecode)
+      if (req.body.country) {
+        const { state, city, pinCode, fullAddress } = req.body
+        await HospitalAddress.findOneAndUpdate({ hospitalId: hospital?._id }, { country: req.body.country, state, city, pinCode, fullAddress }, { new: true, upsert: true })
+        const countryData = await Country.findById(req.body.country)
+        await assignNH12(userId, countryData?.phonecode)
       }
       await User.findByIdAndUpdate(userId, { name: basic.hospitalName, email: basic.email, contactNumber: basic.mobileNo }, { new: true })
       await Laboratory.findOneAndUpdate({ userId: userId }, {
-        name: basic.hospitalName,
-        email: basic.email,
-        contactNumber: basic.mobileNo,
-        gstNumber: basic.gstNumber,
-        about: basic.about,
-        logo: basic.logoFieldId ? baseUrl + basic.logoFieldId : null,
+        name: hospital?.hospitalName,
+        email: hospital?.email,
+        contactNumber: hospital?.mobileNo,
+        gstNumber: hospital?.gstNumber,
+        about: hospital?.about,
+        logo: hospital.logoFileId ? baseUrl + hospital.logoFileId : null,
       }, { new: true })
     }
-    const hospitalUser=await User.findOne({hospitalId:hospital?._id})
-    res.json({ message: "Basic details saved", hospital,success:true ,
+    const hospitalUser = await User.findOne({ hospitalId: hospital?._id })
+    res.json({
+      message: "Basic details saved", hospital, success: true,
       user: {
-          id: hospitalUser._id,
-          name: hospitalUser.name,
-          email: hospitalUser.email,
-          contactNumber: hospitalUser.contactNumber,
-          role: hospitalUser.role,
-          created_by_id: hospitalUser.created_by_id
-        }
+        id: hospitalUser._id,
+        name: hospitalUser.name,
+        email: hospitalUser.email,
+        contactNumber: hospitalUser.contactNumber,
+        role: hospitalUser.role,
+        created_by_id: hospitalUser.created_by_id
+      }
     });
   } catch (err) {
     console.log(err)

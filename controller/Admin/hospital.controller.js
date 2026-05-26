@@ -7,6 +7,11 @@ import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
 import User from "../../models/Hospital/User.js";
 import DoctorAbout from "../../models/Doctor/addressAbout.model.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
+import DoctorAppointment from "../../models/DoctorAppointment.js";
+import LabAppointment from "../../models/LabAppointment.js";
+import Department from "../../models/Department.js";
+import BedAllotment from "../../models/Hospital/BedAllotment.js";
+import HospitalPatient from "../../models/Hospital/HospitalPatient.js";
 
 
 
@@ -389,6 +394,157 @@ export const getHospitalDoctors = async (req, res) => {
     res.status(500).json({
       success: false,
       message: err.message,
+    });
+  }
+};
+
+export const getHospitalDocApt = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { page, limit, } = req.query;
+
+    const apt = await DoctorAppointment.find({ hospitalId: id })
+      .sort({ date: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate({ path: "patientId", select: "name email nh12 contactNumber patientId", populate: { path: "patientId", select: "profileImage" } })
+      .populate({ path: "doctorId", select: "name email nh12 contactNumber doctorIdId", populate: { path: "doctorId", select: "profileImage" } })
+      .populate('department', 'departmentName')
+
+    const total = await DoctorAppointment.countDocuments({ hospitalId: id });
+
+    return res.json({ message: "Appointment fetched successfully", success: true, data: apt, total, totalPages: Math.ceil(total / limit), currentPage: page })
+  } catch (error) {
+    return res.status(500).json({ message: error?.message, success: false })
+  }
+}
+export const getHospitalLabApt = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { page, limit, } = req.query;
+
+    const apt = await LabAppointment.find({ labId: id })
+      .sort({ date: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate({ path: "patientId", select: "name email nh12 contactNumber patientId", populate: { path: "patientId", select: "profileImage" } })
+      .populate({ path: "tests.subCat.subCatId", select: "subCategory" })
+
+
+    const total = await LabAppointment.countDocuments({ labId: id });
+
+    return res.json({ message: "Appointment fetched successfully", success: true, data: apt, total, totalPages: Math.ceil(total / limit), currentPage: page })
+  } catch (error) {
+    return res.status(500).json({ message: error?.message, success: false })
+  }
+}
+export const getAllotmentHistory = async (req, res) => {
+  const { id } = req.params;
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    let filter = { hospitalId: id };
+
+
+    let query = BedAllotment.find(filter)
+      .populate({
+        path: "patientId",
+        select: "name email nh12 contactNumber",
+        populate: { path: "patientId", select: "profileImage" }
+      })
+      .populate({
+        path: "primaryDoctorId",
+        select: "name nh12 contactNumber",
+        populate: { path: "doctorId", select: "profileImage" }
+      })
+      .populate("dischargeId", "createdAt").populate('departmentId', 'departmentName')
+      .populate({
+        path: "bedId",
+        populate: [
+          {
+            path: "floorId",
+            select: "floorName",
+          },
+          { path: "roomId", select: "roomName" }
+        ]
+      })
+      .populate("attendingStaff.staffId", "name")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const totalRecords = await BedAllotment.countDocuments(filter);
+    let allotment = await query.exec();
+
+    if (!allotment.length) {
+      return res.status(200).json({
+        success: false,
+        message: "No allotment history found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: allotment,
+      pagination: {
+        totalRecords,
+        currentPage: page,
+        totalPages: Math.ceil(totalRecords / limit),
+        limit
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to load allotment"
+    });
+  }
+};
+export const getAllotmentDetails = async (req, res) => {
+  try {
+    const allotment = await BedAllotment.findById(req.params.id)
+      .populate("patientId", "name email contactNumber nh12")
+      .populate("primaryDoctorId", "name contactNumber nh12")
+      .populate({ path: 'labAppointment', populate: [{ path: 'tests.subCat.subCatId', select: 'subCategory' }] })
+      .populate('departmentId', 'departmentName')
+      .populate({
+        path: "bedId",
+        populate: [
+          { path: "floorId", select: "floorName" },
+          { path: "roomId", select: "roomName" }
+        ]
+      })
+      .populate("attendingStaff.staffId", "name nh12");
+
+    if (!allotment) {
+      return res.status(404).json({
+        success: false,
+        message: "Allotment not found"
+      });
+    }
+
+    const hospitalPatient = await HospitalPatient.findOne({
+      user_id: allotment.patientId._id
+    });
+
+    const response = allotment.toObject();
+    response.hospitalPatient = hospitalPatient || null;
+
+    res.json({
+      success: true,
+      data: response
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to load allotment"
     });
   }
 };

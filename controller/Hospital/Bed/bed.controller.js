@@ -14,7 +14,6 @@ import PatientDemographic from "../../../models/Patient/demographic.model.js";
 import Patient from '../../../models/Patient/patient.model.js'
 import HospitalBasic from "../../../models/Hospital/HospitalBasic.js";
 import HospitalAddress from "../../../models/Hospital/HospitalAddress.js";
-import HospitalAudit from "../../../models/Hospital/HospitalAudit.js";
 import StaffEmployement from "../../../models/Staff/StaffEmployement.js";
 import PatientDepartment from "../../../models/Hospital/PatientDepartment.js";
 import sendPatientEmail, { sendHospitalEmail } from "../../../utils/sendTemplateEmail.js";
@@ -237,7 +236,7 @@ export const deleteBed = async (req, res) => {
   }
 };
 export const getAllotmentHistory = async (req, res) => {
-  const { id } = req.params;
+  const id = req.user.id || req.user.userId;
 
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
