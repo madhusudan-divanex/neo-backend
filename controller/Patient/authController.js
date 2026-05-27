@@ -491,7 +491,7 @@ const updatePatient = async (req, res) => {
         }
         const updatePatient = await Patient.findByIdAndUpdate(isExist.patientId, { email, contactNumber, name, gender, profileImage }, { new: true })
         if (updatePatient) {
-            await User.findOneAndUpdate({ patientId: userId }, { name, email, contactNumber }, { new: true })
+            await User.findByIdAndUpdate(userId, { name, email, contactNumber }, { new: true })
             return res.status(200).json({ message: "Patient data change successfully", userId: isExist._id, success: true })
         } else {
             return res.status(200).json({ message: "Error occure in user data", success: false })

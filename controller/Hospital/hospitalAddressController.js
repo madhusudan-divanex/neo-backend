@@ -16,8 +16,8 @@ export const saveAddress = async (req, res) => {
       address = new HospitalAddress({
         hospitalId: req.user.created_by_id
       });
-      const countrData=await Country.findById(req.body.country)
-      await assignNH12(userId,countrData.phonecode)
+      const countrData = await Country.findById(req.body.country)
+      await assignNH12(userId, countrData.phonecode)
     }
 
     Object.assign(address, req.body);
@@ -25,14 +25,16 @@ export const saveAddress = async (req, res) => {
     await address.save();
 
     if (address) {
-      const user=await User.findById(userId)
-      await LabAddress.findOneAndUpdate({userId:userId}, {
+      const user = await User.findById(userId)
+      await LabAddress.findOneAndUpdate({ userId: userId }, {
         fullAddress: addressData.fullAddress,
         cityId: addressData.city,
         stateId: addressData.state,
         countryId: addressData.country,
-        pinCode: addressData.pinCode
-      }, { new: true ,})
+        pinCode: addressData.pinCode,
+        lat: addressData?.lat,
+        long: addressData?.long,
+      }, { new: true, })
     }
 
     res.json({ message: "Address saved", address });

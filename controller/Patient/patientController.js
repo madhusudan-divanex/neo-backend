@@ -24,6 +24,7 @@ import HospitalAddress from "../../models/Hospital/HospitalAddress.js";
 import PharAddress from "../../models/Pharmacy/pharmacyAddress.model.js";
 import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import Pharmacy from "../../models/Pharmacy/pharmacy.model.js";
+import Country from "../../models/Hospital/Country.js";
 
 
 async function favoriteController(req, res) {
@@ -805,30 +806,150 @@ const getNearByDoctor = async (req, res) => {
       }
 
       // Fetch doctors who have lat/long
-      const doctorsWithLocation = await DoctorAbout.find({
-        lat: { $ne: null },
-        long: { $ne: null }
-      })
-        .populate("cityId", "name state country").populate('specialty')
-        .populate({
-          path: "userId",
-          select: "-passwordHash",
-          populate: "doctorId"
-        })
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean();
+      const doctorsWithLocation =
+        await DoctorAbout.aggregate([
 
-      // Filter doctors within given distance
-      doctors = doctorsWithLocation.filter(doc => {
-        const dist = getDistanceInKm(
-          Number(lat),
-          Number(long),
-          Number(doc.lat),
-          Number(doc.long)
-        );
-        return dist <= Number(distance);
-      });
+          {
+            $geoNear: {
+
+              near: {
+
+                type: "Point",
+
+                coordinates: [
+                  Number(long),
+                  Number(lat)
+                ]
+              },
+
+              distanceField: "distance",
+
+              spherical: true,
+
+              query: {
+                location: {
+                  $exists: true
+                }
+              }
+            }
+          },
+
+          {
+            $skip: (page - 1) * limit
+          },
+
+          {
+            $limit: Number(limit)
+          },
+
+          /* city */
+
+          {
+            $lookup: {
+
+              from: "cities",
+
+              localField: "cityId",
+
+              foreignField: "_id",
+
+              pipeline: [
+                {
+                  $project: {
+                    name: 1,
+                    state: 1,
+                    country: 1
+                  }
+                }
+              ],
+
+              as: "cityId"
+            }
+          },
+
+          {
+            $unwind: {
+              path: "$cityId",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+
+          /* specialty */
+
+          {
+            $lookup: {
+
+              from: "specialities",
+
+              localField: "specialty",
+
+              foreignField: "_id",
+
+              as: "specialty"
+            }
+          },
+
+          {
+            $unwind: {
+              path: "$specialty",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+
+          /* user */
+
+          {
+            $lookup: {
+
+              from: "users",
+
+              localField: "userId",
+
+              foreignField: "_id",
+
+              pipeline: [
+
+                {
+                  $project: {
+                    passwordHash: 0
+                  }
+                }
+              ],
+
+              as: "userId"
+            }
+          },
+
+          {
+            $unwind: {
+              path: "$userId",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+
+          /* doctor */
+
+          {
+            $lookup: {
+
+              from: "doctors",
+
+              localField: "userId.doctorId",
+
+              foreignField: "_id",
+
+              as: "userId.doctorId"
+            }
+          },
+
+          {
+            $unwind: {
+              path: "$userId.doctorId",
+              preserveNullAndEmptyArrays: true
+            }
+          }
+        ]);
+      doctors = doctorsWithLocation
     }
 
     return res.status(200).json({
@@ -946,6 +1067,35 @@ const getTopUsers = async (req, res) => {
     });
   }
 };
+const getSearchCity = async (req, res) => {
+  const { name, page, limit } = req.query
+  try {
+    const country = await Country.findOne({ name: "India" })
+    const city = await City.find({
+      name: { $regex: name, $options: "i" },
+      countryCode: country.isoCode,
+
+    }).skip((page - 1) * limit).limit(limit)
+
+    return res.status(200).json({
+      message: "City fetched successfully",
+      success: true,
+      data: city,
+      pagination: {
+        total: city.length,
+        page,
+        limit,
+        totalPages: Math.ceil(city.length / limit)
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+}
 
 const getTopUserByCategory = async (req, res) => {
   let { catType, catId, page = 1, limit = 10 } = req.query;
@@ -1141,7 +1291,7 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
 };
 
 export {
-  getTopUsers, getTopUserByCategory,
+  getTopUsers, getTopUserByCategory, getSearchCity,
   favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients, getNearByDoctor,
 
 }

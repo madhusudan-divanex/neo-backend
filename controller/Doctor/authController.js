@@ -744,12 +744,23 @@ const doctorAbout = async (req, res) => {
         if (!user) return res.status(200).json({ message: "User not found", success: false })
         const countryData = await Country.findById(countryId)
         const cityData = await City.findById(cityId)
-        const finalLat = (lat !== undefined && lat !== null) ? lat : cityData?.latitude;
-        const finalLong = (long !== undefined && long !== null) ? long : cityData?.longitude;
+        const finalLat =
+            (lat !== undefined && lat !== null)
+                ? Number(lat)
+                : Number(cityData?.latitude);
+
+        const finalLong =
+            (long !== undefined && long !== null)
+                ? Number(long)
+                : Number(cityData?.longitude);
         const data = await DoctorAbout.findOne({ userId });
+        const location = {
+            type: "Point",
+            coordinates: [finalLong, finalLat]
+        };
         if (data) {
             // await assignNH12(userId,countryData.phonecode)
-            await DoctorAbout.findByIdAndUpdate(data._id, { hospitalName, clinic, lat: finalLat, long: finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou }, { new: true })
+            await DoctorAbout.findByIdAndUpdate(data._id, { hospitalName, clinic, location, lat: finalLat, long: finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou }, { new: true })
             return res.status(200).json({
                 success: true,
                 message: "About data update successfully",
@@ -758,7 +769,7 @@ const doctorAbout = async (req, res) => {
             if (countryData?.phonecode) {
                 await assignNH12(userId, countryData?.phonecode)
             }
-            await DoctorAbout.create({ hospitalName, clinic, lat: finalLat, long: finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou, userId })
+            await DoctorAbout.create({ hospitalName, clinic, location, lat: finalLat, long: finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou, userId })
             await sendWelcomeEmail(userId)
             return res.status(200).json({
                 success: true,
@@ -1164,94 +1175,328 @@ const getCustomProfile = async (req, res) => {
 const getDoctors = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-    const { name, specialty, language, fees, rating, sortBy } = req.query;
+
+    const {
+        name,
+        specialty,
+        language,
+        fees,
+        rating,
+        sortBy,
+        lat,
+        lng, location
+    } = req.query;
 
     try {
+
         const specialties = specialty ? specialty.split(',') : [];
         const languages = language ? language.split(',') : [];
         const minRating = rating ? Number(rating) : 0;
-        const feesRange = fees ? fees.split('_') : [];
-        const minFees = feesRange[0] !== undefined ? Number(feesRange[0]) : null;
-        const maxFees = feesRange[1] !== undefined ? Number(feesRange[1]) : null;
 
-        /* ===== STEP 1: DoctorAbout filters + sort ===== */
-        const aboutFilter = {};
-        if (specialties.length) aboutFilter.specialty = { $in: specialties };
-        if (languages.length) aboutFilter.language = { $in: languages };
+        const feesRange = fees ? fees.split('_') : [];
+
+        const minFees = feesRange[0]
+            ? Number(feesRange[0])
+            : null;
+
+        const maxFees = feesRange[1]
+            ? Number(feesRange[1])
+            : null;
+
+        /* ---------------- GEO FILTER ---------------- */
+
+        const geoPipeline = [];
+
+        // location based sorting
+        if (lat && lng) {
+
+            geoPipeline.push({
+                $geoNear: {
+                    near: {
+                        type: "Point",
+                        coordinates: [Number(lng), Number(lat)]
+                    },
+
+                    distanceField: "distance",
+
+                    spherical: true,
+                    query: {
+                        location: { $exists: true }
+                    }
+                }
+            });
+        }
+
+        if (location) {
+            geoPipeline.push({
+
+                $match: {
+                    cityId: new mongoose.Types.ObjectId(location)
+                }
+            });
+
+        }
+        /* ---------------- FILTERS ---------------- */
+
+        const matchFilter = {};
+
+        if (specialties.length) {
+            matchFilter.specialty = { $in: specialties };
+        }
+
+        if (languages.length) {
+            matchFilter.language = { $in: languages };
+        }
+
         if (minFees !== null || maxFees !== null) {
-            aboutFilter.fees = {
+            matchFilter.fees = {
                 ...(minFees !== null && { $gte: minFees }),
-                ...(maxFees !== null && { $lte: maxFees }),
+                ...(maxFees !== null && { $lte: maxFees })
             };
         }
 
-        const sortOption = sortBy === 'lowToHigh' ? { fees: 1 }
-            : sortBy === 'highToLow' ? { fees: -1 }
-                : { createdAt: -1 };  // default sort
+        if (Object.keys(matchFilter).length) {
+            geoPipeline.push({
+                $match: matchFilter
+            });
+        }
 
-        const matchedAbouts = await DoctorAbout.find(aboutFilter)
-            .sort(sortOption)
-            .populate('countryId stateId cityId specialty', 'name')
-            .lean();
+        /* ---------------- SORT ---------------- */
 
-        // Sorted order mein userIds — yahi final order hoga
-        const sortedUserIds = matchedAbouts.map(a => a.userId.toString());
+        // agar location hai to nearest already sorted hoga
+        // warna old sorting
 
-        /* ===== STEP 2: User filter (no sort, no pagination yet) ===== */
-        const userFilter = {
-            role: 'doctor',
-            fcmToken: { $ne: null },
-            _id: { $in: sortedUserIds }
-        };
-        if (name) userFilter.name = { $regex: name, $options: 'i' };
+        if (!lat || !lng) {
 
-        const users = await User.find(userFilter)
-            .select('name email contactNumber doctorId')
-            .populate('doctorId', 'profileImage rating')
-            .lean();  // ← koi sort nahi, order baad mein lagayenge
+            let sortOption = { createdAt: -1 };
 
-        /* ===== STEP 3: Maps banao ===== */
-        const aboutMap = {};
-        matchedAbouts.forEach(a => {
-            aboutMap[a.userId.toString()] = a;
+            if (sortBy === "lowToHigh") {
+                sortOption = { fees: 1 };
+            }
+
+            if (sortBy === "highToLow") {
+                sortOption = { fees: -1 };
+            }
+
+            geoPipeline.push({
+                $sort: sortOption
+            });
+        }
+
+        /* ---------------- POPULATE ---------------- */
+
+        geoPipeline.push({
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1,
+                            role: 1,
+                            fcmToken: 1,
+                            doctorId: 1,
+                        }
+                    }
+                ],
+                as: "user"
+            }
         });
 
-        const userMap = {};
-        users.forEach(u => {
-            userMap[u._id.toString()] = u;
+        geoPipeline.push({
+            $unwind: "$user"
         });
 
-        /* ===== STEP 4: DoctorAbout ka sorted order restore karo ===== */
-        const mergedData = sortedUserIds
-            .map(id => {
-                const user = userMap[id];
-                if (!user) return null;  // name filter mein remove hua hoga
-                return {
-                    ...user,
-                    doctorAddress: aboutMap[id] || null,
-                    avgRating: user?.doctorId?.rating || 0,
-                };
-            })
-            .filter(Boolean)
-            .filter(doc => doc.avgRating >= minRating);  // rating filter
+        geoPipeline.push({
+            $match: {
+                "user.role": "doctor",
+                "user.fcmToken": { $ne: null },
 
-        /* ===== STEP 5: Ab pagination manually lagao ===== */
-        const total = mergedData.length;
-        const finalData = mergedData.slice((page - 1) * limit, page * limit);
+                ...(name && {
+                    "user.name": {
+                        $regex: name,
+                        $options: "i"
+                    }
+                })
+            }
+        });
+
+        geoPipeline.push({
+            $lookup: {
+                from: "doctors",
+                localField: "user.doctorId",
+                foreignField: "_id",
+                as: "doctorProfile"
+            }
+        });
+
+        geoPipeline.push({
+            $unwind: {
+                path: "$doctorProfile",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+        geoPipeline.push({
+            $addFields: {
+                avgRating: {
+                    $ifNull: ["$doctorProfile.rating", 0]
+                }
+            }
+        });
+
+        geoPipeline.push({
+            $match: {
+                avgRating: { $gte: minRating }
+            }
+        });
+        geoPipeline.push({
+            $lookup: {
+                from: "countries",
+                localField: "countryId",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+                as: "countryData"
+            }
+        });
+
+        geoPipeline.push({
+            $unwind: {
+                path: "$countryData",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+        geoPipeline.push({
+            $lookup: {
+                from: "states",
+                localField: "stateId",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+                as: "stateId"
+            }
+        });
+
+        geoPipeline.push({
+            $unwind: {
+                path: "$stateId",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+
+        geoPipeline.push({
+            $lookup: {
+                from: "cities",
+                localField: "cityId",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+                as: "cityId"
+            }
+        });
+
+        geoPipeline.push({
+            $unwind: {
+                path: "$cityId",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+        geoPipeline.push({
+            $lookup: {
+                from: "specialities",
+                localField: "specialty",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+                as: "specialty"
+            }
+        });
+
+        geoPipeline.push({
+            $unwind: {
+                path: "$specialty",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+        /* ---------------- PAGINATION ---------------- */
+
+        const totalData = await DoctorAbout.aggregate(geoPipeline);
+
+        geoPipeline.push({
+            $skip: (page - 1) * limit
+        });
+
+        geoPipeline.push({
+            $limit: limit
+        });
+
+        const doctors = await DoctorAbout.aggregate(geoPipeline);
+
+        /* ---------------- RESPONSE ---------------- */
+        console.log(doctors)
+        const finalData = doctors.map(item => ({
+            _id: item.user._id,
+            name: item.user.name,
+            email: item.user.email,
+            contactNumber: item.user.contactNumber,
+
+            doctorId: item.user.doctorId,
+
+            profileImage: item.doctorProfile?.profileImage || null,
+
+            avgRating: item.avgRating,
+
+            doctorAddress: item,
+
+            distanceInKm: item.distance
+                ? (item.distance / 1000).toFixed(2)
+                : null
+        }));
 
         return res.status(200).json({
             success: true,
+
             data: finalData,
+
             pagination: {
-                total,
-                totalPage: Math.ceil(total / limit),
+                total: totalData.length,
+                totalPage: Math.ceil(totalData.length / limit),
                 currentPage: page
             }
         });
 
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ success: false, message: err.message });
+
+        console.log(err);
+
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 };
 const getDoctorData = async (req, res) => {

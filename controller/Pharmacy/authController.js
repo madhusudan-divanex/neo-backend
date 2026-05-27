@@ -649,7 +649,7 @@ const getPharData = async (req, res) => {
 
         // 2️⃣ Fetch latest related documents
         // const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
-        const pharAddress = await PharAddress.findOne({ userId }).select('fullAddress').sort({ createdAt: -1 });
+        const pharAddress = await PharAddress.findOne({ userId }).select('fullAddress lat long location').sort({ createdAt: -1 });
         const pharImg = await PharImage.findOne({ userId }).select('thumbnail').sort({ createdAt: -1 });
         const pharLicense = await PharLicense.findOne({ userId }).select('pharCert pharLicenseNumber licenseFile').sort({ createdAt: -1 });
         // const isRequest = Boolean(await EditRequest.exists({ pharId: userId }))
@@ -737,12 +737,23 @@ const pharAddress = async (req, res) => {
         const data = await PharAddress.findOne({ userId });
         const countryData = await Country.findById(countryId)
         const cityData = await City.findById(cityId)
-        const finalLat = (lat !== undefined && lat !== null) ? lat : cityData?.latitude;
-        const finalLong = (long !== undefined && long !== null) ? long : cityData?.longitude;
+        const finalLat =
+            (lat !== undefined && lat !== null)
+                ? Number(lat)
+                : Number(cityData?.latitude);
+
+        const finalLong =
+            (long !== undefined && long !== null)
+                ? Number(long)
+                : Number(cityData?.longitude);
+        const location = {
+            type: "Point",
+            coordinates: [finalLong, finalLat]
+        };
         if (data) {
             await PharAddress.findByIdAndUpdate(data._id, {
                 fullAddress, countryId, lat: finalLat,
-                long: finalLong,
+                long: finalLong, location,
                 stateId, cityId, pinCode, userId
             }, { new: true })
             return res.status(200).json({
@@ -753,7 +764,7 @@ const pharAddress = async (req, res) => {
             await assignNH12(userId, countryData?.phonecode)
             await PharAddress.create({
                 fullAddress, countryId, stateId, cityId, pinCode, lat: finalLat,
-                long: finalLong,
+                long: finalLong, location,
                 userId
             })
             return res.status(200).json({
@@ -1056,83 +1067,240 @@ const deletePharImage = async (req, res) => {
 const getPharmacy = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-    const name = req.query.name
-
+    const { name, lat, long, location } = req.query;
     try {
-        const filter = { role: { $in: ['pharmacy'] } }
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
+        /* =======================================================
+           PIPELINE
+        ======================================================= */
+
+        const pipeline = [];
+        /* ================= GEO NEAR ================= */
+
+        if (lat && long) {
+            pipeline.push({
+                $geoNear: {
+                    near: {
+                        type: "Point",
+                        coordinates: [
+                            Number(long),
+                            Number(lat)
+                        ]
+                    },
+                    distanceField: "distance",
+                    spherical: true,
+                    query: {
+                        location: { $exists: true }
+                    }
+                }
+            });
         }
-        // 1️⃣ Fetch pharmacy users
-        const users = await User.find(filter)
-            .select('-passwordHash')
-            .populate('pharId')
-            .limit(limit)
-            .skip((page - 1) * limit)
-            .lean();
+        if (location) {
+            pipeline.push({
 
-        const pharIds = users.map(u => u._id);
+                $match: {
+                    cityId: new mongoose.Types.ObjectId(location)
+                }
+            });
 
-        // 2️⃣ Fetch addresses
-        const pharAddresses = await PharAddress.find({
-            userId: { $in: pharIds }
-        })
-            .populate('countryId stateId cityId', 'name')
-            .lean();
+        }
 
-        const addressMap = {};
-        pharAddresses.forEach(addr => {
-            addressMap[addr.userId.toString()] = addr;
+        /* ================= USER LOOKUP ================= */
+
+        pipeline.push({
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1,
+                            nh12: 1,
+                            email: 1,
+                            pharId: 1,
+                            role: 1,
+                        }
+                    }
+                ],
+                as: "user"
+            }
         });
 
-        // 3️⃣ Fetch rating stats (AVG + COUNT)
+        pipeline.push({
+            $unwind: "$user"
+        });
+
+        /* ================= FILTER ================= */
+
+        const matchFilter = {
+            "user.role": "pharmacy"
+        };
+
+        if (name) {
+            matchFilter["user.name"] = {
+                $regex: name,
+                $options: "i"
+            };
+        }
+
+        pipeline.push({
+            $match: matchFilter
+        });
+
+        /* ================= PHARMACY LOOKUP ================= */
+
+        pipeline.push({
+            $lookup: {
+                from: "pharmacies",
+                localField: "user.pharId",
+                foreignField: "_id",
+                pipeline: [
+                    {
+                        $project: {
+                            logo: 1,
+                            name: 1,
+                        }
+                    }
+                ],
+                as: "pharmacy"
+            }
+        });
+
+        pipeline.push({
+            $unwind: {
+                path: "$pharmacy",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+        /* ================= DEFAULT SORT ================= */
+
+        if (!lat || !long) {
+            pipeline.push({
+                $sort: {
+                    createdAt: -1
+                }
+            });
+        }
+        pipeline.push({
+            $facet: {
+                data: [
+                    {
+                        $skip: (page - 1) * limit
+                    },
+                    {
+                        $limit: limit
+                    }
+                ],
+                totalCount: [
+                    {
+                        $count: "count"
+                    }
+                ]
+            }
+        });
+
+        /* =======================================================
+           FETCH DATA
+        ======================================================= */
+
+        const result = await PharAddress.aggregate(pipeline);
+
+        const data = result[0]?.data || [];
+        const total = result[0]?.totalCount?.[0]?.count || 0
+
+        /* =======================================================
+           RATINGS
+        ======================================================= */
+
+        const userIds = data.map(item => item.user._id);
+
         const ratingStats = await Rating.aggregate([
+
             {
                 $match: {
-                    pharId: { $in: pharIds }
+                    pharId: { $in: userIds }
                 }
             },
+
             {
                 $group: {
-                    _id: "$labId",
-                    avgRating: { $avg: "$star" },
-                    totalReviews: { $sum: 1 }
+
+                    _id: "$pharId",
+
+                    avgRating: {
+                        $avg: "$star"
+                    },
+
+                    totalReviews: {
+                        $sum: 1
+                    }
                 }
             }
         ]);
 
         const ratingMap = {};
-        ratingStats.forEach(r => {
+
+        ratingStats.forEach((r) => {
+
             ratingMap[r._id.toString()] = {
-                avgRating: Number(r.avgRating.toFixed(1)),
+
+                avgRating: Number(
+                    r.avgRating.toFixed(1)
+                ),
+
                 totalReviews: r.totalReviews
             };
         });
 
-        // 4️⃣ Merge everything
-        const finalData = users.map(user => ({
-            ...user,
-            pharAddress: addressMap[user._id.toString()] || null,
-            avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-            totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+        /* =======================================================
+           FINAL FORMAT
+        ======================================================= */
+
+        const mergedData = data.map((item) => ({
+
+            ...item.user,
+
+            pharId: item.pharmacy,
+
+            pharAddress: item,
+
+            avgRating:
+                ratingMap[item.user._id.toString()]
+                    ?.avgRating || 0,
+
+            totalReviews:
+                ratingMap[item.user._id.toString()]
+                    ?.totalReviews || 0,
+            distanceInKm: item.distance
+                ? (item.distance / 1000).toFixed(2)
+                : null
         }));
 
-        const total = await User.countDocuments(filter);
-
         return res.status(200).json({
+
             success: true,
-            data: finalData,
+
+            data: mergedData,
+
             pagination: {
+
                 total,
+
                 totalPage: Math.ceil(total / limit),
+
                 currentPage: page
             }
         });
 
     } catch (err) {
+
         console.error(err);
+
         return res.status(500).json({
+
             success: false,
+
             message: err.message
         });
     }

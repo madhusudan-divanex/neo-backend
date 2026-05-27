@@ -671,14 +671,25 @@ const labAddress = async (req, res) => {
         if (!user) return res.status(200).json({ message: "User not found", success: false })
         const countryData = await Country.findById(countryId)
         const cityData = await City.findById(cityId)
-        const finalLat = (lat !== undefined && lat !== null) ? lat : cityData?.latitude;
-        const finalLong = (long !== undefined && long !== null) ? long : cityData?.longitude;
+        const finalLat =
+            (lat !== undefined && lat !== null)
+                ? Number(lat)
+                : Number(cityData?.latitude);
+
+        const finalLong =
+            (long !== undefined && long !== null)
+                ? Number(long)
+                : Number(cityData?.longitude);
         const data = await LabAddress.findOne({ userId });
+        const location = {
+            type: "Point",
+            coordinates: [finalLong, finalLat]
+        };
         if (data) {
             await LabAddress.findByIdAndUpdate(data._id, {
                 fullAddress, lat: finalLat,
                 long: finalLong,
-                countryId, stateId, cityId, pinCode, userId
+                countryId, stateId, cityId, pinCode, userId, location
             }, { new: true })
             return res.status(200).json({
                 success: true,
@@ -689,7 +700,7 @@ const labAddress = async (req, res) => {
             await LabAddress.create({
                 fullAddress, countryId, lat: finalLat,
                 long: finalLong,
-                stateId, lat, long, cityId, pinCode, userId
+                stateId, lat, long, cityId, pinCode, userId, location
             })
             return res.status(200).json({
                 success: true,
@@ -1030,145 +1041,474 @@ const sendReport = async (req, res) => {
     }
 };
 const getLabs = async (req, res) => {
+
     try {
         const limit = parseInt(req.query.limit) || 10;
-        const page = parseInt(req.query.page) || 1;
-        const { name, location, category, sortBy, type } = req.query;
 
-        /* ===== STEP 1: Category filter — Test se sorted labIds nikalo ===== */
-        let sortedLabUserIds = null; // null = no category filter
+        const page = parseInt(req.query.page) || 1;
+
+        const {
+            name,
+            location,
+            category,
+            sortBy,
+            type,
+            lat,
+            long
+        } = req.query;
+
+        /* ======================================================
+           STEP 1: CATEGORY FILTER
+        ====================================================== */
+
+        let sortedLabUserIds = null;
 
         if (category) {
-            const sortOption = sortBy === 'ASC' ? { totalAmount: 1 }
-                : sortBy === 'DESC' ? { totalAmount: -1 }
-                    : {};
 
-            // distinct() sort preserve nahi karta — find() use karo
+            const sortOption =
+                sortBy === 'ASC'
+                    ? { totalAmount: 1 }
+                    : sortBy === 'DESC'
+                        ? { totalAmount: -1 }
+                        : {};
+
             const tests = await Test.find({
-                category: { $in: category.split(',') }
+                category: {
+                    $in: category.split(',')
+                }
             })
                 .sort(sortOption)
                 .select('labId')
                 .lean();
 
-            // Sorted order mein unique labIds (userId) — order preserve karna hai
             const seen = new Set();
+
             sortedLabUserIds = [];
-            tests.forEach(t => {
+
+            tests.forEach((t) => {
+
                 const id = t.labId.toString();
+
                 if (!seen.has(id)) {
+
                     seen.add(id);
-                    sortedLabUserIds.push(t.labId);
+
+                    sortedLabUserIds.push(
+                        t.labId.toString()
+                    );
                 }
             });
         }
 
-        /* ===== STEP 2: Location filter — valid userIds nikalo ===== */
-        let locationUserIds = null; // null = no location filter
+        /* ======================================================
+           STEP 2: LOCATION FILTER
+        ====================================================== */
+
+        let locationUserIds = null;
 
         if (location) {
-            const city = await City.findOne({
-                name: new RegExp(`^${location}$`, 'i')
-            }).lean();
 
             const labAddressFilter = {};
-            if (city) labAddressFilter.cityId = city._id;
+            labAddressFilter.cityId = new mongoose.Types.ObjectId(location);
 
-            const labAddresses = await LabAddress.find(labAddressFilter)
-                .select('userId')
-                .lean();
 
-            locationUserIds = labAddresses.map(a => a.userId.toString());
+            const labAddresses =
+                await LabAddress.find(
+                    labAddressFilter
+                )
+                    .select('userId')
+                    .lean();
+
+            locationUserIds =
+                labAddresses.map(
+                    a => a.userId.toString()
+                );
         }
 
-        /* ===== STEP 3: User filter banao — saare filters combine karo ===== */
-        const userFilter = { labId: { $exists: true, $ne: null } };
+        /* ======================================================
+           STEP 3: USER FILTER
+        ====================================================== */
 
-        userFilter.role = type ? type : { $in: ['lab', 'hospital'] };
+        const userFilter = {
 
-        if (name) userFilter.name = { $regex: name, $options: 'i' };
+            labId: {
+                $exists: true,
+                $ne: null
+            }
+        };
 
-        // Category + location dono hain toh intersection lo
-        if (sortedLabUserIds && locationUserIds) {
-            const locationSet = new Set(locationUserIds);
-            const intersected = sortedLabUserIds.filter(id =>
-                locationSet.has(id.toString())
-            );
-            userFilter._id = { $in: intersected };
+        userFilter.role = type
+            ? type
+            : { $in: ['lab', 'hospital'] };
+
+        if (name) {
+
+            userFilter.name = {
+                $regex: name,
+                $options: 'i'
+            };
+        }
+
+        // category + location intersection
+
+        if (
+            sortedLabUserIds &&
+            locationUserIds
+        ) {
+
+            const locationSet =
+                new Set(locationUserIds);
+
+            const intersected =
+                sortedLabUserIds.filter(id =>
+                    locationSet.has(id.toString())
+                );
+
+            userFilter._id = {
+                $in: intersected
+            };
 
         } else if (sortedLabUserIds) {
-            userFilter._id = { $in: sortedLabUserIds };
+
+            userFilter._id = {
+                $in: sortedLabUserIds
+            };
 
         } else if (locationUserIds) {
-            userFilter._id = { $in: locationUserIds };
+
+            userFilter._id = {
+                $in: locationUserIds
+            };
         }
 
-        /* ===== STEP 4: Users fetch karo (no sort — order baad mein restore karenge) ===== */
-        const total = await User.countDocuments(userFilter);
+        /* ======================================================
+           STEP 4: FETCH USERS
+        ====================================================== */
 
         const users = await User.find(userFilter)
             .select('-passwordHash')
             .populate('labId')
-            .lean(); // ← koi limit/skip/sort nahi — baad mein manually karenge
-
-        /* ===== STEP 5: Address map banao (sirf fetched users ke liye) ===== */
-        const fetchedUserIds = users.map(u => u._id);
-
-        const labAddresses = await LabAddress.find({
-            userId: { $in: fetchedUserIds }
-        })
-            .populate('countryId stateId cityId', 'name')
             .lean();
 
+        const fetchedUserIds =
+            users.map(u => u._id);
+
+        /* ======================================================
+           STEP 5: LAB ADDRESS AGGREGATE
+        ====================================================== */
+
+        const pipeline = [];
+
+        /* ================= GEO NEAR ================= */
+
+        if (lat != null && long != null) {
+
+            pipeline.push({
+
+                $geoNear: {
+
+                    near: {
+                        type: "Point",
+
+                        coordinates: [
+                            Number(long),
+                            Number(lat)
+                        ]
+                    },
+
+                    distanceField: "distance",
+
+                    spherical: true,
+
+                    query: {
+                        userId: {
+                            $in: fetchedUserIds
+                        },
+
+                        location: {
+                            $exists: true
+                        }
+                    }
+                }
+            });
+        } else {
+
+            pipeline.push({
+
+                $match: {
+
+                    userId: {
+                        $in: fetchedUserIds
+                    }
+                }
+            });
+        }
+
+        /* ================= POPULATE ================= */
+
+        pipeline.push({
+
+            $lookup: {
+
+                from: "countries",
+
+                localField: "countryId",
+
+                foreignField: "_id",
+
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+
+                as: "countryId"
+            }
+        });
+
+        pipeline.push({
+
+            $unwind: {
+                path: "$countryId",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+        pipeline.push({
+
+            $lookup: {
+
+                from: "states",
+
+                localField: "stateId",
+
+                foreignField: "_id",
+
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+
+                as: "stateId"
+            }
+        });
+
+        pipeline.push({
+
+            $unwind: {
+                path: "$stateId",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+        pipeline.push({
+
+            $lookup: {
+
+                from: "cities",
+
+                localField: "cityId",
+
+                foreignField: "_id",
+
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ],
+
+                as: "cityId"
+            }
+        });
+
+        pipeline.push({
+
+            $unwind: {
+                path: "$cityId",
+                preserveNullAndEmptyArrays: true
+            }
+        });
+
+        /* ================= DEFAULT SORT ================= */
+
+        if (lat == null || long == null) {
+
+            pipeline.push({
+
+                $sort: {
+                    createdAt: -1
+                }
+            });
+        }
+
+        /* ================= PAGINATION ================= */
+
+        pipeline.push({
+
+            $facet: {
+
+                data: [
+
+                    {
+                        $skip:
+                            (page - 1) * limit
+                    },
+
+                    {
+                        $limit: limit
+                    }
+                ],
+
+                totalCount: [
+
+                    {
+                        $count: "count"
+                    }
+                ]
+            }
+        });
+
+        const result =
+            await LabAddress.aggregate(
+                pipeline
+            );
+
+        const labAddresses =
+            result[0]?.data || [];
+
+        const total =
+            result[0]?.totalCount?.[0]
+                ?.count || 0;
+
+        /* ======================================================
+           STEP 6: ADDRESS MAP
+        ====================================================== */
+
         const labAddressMap = {};
+
         labAddresses.forEach(a => {
-            labAddressMap[a.userId.toString()] = a;
+
+            labAddressMap[
+                a.userId.toString()
+            ] = a;
         });
 
-        /* ===== STEP 6: User map banao ===== */
+        /* ======================================================
+           STEP 7: USER MAP
+        ====================================================== */
+
         const userMap = {};
+
         users.forEach(u => {
-            userMap[u._id.toString()] = u;
+
+            userMap[
+                u._id.toString()
+            ] = u;
         });
 
-        /* ===== STEP 7: Sorted order restore karo + merge ===== */
+        /* ======================================================
+           STEP 8: MERGE DATA
+        ====================================================== */
+
         let mergedData;
 
         if (sortedLabUserIds) {
-            // Category sort ka order follow karo
-            mergedData = sortedLabUserIds
-                .map(id => userMap[id.toString()])
-                .filter(Boolean) // name/location filter mein remove hue users hata do
-                .map(u => ({
-                    ...u,
-                    address: labAddressMap[u._id.toString()] || null,
-                    avgRating: u?.labId?.rating || 0,
-                }));
+            mergedData =
+                sortedLabUserIds
+                    .map(id => {
+
+                        const user =
+                            userMap[id];
+
+                        if (!user) return null;
+
+                        return {
+
+                            ...user,
+
+                            address:
+                                labAddressMap[id]
+                                || null,
+
+                            avgRating:
+                                user?.labId
+                                    ?.rating || 0,
+
+                            distanceInKm:
+                                labAddressMap[id]
+                                    ?.distance
+                                    ? (
+                                        labAddressMap[id]
+                                            .distance / 1000
+                                    ).toFixed(2)
+                                    : null
+                        };
+                    })
+                    .filter(Boolean);
+
         } else {
-            // Default: createdAt DESC (User.find ka natural order)
-            mergedData = users.map(u => ({
-                ...u,
-                address: labAddressMap[u._id.toString()] || null,
-                avgRating: u?.labId?.rating || 0,
-            }));
+
+            mergedData =
+                users.map(u => ({
+
+                    ...u,
+
+                    address:
+                        labAddressMap[
+                        u._id.toString()
+                        ] || null,
+
+                    avgRating:
+                        u?.labId?.rating || 0,
+
+                    distanceInKm:
+                        labAddressMap[
+                            u._id.toString()
+                        ]?.distance
+                            ? (
+                                labAddressMap[
+                                    u._id.toString()
+                                ].distance / 1000
+                            ).toFixed(2)
+                            : null
+                }));
         }
 
-        /* ===== STEP 8: Manual pagination ===== */
-        const finalData = mergedData.slice((page - 1) * limit, page * limit);
-
         return res.status(200).json({
+
             success: true,
-            data: finalData,
+
+            data: mergedData,
+
             pagination: {
+
                 total,
-                totalPage: Math.ceil(total / limit),
+
+                totalPage: Math.ceil(
+                    total / limit
+                ),
+
                 currentPage: page
             }
         });
 
     } catch (err) {
+
         console.error(err);
-        return res.status(500).json({ success: false, message: err.message });
+
+        return res.status(500).json({
+
+            success: false,
+
+            message: err.message
+        });
     }
 };
 const getLabList = async (req, res) => {

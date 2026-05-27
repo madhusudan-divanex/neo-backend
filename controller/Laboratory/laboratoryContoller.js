@@ -128,7 +128,10 @@ const addTest = async (req, res) => {
                         cityId: address.city,
                         stateId: address.state,
                         countryId: address.country,
-                        pinCode: address.pinCode
+                        pinCode: address.pinCode,
+                        location: address?.location,
+                        lat: address?.lat,
+                        long: address?.long
                     }], { session });
 
                     // =========================

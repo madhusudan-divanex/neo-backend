@@ -23,21 +23,38 @@ const addressSchema = new Schema({
   stateId: { type: mongoose.Schema.Types.ObjectId, ref: 'State', required: true },
   cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', required: true },
   pinCode: { type: String, required: true },
-  specialty: { type: mongoose.Schema.Types.ObjectId,
-        ref: "speciality" },
-  treatmentAreas: [{ type: mongoose.Schema.Types.ObjectId,
-        ref: "speciality"}],
+  specialty: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "speciality"
+  },
+  treatmentAreas: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "speciality"
+  }],
   fees: { type: Number, default: 0 },
   language: [{ type: String }],
   aboutYou: { type: String },
   lat: Number,
   long: Number,
-  clinic:{
-    type:Boolean,
-    default:false
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+    }
+  },
+  clinic: {
+    type: Boolean,
+    default: false
   }
 
 }, { timestamps: true });
-
+addressSchema.index({
+  location: "2dsphere"
+});
 const DoctorAbout = mongoose.model("doctor-about", addressSchema);
 export default DoctorAbout

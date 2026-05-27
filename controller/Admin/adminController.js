@@ -64,6 +64,7 @@ import HospitalContact from "../../models/Hospital/HospitalContact.js"
 import Department from "../../models/Department.js"
 import BirthCertificate from "../../models/Certificates/BirthCertificate.js"
 import DeathCertificate from "../../models/Certificates/DeathCertificate.js"
+import City from "../../models/Hospital/City.js"
 export const addSpecialty = async (req, res) => {
     const icon = req?.file?.path
     const { name } = req.body
@@ -508,7 +509,11 @@ export const addDoctorByAdmin = async (req, res) => {
             const rawPassword = contactNumber.slice(-4) + "@123";
             const passwordHash = await bcrypt.hash(rawPassword, 10);
             const pt = await User.create({ name, doctorId: doctor._id, contactNumber, email, role: 'doctor', created_by: "admin", passwordHash })
-            await DoctorAbout.create({ userId: pt._id, dob, contact, fullAddress, pinCode, countryId, stateId, cityId })
+            const cityData = await City.findById(cityId)
+            const lat = cityData?.latitude;
+            const long = cityData?.longitude;
+            const location = { type: "Point", coordinates: [long, lat] }
+            await DoctorAbout.create({ userId: pt._id, dob, contact, fullAddress, pinCode, countryId, stateId, cityId, lat, long, location })
             await Doctor.findByIdAndUpdate(doctor._id, { userId: pt._id }, { new: true })
             const countryData = await Country.findById(countryId)
             await assignNH12(pt._id, countryData?.phonecode)
@@ -548,7 +553,11 @@ export const addPharmacyByAdmin = async (req, res) => {
             const rawPassword = contactNumber.slice(-4) + "@123";
             const passwordHash = await bcrypt.hash(rawPassword, 10);
             const pt = await User.create({ name, pharId: pharmacy._id, contactNumber, email, role: 'pharmacy', created_by: "admin", passwordHash })
-            await PharAddress.create({ userId: pt._id, contact, fullAddress, pinCode, countryId, stateId, cityId })
+            const cityData = await City.findById(cityId)
+            const lat = cityData?.latitude;
+            const long = cityData?.longitude;
+            const location = { type: "Point", coordinates: [long, lat] }
+            await PharAddress.create({ userId: pt._id, contact, fullAddress, pinCode, countryId, stateId, cityId, location, lat, long })
             await Pharmacy.findByIdAndUpdate(pharmacy._id, { userId: pt._id }, { new: true })
             const countryData = await Country.findById(countryId)
             await assignNH12(pt._id, countryData?.phonecode)
@@ -588,7 +597,11 @@ export const addLabByAdmin = async (req, res) => {
             const rawPassword = contactNumber.slice(-4) + "@123";
             const passwordHash = await bcrypt.hash(rawPassword, 10);
             const pt = await User.create({ name, labId: laboratory._id, contactNumber, email, role: 'lab', created_by: "admin", passwordHash })
-            await LabAddress.create({ userId: pt._id, contact, fullAddress, pinCode, countryId, stateId, cityId })
+            const cityData = await City.findById(cityId)
+            const lat = cityData?.latitude;
+            const long = cityData?.longitude;
+            const location = { type: "Point", coordinates: [long, lat] }
+            await LabAddress.create({ userId: pt._id, contact, fullAddress, pinCode, countryId, stateId, cityId, location, lat, long })
             await Laboratory.findByIdAndUpdate(laboratory._id, { userId: pt._id }, { new: true })
             const countryData = await Country.findById(countryId)
             await assignNH12(pt._id, countryData?.phonecode)
@@ -631,7 +644,11 @@ export const addHospitalByAdmin = async (req, res) => {
                 name, pharId: hospital._id, contactNumber, email, role: 'hospital',
                 created_by: "admin", created_by_id: hospital?._id, passwordHash, hospitalId: hospital?._id
             })
-            await HospitalAddress.create({ hospitalId: hospital._id, contact, fullAddress, pinCode, country, state, city })
+            const cityData = await City.findById(city)
+            const lat = cityData?.latitude;
+            const long = cityData?.longitude;
+            const location = { type: "Point", coordinates: [long, lat] }
+            await HospitalAddress.create({ hospitalId: hospital._id, contact, fullAddress, pinCode, country, state, city, location, lat, long })
             await HospitalBasic.findByIdAndUpdate(hospital._id, { userId: pt._id }, { new: true })
             const countryData = await Country.findById(country)
             await assignNH12(pt._id, countryData?.phonecode)
