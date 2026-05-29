@@ -1211,6 +1211,15 @@ export const addOrUpatePaymentInfo = async (req, res) => {
       userId,
     });
 
+    await AuditLog.create({
+      orgId: userId,
+      actorId: req.user.loginUser || userId,
+      panel: req.user.type,
+      method: "CREATE",
+      shortDesc: "Payment Info Added",
+      description: `Payment info added `,
+    })
+
     return res.status(201).json({
       success: true,
       message: "Payment data saved successfully",
@@ -1699,19 +1708,18 @@ export const labReportPdf = async (req, res) => {
     if (mongoose.Types.ObjectId.isValid(id)) {
       query.push({ _id: id });
     }
-
-    const appointmentData = await LabAppointment.findOne({
-      $or: query
-    }).populate('patientId', 'name email contactNumber nh12').populate('staff', 'name nh12')
-    if (!appointmentData) {
-      return res.status(404).json({ message: "Appointment data not found", success: false })
+    const isReport = await TestReport.findOne({ $or: query }).populate({ path: 'subCatId', populate: [{ path: 'category' }] })
+    if (!isReport) {
+      return res.status(404).json({ message: "Report data not found", success: false })
     }
-    const testReports = await TestReport.find({ appointmentId: appointmentData?._id })
-      .populate({ path: 'subCatId', populate: [{ path: 'category' }] })
+    const appointmentData = await LabAppointment.findById(isReport.appointmentId).populate('patientId', 'name email contactNumber nh12').populate('staff', 'name nh12')
+    // const testReports = await TestReport.find({ appointmentId: appointmentData?._id })
+    //   .populate({ path: 'subCatId', populate: [{ path: 'category' }] })
 
     const user = await User.findById(appointmentData.labId)
     const patient = await User.findById(appointmentData?.patientId).populate('patientId', 'gender').lean()
     const patientDemo = await PatientDemographic.findOne({ userId: appointmentData?.patientId }).lean()
+    const sampleData = await LabSample.findOne({ appointmentId: appointmentData?._id, forTestId: isReport.subCatId })
     const patientData = { ...patient, ...patientDemo }
     let labData = {}
     if (user.role == "lab") {
@@ -1727,7 +1735,7 @@ export const labReportPdf = async (req, res) => {
       labData.state = labAddress?.stateId
       labData.pinCode = labAddress?.pinCode
 
-      return res.status(200).json({ message: "Report data fetched", patientData, testReports, appointmentData, labData, success: true })
+      return res.status(200).json({ message: "Report data fetched", patientData, sampleData, testReports: [isReport], appointmentData, labData, success: true })
 
     } else if (user.role == "hospital") {
       const hospital = await User.findById(user._id).populate('hospitalId', 'logoFileId').lean()
@@ -1741,7 +1749,7 @@ export const labReportPdf = async (req, res) => {
       labData.city = hospitalAddress?.city
       labData.state = hospitalAddress?.state
       labData.pinCode = hospitalAddress?.pinCode
-      return res.status(200).json({ message: "Report data fetched", patientData, testReports, appointmentData, labData, success: true })
+      return res.status(200).json({ message: "Report data fetched", patientData, sampleData, testReports: [isReport], appointmentData, labData, success: true })
     } else {
       return res.status(404).json({ message: "User not found", success: false })
     }

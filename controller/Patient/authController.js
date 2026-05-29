@@ -844,7 +844,7 @@ const patientMedicalHistory = async (req, res) => {
             });
         } else {
             await MedicalHistory.create({ alcohol, smoking, allergies, medicationDetail, onMedication, chronicCondition, familyHistory, userId })
-            await sendWelcomeEmail(userId)
+            // await sendWelcomeEmail(userId)
             return res.status(200).json({
                 success: true,
                 message: "Medical History saved successfully",
@@ -936,9 +936,14 @@ const addPrescriptions = async (req, res) => {
         if (!userPrescriptionsDoc) {
             // No existing doc, create new one
             // Attach uploaded file paths to prescriptions
+            const hasAnyFileIndex = prescriptionsData.some(p => p && p.fileIndex !== undefined);
             prescriptionsData.forEach((prescription, i) => {
-                if (prescription && files[i]) {
-                    prescription.fileUrl = files[i].path;
+                if (!prescription) return;
+                const fileIndex = prescription.fileIndex !== undefined
+                    ? prescription.fileIndex
+                    : (hasAnyFileIndex ? -1 : i);
+                if (files[fileIndex]) {
+                    prescription.fileUrl = files[fileIndex].path;
                 }
             });
             const created = await PatientPrescriptions.create({
@@ -955,27 +960,30 @@ const addPrescriptions = async (req, res) => {
 
         // If doc exists, update or add prescriptions
         prescriptionsData.forEach((newPresc, index) => {
-            if (!newPresc) return; // skip if undefined
+            if (!newPresc) return;
 
             const existingPresc = userPrescriptionsDoc.prescriptions.id(newPresc._id);
 
-            if (existingPresc) {
-                // Update existing prescription
-                if (files[index]) {
-                    safeUnlink(existingPresc.fileUrl);
-                    existingPresc.fileUrl = files[index].path;
-                }
+            // fileIndex explicitly set hai tabhi file assign karo
+            const fileIndex = newPresc.fileIndex !== undefined ? newPresc.fileIndex : -1;
 
+            if (existingPresc) {
+                // Existing: file optional hai
+                if (fileIndex >= 0 && files[fileIndex]) {
+                    safeUnlink(existingPresc.fileUrl);
+                    existingPresc.fileUrl = files[fileIndex].path;
+                }
+                // File nahi aayi toh purani fileUrl rahegi — kuch mat karo
                 existingPresc.name = newPresc.name || existingPresc.name;
-                existingPresc.diagnosticName = newPresc.diagnosticName || existingPresc.diagnosticName;
-                // update other fields similarly if needed
 
             } else {
-                // Add new prescription
-                if (files[index]) {
-                    newPresc.fileUrl = files[index].path;
+                // Naya prescription: file mandatory
+                if (fileIndex >= 0 && files[fileIndex]) {
+                    newPresc.fileUrl = files[fileIndex].path;
+                    userPrescriptionsDoc.prescriptions.push(newPresc);
+                } else {
+                    console.warn(`Skipping new prescription at index ${index} — no file provided`);
                 }
-                userPrescriptionsDoc.prescriptions.push(newPresc);
             }
         });
 

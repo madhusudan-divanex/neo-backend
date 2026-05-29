@@ -427,17 +427,30 @@ io.on("connection", (socket) => {
 
         const callerId = socket.userId;
 
+        // ✅ toUserId nahi aaya tो socket se lo
+        const resolvedToUserId = toUserId || socket.callPartner;
+
         activeCalls.delete(callerId);
-        if (toUserId) activeCalls.delete(toUserId);
+        if (resolvedToUserId) activeCalls.delete(resolvedToUserId);
+
+        // ✅ Dusre user ke socket ka callPartner bhi clear karo
+        if (resolvedToUserId) {
+            const partnerSock = [...io.sockets.sockets.values()]
+                .find(s => s.userId === resolvedToUserId);
+            if (partnerSock) {
+                partnerSock.callPartner = null;
+                partnerSock.callLog = null;
+            }
+        }
+        socket.callPartner = null;
+
         let savedCallLog = null;
         if (socket.callLog) {
             socket.callLog.endTime = new Date();
             socket.callLog.duration =
                 (socket.callLog.endTime - socket.callLog.startTime) / 1000;
-
             socket.callLog.status =
                 socket.callLog.duration < 2 ? "missed" : "completed";
-
             await socket.callLog.save();
             savedCallLog = socket.callLog;
             socket.callLog = null;
@@ -461,12 +474,11 @@ io.on("connection", (socket) => {
             return;
         }
 
-        // 🔵 INDIVIDUAL
-        const receiverSocket = onlineUsers.get(toUserId);
+        // ✅ INDIVIDUAL — resolvedToUserId use karo
+        const receiverSocket = onlineUsers.get(resolvedToUserId);
         if (receiverSocket) {
             io.to(receiverSocket).emit("call-ended");
         }
-
         io.to(socket.id).emit("call-ended");
     });
 
@@ -498,6 +510,15 @@ io.on("connection", (socket) => {
         if (callerSocket) {
             io.to(callerSocket).emit("call-answered", { answer });
         }
+        // ✅ Receiver ke socket pe callPartner save karo
+        socket.callPartner = toUserId;  // receiver → caller ka userId
+
+        // ✅ Caller ke socket pe bhi callPartner save karo
+        const callerSockObj = [...io.sockets.sockets.values()]
+            .find(s => s.userId === toUserId);
+        if (callerSockObj) {
+            callerSockObj.callPartner = socket.userId; // caller → receiver ka userId
+        }
     });
     socket.on("ice-candidate", ({
         toUserId,
@@ -528,6 +549,16 @@ io.on("connection", (socket) => {
         const userId = socket.userId;
 
         activeCalls.delete(userId); // ✅ sirf apna remove karo
+        activeCalls.delete(toUserId); // ✅ caller ka bhi hata do
+
+        // ✅ Caller ke socket se bhi callPartner clear karo
+        const callerSock = [...io.sockets.sockets.values()]
+            .find(s => s.userId === toUserId);
+        if (callerSock) {
+            callerSock.callPartner = null;
+            activeCalls.delete(toUserId); // double sure
+        }
+        socket.callPartner = null;
 
         if (socket.callLog) {
             socket.callLog.endTime = new Date();
@@ -558,6 +589,16 @@ io.on("connection", (socket) => {
 
         if (socket.callLog?.group) {
             io.to(socket.callLog.group).emit("call-ended");
+        }
+        // ✅ Agar call active thi aur partner hai
+        if (socket.callPartner) {
+            activeCalls.delete(socket.callPartner);
+            const partnerSock = [...io.sockets.sockets.values()]
+                .find(s => s.userId === socket.callPartner);
+            if (partnerSock) {
+                partnerSock.callPartner = null;
+                io.to(partnerSock.id).emit("call-ended"); // partner ko bhi batao
+            }
         }
         if (socket.userId) {
             console.log("disconnecting user", socket.userId)

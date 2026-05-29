@@ -770,7 +770,7 @@ const doctorAbout = async (req, res) => {
                 await assignNH12(userId, countryData?.phonecode)
             }
             await DoctorAbout.create({ hospitalName, clinic, location, lat: finalLat, long: finalLong, fullAddress, countryId, stateId, cityId, pinCode, specialty, treatmentAreas, fees, language, aboutYou, userId })
-            await sendWelcomeEmail(userId)
+            // await sendWelcomeEmail(userId)
             return res.status(200).json({
                 success: true,
                 message: "About data saved successfully",
@@ -1514,12 +1514,23 @@ const getDoctorData = async (req, res) => {
         const doctorAbout = await DoctorAbout.findOne({ userId }).populate('countryId specialty stateId treatmentAreas')
             .populate('cityId').sort({ createdAt: -1 });
         const doctorLicense = await MedicalLicense.findOne({ userId }).sort({ createdAt: -1 });
-        const uniquePatientIds = await DoctorAppointment.distinct(
-            "patientId",
-            { doctorId: userId }
-        );
-
-        const totalPatients = uniquePatientIds.length;
+        const uniquePatientIds = await DoctorAppointment.aggregate([
+            {
+                $match: {
+                    doctorId: new mongoose.Types.ObjectId(userId),
+                    status: 'completed'
+                }
+            },
+            {
+                $group: {
+                    _id: '$patientId'
+                }
+            },
+            {
+                $count: 'totalPatients'
+            }
+        ])
+        const totalPatients = uniquePatientIds[0]?.totalPatients || 0
 
 
         // 3️⃣ Fetch ratings

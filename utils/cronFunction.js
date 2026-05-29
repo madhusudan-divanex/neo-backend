@@ -10,6 +10,7 @@ import sendPatientEmail, { sendDoctorEmail, sendPharEmail } from './sendTemplate
 import HospitalBasic from '../models/Hospital/HospitalBasic.js';
 import HospitalAddress from '../models/Hospital/HospitalAddress.js';
 import DoctorAppointment from '../models/DoctorAppointment.js';
+import LabAppointment from '../models/LabAppointment.js';
 import DoctorAbout from '../models/Doctor/addressAbout.model.js';
 import User from '../models/Hospital/User.js';
 import Rating from '../models/Rating.js';
@@ -557,3 +558,37 @@ cron.schedule("0 2 * * *", async () => {
     console.error('[RatingCron] Error:', err.message);
   }
 });
+
+cron.schedule("0 * * * *", async () => {
+  try {
+    const now = new Date();
+    console.log("📌 Cron job to reject expired appointments started:", now);
+
+    // Reject Doctor Appointments
+    const docResult = await DoctorAppointment.updateMany(
+      {
+        status: "pending",
+        date: { $lt: now }
+      },
+      {
+        $set: { status: "rejected" }
+      }
+    );
+
+    // Reject Lab Appointments
+    const labResult = await LabAppointment.updateMany(
+      {
+        status: "pending",
+        date: { $lt: now }
+      },
+      {
+        $set: { status: "rejected" }
+      }
+    );
+
+    console.log(`✅ Expired appointments rejected: ${docResult.modifiedCount} doctor, ${labResult.modifiedCount} lab.`);
+  } catch (error) {
+    console.error("❌ Error in reject expired appointments cron job:", error);
+  }
+});
+

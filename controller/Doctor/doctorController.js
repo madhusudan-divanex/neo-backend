@@ -38,8 +38,23 @@ const doctorDashboard = async (req, res) => {
     const totalApt = await DoctorAppointment.countDocuments({ doctorId: id })
     const todayApt = await DoctorAppointment.countDocuments({ doctorId: id, createdAt: { $gte: start, $lte: end } })
     const pendingRequest = 0
-    const uniquePatientIds = await DoctorAppointment.distinct('patientId', { doctorId: id })
-    const totalPatient = uniquePatientIds.length
+    const uniquePatientIds = await DoctorAppointment.aggregate([
+      {
+        $match: {
+          doctorId: new mongoose.Types.ObjectId(id),
+          status: 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: '$patientId'
+        }
+      },
+      {
+        $count: 'totalPatients'
+      }
+    ])
+    const totalPatient = uniquePatientIds[0]?.totalPatients || 0
     const totalStaff = await StaffEmployement.countDocuments({ organizationId: id, })
     const totalDoctors = await StaffEmployement.countDocuments({ organizationId: id, role: "doctor" })
     const totalDepartments = await Department.countDocuments({ userId: id })

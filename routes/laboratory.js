@@ -2,7 +2,7 @@ import { changePassword, deleteLab, getProfile, getProfileDetail, resendOtp, sig
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { getLabAppointment, getLabAppointmentData, getPatientLabReport, labDashboardData } from "../controller/appointmentController.js";
+import { bookLabAppointment, getLabAppointment, getLabAppointmentData, getPatientLabReport, labDashboardData } from "../controller/appointmentController.js";
 import { addPatient, addTest, collectSample, deleteTest, getLabInvoice, getTest, getTestData, getTestReport, labTestAction, saveLabInvoice, saveReport, updateTest } from "../controller/Laboratory/laboratoryContoller.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
 import { updateDaySlot, addTimeSlot, getTimeSlots } from "../controller/Doctor/doctorController.js";
@@ -65,7 +65,7 @@ lab.post('/test', authMiddleware, checkPermission("lab", "addTest"), addTest)
 lab.put('/test', authMiddleware, checkPermission("lab", "editTest"), updateTest)
 lab.get('/test-data/:id', authMiddleware, getTestData)
 lab.post('/test-report', authMiddleware, checkPermission("lab", "addReport"), uploader.single('report'), saveReport)
-lab.post('/test-report-data', authMiddleware, getTestReport)
+lab.post('/test-report-data', authMiddleware, checkPermission("lab", 'viewReport'), getTestReport)
 lab.post('/test-sample', authMiddleware, checkPermission("lab", "addReport"), collectSample)
 
 
@@ -84,6 +84,6 @@ lab.get('/time-slot/:userId', getTimeSlots)
 lab.put('/day-slot', authMiddleware, updateDaySlot)
 lab.post('/payment', authMiddleware, checkPermission("lab", "billing"), saveLabInvoice)
 lab.get('/payment/:id', authMiddleware, getLabInvoice)
-
+lab.post('/book-appointment', authMiddleware, checkPermission("lab", "testRequest"), bookLabAppointment)
 
 export default lab

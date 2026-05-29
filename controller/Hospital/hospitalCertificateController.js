@@ -40,7 +40,7 @@ export const uploadCertificate = async (req, res) => {
       licenseNumber,
       fileId: fileDoc._id.toString()
     });
-    await sendWelcomeEmail(req.user.created_by_id)
+    // await sendWelcomeEmail(req.user.created_by_id)
     let labLicenseNumber = "";
     let licenseFile = "";
     const labCert = [];

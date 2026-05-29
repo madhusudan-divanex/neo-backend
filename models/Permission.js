@@ -18,7 +18,7 @@ const permissionSchema = new Schema(
       required: true,
       index: true
     },
-    staffEmp:[{
+    staffEmp: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "StaffEmployement",
     }],
@@ -115,19 +115,12 @@ const permissionSchema = new Schema(
       addTest: { type: Boolean, default: false },
       editTest: { type: Boolean, default: false },
       billing: { type: Boolean, default: false },
-
+      collectSample: { type: Boolean, default: false },
       viewReport: { type: Boolean, default: false },
       addReport: { type: Boolean, default: false },
       editReport: { type: Boolean, default: false },
-      export: { type: Boolean, default: false },
-
-      patientDetails: { type: Boolean, default: false },
-      appointmentDetails: { type: Boolean, default: false },
 
       sendReportMail: { type: Boolean, default: false },
-      printReport: { type: Boolean, default: false },
-
-      patientCall: { type: Boolean, default: false },
 
       paymentStatus: { type: Boolean, default: false },
       appointmentStatus: { type: Boolean, default: false },

@@ -46,6 +46,7 @@ import {
 import authMiddleware from "../../middleware/authMiddleare.js";
 import getUploader from "../../config/multerConfig.js";
 import { askQuestionRateLimiter } from "../../utils/globalFunction.js";
+import { checkPermission } from "../../middleware/permissionCheck.js";
 
 const router = express.Router();
 const uploader = getUploader('hospital')
@@ -81,7 +82,7 @@ router.post("/ask-question", authMiddleware, askQuestionRateLimiter, askQuestion
 router.get("/ask/question", authMiddleware, getAskQuestionController)
 router.get("/general/question", authMiddleware, getGeneralQuestionController)
 router.get("/user-data/:nh12", authMiddleware, getUserDataController)
-router.post("/payment-info", authMiddleware, uploader.single('qr'), addOrUpatePaymentInfo)
+router.post("/payment-info", authMiddleware, checkPermission("panels", "addPaymentInfo"), uploader.single('qr'), addOrUpatePaymentInfo)
 router.get("/doctor-appointment-payment/:id", doctorAppointmentInvoice)
 router.get("/opd-invoice/:id", opdInvoicePdf)
 router.get("/doctor-empanelment/:doctorId/:hospitalId", doctorEmpanelmentPdf)

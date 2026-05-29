@@ -98,7 +98,7 @@ const signUpLab = async (req, res) => {
                 newLab.userId = userData?._id
                 await newLab.save()
                 const token = jwt.sign(
-                    { user: userData._id },
+                    { user: userData._id, type: "lab", isOwner: true },
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );

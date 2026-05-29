@@ -26,7 +26,7 @@ appointment.get('/patient-lab/:id', authMiddleware, getPatientLabAppointment)
 
 appointment.post('/lab', authMiddleware, bookLabAppointment)
 appointment.put('/lab/reschedule', authMiddleware, rescheduleLabAppointment)
-appointment.get('/lab/:id', authMiddleware, checkPermission("lab", "testRequest"), getLabAppointment)
+appointment.get('/lab/:id', authMiddleware, getLabAppointment)
 appointment.put('/lab-action', authMiddleware, checkPermission("lab", "appointmentStatus"), actionLabAppointment)
 appointment.put('/lab/payment-action', authMiddleware, checkPermission("lab", "paymentStatus"), paymentLabAppointment)
 appointment.post('/lab-cancel', authMiddleware, cancelLabAppointment)
@@ -43,5 +43,5 @@ appointment.post('/hospital/doctor', authMiddleware, checkPermission("appointmen
 appointment.put('/hospital/doctor-action', authMiddleware, checkPermission("appointments", "status"), actionDoctorAppointment)
 
 appointment.get('/lab/sample/:id', authMiddleware, getAppointmentSample)
-appointment.post('/lab/sample', authMiddleware, addSample)
+appointment.post('/lab/sample', authMiddleware, checkPermission("lab", "collectSample"), addSample)
 export default appointment
