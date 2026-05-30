@@ -70,7 +70,7 @@ cron.schedule('0 0 * * *', async () => {
         await Notification.create({
           userId: prescription.patientId?._id,
           title: "Doctor Revisit Reminder",
-          message: `This is a reminder that you have a scheduled revisit today with Dr. ${prescription.doctorId.name} regarding ${prescription?.diagnosis}. Kindly book your appointment.`,
+          message: `This is a reminder that you have a scheduled revisit today with  ${prescription.doctorId.name} regarding ${prescription?.diagnosis}. Kindly book your appointment.`,
           type: "REVISIT"
         });
         await Prescriptions.findByIdAndUpdate(prescription._id, { notif: true }, { new: true })
@@ -342,7 +342,7 @@ cron.schedule("* * * * *", async () => {
       await Notification.create({
         userId: apt?.patientId?._id,
         title: "Appointment Reminder",
-        message: `Your appointment with Dr. ${apt?.doctorId?.name} is scheduled within next 5 hours.`,
+        message: `Your appointment with ${apt?.doctorId?.name} is scheduled within next 5 hours.`,
         type: "APPOINTMENT_REMINDER"
       });
 

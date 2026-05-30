@@ -703,6 +703,7 @@ const saveLabInvoice = async (req, res) => {
 
         await invoice.save();
         isApt.invoiceId = invoice._id
+        isApt.paymentStatus = "paid"
         await isApt.save()
 
         await AuditLog.create([

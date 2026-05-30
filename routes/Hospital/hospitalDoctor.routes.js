@@ -17,7 +17,8 @@ import {
   getTimeSlots,
   addTimeSlot,
   updateDaySlot,
-  availableDoctor
+  availableDoctor,
+  getDoctorAboutData
 } from "../../controller/Hospital/hospitalDoctor.controller.js";
 import getUploader from "../../config/multerConfig.js";
 import { checkPermission } from "../../middleware/permissionCheck.js";
@@ -34,8 +35,8 @@ const uploader = getUploader('doctor');
 
 router.post(
   "/create",
-  auth,checkPermission("doctors","add"),
- uploader.single('profileImage'),
+  auth, checkPermission("doctors", "add"),
+  uploader.single('profileImage'),
   createHospitalDoctor
 );
 
@@ -45,22 +46,22 @@ router.post(
   saveDoctorProfessionalDetails
 );
 router.post(
-  "/employment-details",auth,
+  "/employment-details", auth,
   doctorEmploymentDetails
 );
 router.post(
-  "/access-details",auth,
+  "/access-details", auth,
   saveDoctorAccess
 );
 router.get("/list", auth, getHospitalDoctorList);
 router.get("/my-all-staff", auth, getMyAllStaffList);
 router.get("/get-by-id/:id", auth, getHospitalDoctorByIdNew);
-router.get("/employment/:hospitalId/:doctorId",  getHospitalDoctorEmployement);
-router.get("/available/:department/:time",auth,availableDoctor)
+router.get("/employment/:hospitalId/:doctorId", getHospitalDoctorEmployement);
+router.get("/available/:department/:time", auth, availableDoctor)
 router.get("/:id", auth, getHospitalDoctorById);
-router.get("/time-slot/:userId/:hospitalId",getTimeSlots)
-router.post("/time-slot",auth,addTimeSlot)
-router.put("/time-slot",auth,updateDaySlot)
+router.get("/time-slot/:userId/:hospitalId", getTimeSlots)
+router.post("/time-slot", auth, addTimeSlot)
+router.put("/time-slot", auth, updateDaySlot)
 
 router.put(
   "/:id",
@@ -72,6 +73,7 @@ router.put(
   updateHospitalDoctor
 );
 
+router.get('/about/:id', auth, getDoctorAboutData)
 // router.delete("/:id", auth,checkPermission("doctors","delete"), deleteDoctor);
 
 export default router;

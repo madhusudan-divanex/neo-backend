@@ -61,13 +61,19 @@ export const addPatient = async (req, res) => {
         shortDesc: "Patient created",
         description: `Patient details ${name} was created department ${departmentActive?.departmentName} and status ${status}`,
       })
+      return res.status(200).json({
+        success: true,
+        message: "Patient added successfully",
+        data: patient, patientId: pt?._id
+      });
+    }
+    else {
+      return res.status(400).json({
+        success: false,
+        message: "Patient not added"
+      });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Patient added successfully",
-      data: patient
-    });
 
   } catch (err) {
     console.log(err)

@@ -320,7 +320,7 @@ async function sendReminder(req, res) {
       await sendPush({
         token: user.fcmToken,
         title: "Doctor Revisit Reminder",
-        body: `This is a reminder that you have a scheduled revisit today with Dr. ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.` || "📩 New message received",
+        body: `This is a reminder that you have a scheduled revisit today with  ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.` || "📩 New message received",
         data: {
           type: "REVISIT",
         }
@@ -329,7 +329,7 @@ async function sendReminder(req, res) {
     await Notification.create({
       userId: patientId,
       title: "Doctor Revisit Reminder",
-      message: `This is a reminder that you have a scheduled revisit today with Dr. ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.`,
+      message: `This is a reminder that you have a scheduled revisit today with  ${isPrescription.doctorId.name} regarding ${isPrescription?.diagnosis}. Kindly book your appointment.`,
       type: "REVISIT"
     });
     return res.status(200).json({ messsage: "Notfication send", success: true })

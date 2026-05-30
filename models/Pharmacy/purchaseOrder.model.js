@@ -2,16 +2,16 @@ import mongoose from "mongoose"
 
 const POProductSchema = new mongoose.Schema({
     productName: String,
-    schedule: String,
+    schedule: { type: mongoose.Schema.Types.ObjectId, ref: "schedule-medicines" },
     quantity: Number,
     batchNumber: String,
     expDate: String
 });
 
 const POSchema = new mongoose.Schema({
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User",index:true },
-    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: "User",index:true },
-    supplierId: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" ,required:true},
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+    supplierId: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier", required: true },
     deliveryDate: Date,
     note: String,
     status: {

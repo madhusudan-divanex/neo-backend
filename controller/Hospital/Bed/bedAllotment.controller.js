@@ -113,7 +113,7 @@ export const addAllotment = async (req, res) => {
       orgId: hospitalId,
       actorId: req.user.loginUser || hospitalId,
       panel: "hospital",
-      method: "POST",
+      method: "CREATE",
       shortDesc: "Allotment created",
       description: `Bed allotted for patient ${isPatient?.name}`
     })

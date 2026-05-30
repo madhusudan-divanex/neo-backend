@@ -107,7 +107,7 @@ const bookDoctorAppointment = async (req, res) => {
                 })
             }
 
-            if (isExist.fcmToken) {
+            if (isExist.fcmToken && !hospitalId) {
                 await sendPush({
                     token: isExist.fcmToken,
                     title: "New Appointment",
@@ -558,7 +558,7 @@ const editDoctorPrescription = async (req, res) => {
             await Notification.create({
                 userId: patientId,
                 title: "Prescription Updated",
-                message: `Dr. ${isExist.name} has updated a prescription (id ${add?.customId}) for you.`
+                message: `${isExist.name} has updated a prescription (id ${add?.customId}) for you.`
             })
             return res.status(200).json({ message: "Presctiption update successfully", success: true })
         } else {
@@ -1003,7 +1003,7 @@ const bookLabAppointment = async (req, res) => {
                 data: book
             });
             const existingAppointments = await LabAppointment.find({
-                patientId,
+                patientId, _id: { $ne: book?._id },
                 labId,
                 status: { $ne: "cancel" }
             });

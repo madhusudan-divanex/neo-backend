@@ -178,7 +178,7 @@ export const updateBed = async (req, res) => {
     const department = await Department.findById(departmentId).select("departmentName")
     await AuditLog.create({
       orgId: req.user.id,
-      actorId: req.user.loginUser || req.user.userId,
+      actorId: req.user.loginUser || req.user.id,
       panel: "hospital",
       method: "UPDATE",
       shortDesc: "Bed updated",

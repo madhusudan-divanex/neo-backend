@@ -265,7 +265,7 @@ export const register = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, panel: "hospital", isOwner: true },
       process.env.JWT_SECRET
     );
 

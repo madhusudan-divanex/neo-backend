@@ -24,6 +24,7 @@ import Country from '../../models/Hospital/Country.js';
 import { assignNH12 } from '../../utils/nh12.js';
 import PaymentInfo from '../../models/PaymentInfo.js';
 import { sendPharEmail } from '../../utils/sendTemplateEmail.js';
+import AuditLog from '../../models/AuditLog.js';
 
 const signUpPhar = async (req, res) => {
     const { name, gender, email, contactNumber, password, gstNumber, about, pharId } = req.body;
@@ -95,7 +96,7 @@ const signUpPhar = async (req, res) => {
                 newphar.userId = userData?._id
                 await newphar.save()
                 const token = jwt.sign(
-                    { user: userData._id },
+                    { user: userData._id, type: "pharmacy", isOwner: true },
                     process.env.JWT_SECRET,
                     // { expiresIn: isRemember ? "30d" : "1d" }
                 );
@@ -469,6 +470,14 @@ const changePassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         const updatePass = await User.findByIdAndUpdate(userId, { passwordHash: hashedPassword }, { new: true })
         if (updatePass) {
+            await AuditLog.create({
+                orgId: userId,
+                actorId: userId,
+                panel: req.user.type,
+                method: "UPDATE",
+                shortDesc: "Password changed",
+                description: `Password changed successfully at ${new Date()?.toLocaleString('en-GB')}`,
+            })
             return res.status(200).json({ message: "Password change successfully", userId: isExist._id, success: true })
         } else {
             return res.status(200).json({ message: "Error occure in password reset", success: false })
@@ -1038,7 +1047,7 @@ const deletePharImage = async (req, res) => {
     const { path, type } = req.body;
     const pharId = req.user.userId
     try {
-        const user = await Pharmacy.findById(pharId)
+        const user = await User.findById(pharId)
         if (!user) return res.status(200).json({ message: "Pharmacy not found", success: false })
         if (type == 'thumbnail') {
             await PharImage.findOneAndUpdate({ userId: pharId }, { thumbnail: '' }, { new: true })

@@ -29,6 +29,7 @@ import HospitalImage from "../../models/Hospital/HospitalImage.js";
 import PatientDemographic from "../../models/Patient/demographic.model.js";
 import Patient from "../../models/Patient/patient.model.js";
 import sendPatientEmail, { sendDoctorEmail } from "../../utils/sendTemplateEmail.js";
+import City from "../../models/Hospital/City.js";
 
 // ================= CHANGE PASSWORD =================
 export const changePassword = async (req, res) => {
@@ -264,18 +265,100 @@ export const getHospitals = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
   const name = req.query.name
-
+  const lat = req.query.lat
+  const lng = req.query.long
+  const location = req.query.location
   try {
     // 1️⃣ Fetch hospital users
     const filter = {}
     if (name) {
       filter.hospitalName = { $regex: name, $options: "i" };
     }
-    const users = await HospitalBasic.find(filter).select('hospitalName logoFileId userId')
-      .limit(limit)
-      .skip((page - 1) * limit)
-      .lean();
-    const hospitalIds = users.map(item => item._id)
+    const pipeline = [];
+
+    if (lat && lng) {
+      pipeline.push({
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [
+              Number(lng),
+              Number(lat)
+            ]
+          },
+          distanceField: "distance",
+          spherical: true,
+          query: {
+            location: { $exists: true }
+          }
+        }
+      });
+    }
+    pipeline.push({
+      $lookup: {
+        from: "hospitalbasics",
+        localField: "hospitalId",
+        foreignField: "_id",
+        as: "hospital"
+      }
+    });
+
+    pipeline.push({
+      $unwind: "$hospital"
+    });
+    if (location) {
+      pipeline.push({
+        $match: {
+          city: new mongoose.Types.ObjectId(location)
+        }
+      });
+    }
+
+    const matchFilter = {};
+
+    if (name) {
+      matchFilter["hospital.hospitalName"] = {
+        $regex: name,
+        $options: "i"
+      };
+    }
+
+    if (Object.keys(matchFilter).length) {
+      pipeline.push({
+        $match: matchFilter
+      });
+    }
+    if (!lat || !lng) {
+      pipeline.push({
+        $sort: {
+          createdAt: -1
+        }
+      });
+    }
+    const countPipeline = [...pipeline];
+
+    countPipeline.push({
+      $count: "total"
+    });
+
+    const totalResult =
+      await HospitalAddress.aggregate(countPipeline);
+
+    const total =
+      totalResult?.[0]?.total || 0;
+
+    pipeline.push({
+      $skip: (page - 1) * limit
+    });
+
+    pipeline.push({
+      $limit: limit
+    });
+    const data =
+      await HospitalAddress.aggregate(pipeline);
+
+    const hospitalIds =
+      data.map(item => item.hospital._id);
     const address = await HospitalAddress.find({ hospitalId: { $in: hospitalIds } })
     const addressMap = {};
     address.forEach(addr => {
@@ -304,17 +387,30 @@ export const getHospitals = async (req, res) => {
         totalReviews: r.totalReviews
       };
     });
+    console.log("heheh", data)
+    const finalData = data.map(item => ({
+      ...item.hospital,
 
-    // 4️⃣ Merge everything
-    const finalData = users.map(user => ({
-      ...user, logo: user.logoFileId ? `api/file/${user?.logoFileId}` : null,
-      address: addressMap[user._id.toString()] || null,
-      avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-      totalReviews: ratingMap[user._id.toString()]?.totalReviews || 0
+      logo: item.hospital.logoFileId
+        ? `api/file/${item.hospital.logoFileId}`
+        : null,
+
+      address: item,
+
+      avgRating:
+        ratingMap[item.hospital._id.toString()]
+          ?.avgRating || 0,
+
+      totalReviews:
+        ratingMap[item.hospital._id.toString()]
+          ?.totalReviews || 0,
+
+      distanceInKm: item.distance
+        ? (item.distance / 1000).toFixed(2)
+        : null
     }));
 
 
-    const total = await HospitalBasic.countDocuments(filter);
 
     return res.status(200).json({
       success: true,

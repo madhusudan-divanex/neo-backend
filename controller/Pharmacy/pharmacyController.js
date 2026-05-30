@@ -33,8 +33,9 @@ const addInventry = async (req, res) => {
         //     return res.status(200).json({ message: "Batch number already exits", success: false })
         // }
         let data;
+        const h1Schedule = await ScheduleMedicines.findOne({ name: 'H1' })
 
-        if (req.body.schedule == 'H1') {
+        if (req.body.schedule == h1Schedule?._id) {
             data = {
                 ...req.body,
                 status: 'Pending'
@@ -624,19 +625,66 @@ const getPOList = async (req, res) => {
                 }
             },
             { $unwind: "$supplier" },
-            { $match: matchStage },
-            // 👇 populate jaisa behaviour
+
+            // Schedule populate
+            {
+                $lookup: {
+                    from: "schedule-medicines", // collection name
+                    localField: "products.schedule",
+                    foreignField: "_id",
+                    as: "scheduleData"
+                }
+            },
+
             {
                 $addFields: {
                     supplierId: {
                         _id: "$supplier._id",
                         name: "$supplier.name",
                         mobileNumber: "$supplier.mobileNumber"
+                    },
+
+                    products: {
+                        $map: {
+                            input: "$products",
+                            as: "product",
+                            in: {
+                                $mergeObjects: [
+                                    "$$product",
+                                    {
+                                        schedule: {
+                                            $arrayElemAt: [
+                                                {
+                                                    $filter: {
+                                                        input: "$scheduleData",
+                                                        as: "sch",
+                                                        cond: {
+                                                            $eq: [
+                                                                "$$sch._id",
+                                                                "$$product.schedule"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                0
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
                     }
                 }
             },
 
-            { $project: { supplier: 0 } }, // extra field remove
+            { $match: matchStage },
+
+            {
+                $project: {
+                    supplier: 0,
+                    scheduleData: 0
+                }
+            },
 
             { $sort: { createdAt: -1 } },
 
@@ -1292,6 +1340,7 @@ const completeReturn = async (req, res) => {
             }
             if (inv.quantity < p.quantity) {
                 await session.abortTransaction();
+                console.log(inv)
                 return res.status(400).json({ success: false, message: `Insufficient stock for ${inv.medicineName}` });
             }
             // Deduct
@@ -1502,15 +1551,21 @@ const sellMedicine = async (req, res) => {
     let ptData;
     try {
         const paymentData = await PaymentInfo.findOne({ userId: pharId || hospitalId })
+        if (!paymentData) {
+            safeUnlink(prescriptionFile)
+            return res.status(400).json({ success: false, message: "Payment details are not added. Please add first" });
+        }
         const userId = pharId || hospitalId
         const pharmacy = await User.findById(userId);
         if (!pharmacy) {
+            safeUnlink(prescriptionFile)
             return res.status(200).json({ success: false, message: "User not found" });
         }
         if (patientId) {
             // Existing patient by ID
             const patient = await User.findById(patientId);
             if (!patient) {
+                safeUnlink(prescriptionFile)
                 return res.status(400).json({ success: false, message: "Invalid Patient ID" });
             }
         } else {
@@ -2507,6 +2562,69 @@ export const getCustomerReturn = async (req, res) => {
                 totalPages: Math.ceil(total / limit)
             }
         });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+export const requestableMedicine = async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const scheduleH1 = await ScheduleMedicines.findOne({ name: "H1" });
+        const isUser = await User.findById(userId)
+        if (!scheduleH1) {
+            return res.status(404).json({
+                success: false,
+                message: "Schedule not found"
+            });
+        }
+
+        const medicines = await Inventory.find({
+            pharId: userId,
+            schedule: scheduleH1._id,
+            status: "Pending"
+        });
+        if (isUser.role == "pharmacy") {
+            const requestedData = await MedicineRequest.find({
+                medicineId: { $in: medicines.map(item => item._id) },
+                pharId: userId
+            });
+
+            // Sirf wahi medicines jinki request nahi bani hai
+            const unrequestedMedicines = medicines.filter(item =>
+                !requestedData.some(
+                    req => req.medicineId.toString() === item._id.toString()
+                )
+            );
+
+            return res.status(200).json({
+                success: true,
+                data: unrequestedMedicines
+            });
+        } else {
+
+            const requestedData = await MedicineRequest.find({
+                medicineId: { $in: medicines.map(item => item._id) },
+                hospitalId: userId
+            });
+
+            // Sirf wahi medicines jinki request nahi bani hai
+            const unrequestedMedicines = medicines.filter(item =>
+                !requestedData.some(
+                    req => req.medicineId.toString() === item._id.toString()
+                )
+            );
+
+            return res.status(200).json({
+                success: true,
+                data: unrequestedMedicines
+            });
+        }
+
 
     } catch (error) {
         return res.status(500).json({

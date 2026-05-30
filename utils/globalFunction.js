@@ -55,7 +55,7 @@ const checkStockAvailability = async (userId, products) => {
     if (inventory.quantity < item.quantity) {
       return {
         success: false,
-        message: `Insufficient stock for ${inventory._id}`
+        message: `Insufficient stock for ${inventory.medicineName}`
       };
     }
   }

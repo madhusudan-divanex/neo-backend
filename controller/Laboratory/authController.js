@@ -970,18 +970,18 @@ const deleteLabImage = async (req, res) => {
     const { path, type } = req.body;
     const userId = req.user.userId
     try {
-        const user = await User.findById(labId)
+        const user = await User.findById(userId)
         if (!user) return res.status(200).json({ message: "Lab not found", success: false })
         if (type == 'thumbnail') {
-            await LabImage.findOneAndUpdate({ userId: labId }, { thumbnail: '' }, { new: true })
+            await LabImage.findOneAndUpdate({ userId }, { thumbnail: '' }, { new: true })
             safeUnlink(path)
             return res.status(200).json({
                 success: true,
                 message: "Image deleted",
             });
         } else {
-            const imgDoc = await LabImage.findOne({ userId: labId });
-            await LabImage.findOneAndUpdate({ userId: labId }, { $pull: { labImg: path }, }, { new: true })
+            const imgDoc = await LabImage.findOne({ userId });
+            await LabImage.findOneAndUpdate({ userId }, { $pull: { labImg: path }, }, { new: true })
             safeUnlink(path)
             return res.status(200).json({
                 success: true,

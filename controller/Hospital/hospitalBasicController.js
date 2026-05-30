@@ -44,8 +44,9 @@ export const saveBasic = async (req, res) => {
     if (hospital) {
       const baseUrl = `api/file/`;
       if (req.body.country) {
-        const { state, city, pinCode, fullAddress } = req.body
-        await HospitalAddress.findOneAndUpdate({ hospitalId: hospital?._id }, { country: req.body.country, state, city, pinCode, fullAddress }, { new: true, upsert: true })
+        const { state, city, pinCode, fullAddress, lat, long } = req.body
+        const location = { type: "Point", coordinates: [long, lat] };
+        await HospitalAddress.findOneAndUpdate({ hospitalId: hospital?._id }, { country: req.body.country, state, city, pinCode, fullAddress, location, lat, long }, { new: true, upsert: true })
         const countryData = await Country.findById(req.body.country)
         await assignNH12(userId, countryData?.phonecode)
       }

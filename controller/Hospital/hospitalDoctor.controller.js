@@ -16,6 +16,7 @@ import Country from "../../models/Hospital/Country.js";
 import { assignNH12 } from "../../utils/nh12.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 import AuditLog from "../../models/AuditLog.js";
+import City from "../../models/Hospital/City.js";
 export const createHospitalDoctor = async (req, res) => {
   const image = req.file?.path;
   try {
@@ -43,12 +44,17 @@ export const createHospitalDoctor = async (req, res) => {
       address = JSON.parse(req.body.address);
     } else {
       // map manually or leave empty
+      const cityData = await City.findById(req.body.cityId)
+      const location = cityData ? { type: "Point", coordinates: [cityData?.longitude, cityData?.latitude] } : null
       address = {
         countryId: req.body.countryId,
         stateId: req.body.stateId,
         cityId: req.body.cityId,
         pinCode: req.body.pinCode,
         fullAddress: req.body.fullAddress,
+        location,
+        lat: cityData?.latitude,
+        long: cityData?.longitude,
 
         contact: {
           emergencyContactName: req.body.emergencyContactName,
@@ -388,7 +394,7 @@ export const getHospitalDoctorByIdNew = async (req, res) => {
       });
     }
 
-    const aboutDoctor = await DoctorAbout.findOne({ userId: id }).populate('cityId stateId countryId specialty treatmentAreas', 'name')
+    const aboutDoctor = await DoctorAbout.findOne({ userId: id }).populate('stateId countryId', 'name isoCode').populate('cityId specialty treatmentAreas', 'name')
     const aboutDoctorEduWork = await DoctorEduWork.findOne({ userId: id })
     const employmentDetails = await StaffEmployement.findOne({ userId: id, organizationId: hospitalId })?.populate('department', 'departmentName').populate('permissionId', 'name')
 
@@ -976,3 +982,17 @@ export const availableDoctor = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+export const getDoctorAboutData = async (req, res) => {
+  const userId = req.user.id
+  try {
+    const { id } = req.params;
+    const staffEmp = await StaffEmployement.findOne({ userId: id, organizationId: userId }).lean()
+    const aboutData = await DoctorAbout.findOne({ userId: id }).select('specialty').populate('specialty', 'name')
+    return res.status(200).json({
+      message: "Doctor about data fetched successfully", success: true,
+      data: { specialty: aboutData?.specialty?.name, ...staffEmp }
+    })
+  } catch (error) {
+    return res.status(500).json({ message: error.message })
+  }
+}
