@@ -130,7 +130,6 @@ io.use((socket, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("decoded", decoded)
         socket.userId = decoded.id || decoded.user;
 
         console.log("🔐 Socket Auth:", decoded.user);

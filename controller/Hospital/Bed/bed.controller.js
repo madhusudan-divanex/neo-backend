@@ -1158,7 +1158,7 @@ export const departmentTransfer = async (req, res) => {
       return res.status(400).json({ success: false, message: "Doctor not in hospital" });
     }
 
-    if (toDoctorEmployment.status !== "Active") {
+    if (toDoctorEmployment.status !== "active") {
       await session.abortTransaction();
       return res.status(400).json({
         message: `Doctor is ${toDoctorEmployment.status}`,

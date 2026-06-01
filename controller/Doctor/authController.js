@@ -93,7 +93,7 @@ const signUpDoctor = async (req, res) => {
             success: true,
             message: "Doctor registered successfully",
             doctorId: newDoctor._id,
-            userId: userData._id, code
+            userId: userData._id,
         });
 
     } catch (err) {
@@ -1457,7 +1457,7 @@ const getDoctors = async (req, res) => {
         const doctors = await DoctorAbout.aggregate(geoPipeline);
 
         /* ---------------- RESPONSE ---------------- */
-        console.log(doctors)
+
         const finalData = doctors.map(item => ({
             _id: item.user._id,
             name: item.user.name,

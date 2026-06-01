@@ -101,6 +101,7 @@ export const createHospitalDoctor = async (req, res) => {
       const pt = await User.create({
         name: personal.name,
         doctorId: personalData._id,
+        contactNumber: personal.contactNumber,
         email: personal.email,
         role: 'doctor',
         created_by: "hospital",

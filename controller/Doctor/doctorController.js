@@ -208,6 +208,31 @@ async function getDoctorPatientReport(req, res) {
     });
   }
 }
+async function getDoctorPatientLabPrescription(req, res) {
+  const patientId = req.params.patientId
+  const { page, limit } = req.query
+  try {
+    const appointments = await DoctorAppointment.find({
+      patientId,
+      doctorId: req.user.userId,
+      "labTest.tests.0": { $exists: true }
+    }).populate('labTest.tests.category', 'name').populate('labTest.tests.subCat', 'subCategory').select('-vitals').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+
+    const totalAppointments = await DoctorAppointment.countDocuments({
+      patientId,
+      doctorId: req.user.userId,
+      "labTest.tests.0": { $exists: true }
+    })
+    return res.status(200).json({ message: "labReports", data: appointments, success: true, pagination: { page, limit, totalAppointments, totalPages: Math.ceil(totalAppointments / limit) } })
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+    });
+  }
+}
 async function getPatientPending(req, res) {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -512,6 +537,6 @@ export const addPatient = async (req, res) => {
 };
 
 export {
-  doctorDashboard, getPatientHistory, getOccupiedSlots, getDoctorPatientReport, getPatientPending, sendReminder,
+  doctorDashboard, getPatientHistory, getOccupiedSlots, getDoctorPatientReport, getDoctorPatientLabPrescription, getPatientPending, sendReminder,
 
 }

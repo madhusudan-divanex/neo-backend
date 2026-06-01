@@ -1673,7 +1673,11 @@ export const consentLetterPdf = async (req, res) => {
 export const bedInvoicePdf = async (req, res) => {
   const customId = req.params.id
   try {
-    const allotmentData = await BedAllotment.findOne({ $or: [{ customId: customId }, { _id: customId }] })
+    const query = [{ customId: customId }];
+    if (mongoose.Types.ObjectId.isValid(customId)) {
+      query.push({ _id: customId });
+    }
+    const allotmentData = await BedAllotment.findOne({ $or: query })
       .populate('primaryDoctorId', 'nh12 name')
       .populate('departmentId', 'departmentName')
       .populate({ path: 'bedId', populate: [{ path: "roomId" }] })
@@ -1811,7 +1815,11 @@ export const labInvoicePdf = async (req, res) => {
 export const labSamplePdf = async (req, res) => {
   const id = req.params.id
   try {
-    const appointmentData = await LabAppointment.findOne({ $or: [{ customId: id }, { _id: id }] })
+    const query = [{ customId: id }]
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query.push({ _id: id });
+    }
+    const appointmentData = await LabAppointment.findOne({ $or: query })
       .populate('patientId', 'name email contactNumber nh12').populate('staff', 'name nh12')
     if (!appointmentData) {
       return res.status(404).json({ message: "Appointment data not found", success: false })

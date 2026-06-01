@@ -387,7 +387,7 @@ export const getHospitals = async (req, res) => {
         totalReviews: r.totalReviews
       };
     });
-    console.log("heheh", data)
+
     const finalData = data.map(item => ({
       ...item.hospital,
 

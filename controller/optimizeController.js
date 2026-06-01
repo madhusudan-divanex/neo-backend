@@ -1,5 +1,6 @@
 import PatientBanner from "../models/Admin/PatientBanner.js";
 import Queries from "../models/Admin/Queries.js";
+import Department from "../models/Department.js";
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import DoctorClinic from "../models/Doctor/Clinic.model.js";
 import DoctorEduWork from "../models/Doctor/eduWork.js";
@@ -212,12 +213,18 @@ const getUserWithDetails = async ({
 };
 const getHospitalDoctor = async (req, res) => {
     const hospitalId = req.user.id || req.user.userId
-    const { status } = req.query
+    const { status, deptType } = req.query
     try {
+        let departmentId = []
+        if (deptType) {
+            const departments = await Department.find({ type: deptType, userId: hospitalId })
+            console.log(departments)
+            departmentId = departments.map(d => d._id)
+        }
         let filter = {
             organizationId: hospitalId,
             userRole: "doctor",
-            status: "active"
+            status: "active", department: departmentId ? { $in: departmentId } : null
         }
         if (status) {
             filter.status = status

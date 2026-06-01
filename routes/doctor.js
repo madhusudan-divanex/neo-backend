@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { bookDoctorAppointment, doctorAptPayment, doctorAptVitals, doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
-import { addPatient, addTimeSlot, deleteTimeSlot, doctorDashboard, getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, getTimeSlots, sendReminder, updateDaySlot, updateTimeSlot, } from "../controller/Doctor/doctorController.js";
+import { addPatient, addTimeSlot, deleteTimeSlot, doctorDashboard, getDoctorPatientLabPrescription, getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, getTimeSlots, sendReminder, updateDaySlot, updateTimeSlot, } from "../controller/Doctor/doctorController.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
 import { ChatList } from "../controller/Hospital/chatController.js";
 const doctor = express.Router()
@@ -59,6 +59,7 @@ doctor.get('/dashboard/:id', authMiddleware, doctorDashboard)
 doctor.get('/patient-history/:id', authMiddleware, getPatientHistory)
 doctor.get('/occupied-slots/:doctorId/:date', getOccupiedSlots)
 doctor.get('/patient-lab-report/:doctorId/:patientId', getDoctorPatientReport)
+doctor.get('/patient-lab-prescription/:patientId', authMiddleware, getDoctorPatientLabPrescription)
 doctor.post('/send-reminder', authMiddleware, sendReminder)
 
 

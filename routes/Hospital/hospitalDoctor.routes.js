@@ -41,7 +41,7 @@ router.post(
 );
 
 router.post(
-  "/professional-details",
+  "/professional-details", auth,
   uploader.array("medicalLicenseFiles"),
   saveDoctorProfessionalDetails
 );

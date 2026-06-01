@@ -116,6 +116,7 @@ export const getAllDeathCertificates = async (req, res) => {
       filter.hospitalId = userId;
     } else {
       filter.doctorId = userId;
+      filter.hospitalId = null
     }
 
     if (search) {
@@ -320,6 +321,7 @@ export const getAllBirthCertificates = async (req, res) => {
       filter.hospitalId = userId;
     } else {
       filter.doctorId = userId;
+      filter.hospitalId = null
     }
     if (search) {
       filter.customId = search
@@ -379,6 +381,7 @@ export const getBirthCertificatesData = async (req, res) => {
       dataToSend.address = hospitalAddress
       dataToSend.license = hospitalBasic?.licenseId
       dataToSend.specialty = staffEmp?.specialty?.name
+      dataToSend.logo = hospitalBasic?.logoFileId ? `api/file/${hospitalBasic?.logoFileId}` : null
       return res.status(200).json({ data: dataToSend, success: true });
     }
     if (data.type == "doctor") {
@@ -391,6 +394,7 @@ export const getBirthCertificatesData = async (req, res) => {
       dataToSend.nh12 = doctor.nh12;
       dataToSend.address = doctorAddress
       dataToSend.specialty = doctorAddress?.specialty?.name
+      dataToSend.logo = doct?.profileImage
       return res.status(200).json({ data: dataToSend, success: true });
     }
 
@@ -469,6 +473,7 @@ export const getAllFitnessCertificates = async (req, res) => {
       filter.hospitalId = userId;
     } else {
       filter.doctorId = userId;
+      filter.hospitalId = null
     }
     if (search) {
       filter.customId = search
@@ -643,6 +648,7 @@ export const getAllMedicalCertificates = async (req, res) => {
       filter.hospitalId = userId;
     } else {
       filter.doctorId = userId;
+      filter.hospitalId = null
     }
     if (search) {
       filter.customId = search
@@ -704,6 +710,7 @@ export const getMedicalCertificatesData = async (req, res) => {
       dataToSend.address = hospitalAddress
       dataToSend.license = hospitalBasic?.licenseId
       dataToSend.specialty = staffEmp?.specialty?.name
+      dataToSend.logo = hospitalBasic?.logoFileId ? `api/file/${hospitalBasic?.logoFileId}` : null
       return res.status(200).json({ data: dataToSend, success: true });
     }
     if (data.type == "doctor") {
@@ -715,6 +722,7 @@ export const getMedicalCertificatesData = async (req, res) => {
       dataToSend.logo = doct?.profileImage
       dataToSend.address = doctorAddress
       dataToSend.specialty = doctorAddress?.specialty?.name
+      dataToSend.logo = doct?.profileImage
       return res.status(200).json({ data: dataToSend, success: true });
     }
 

@@ -968,94 +968,479 @@ const getNearByDoctor = async (req, res) => {
   }
 };
 const getTopUsers = async (req, res) => {
+  const { lat, lng } = req.query;
   try {
-    const fiveDoctors = await User.find({ role: "doctor" })
-      .select("name email contactNumber doctorId")
-      .populate("doctorId", "profileImage")
-      .sort({ createdAt: -1 })
-      .limit(5);
+    const doctorPipeline = [];
 
-    const fiveLabs = await User.find({ role: "lab" })
-      .select("name email contactNumber labId")
-      .populate("labId", "logo")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    const fivePhar = await User.find({ role: "pharmacy" })
-      .select("name email contactNumber pharId")
-      .populate("pharId", "logo")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    const fiveHospital = await User.find({ role: "hospital" })
-      .select("name email contactNumber hospitalId")
-      .populate("hospitalId", "logoFileId")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    // IDs
-    const doctorIds = fiveDoctors.map(item => item._id);
-    const labIds = fiveLabs.map(item => item._id);
-    const pharIds = fivePhar.map(item => item._id);
-    const hospitalIds = fiveHospital.map(item => item?.hospitalId?._id);
-
-    // About data
-    const doctorAbouts = await DoctorAbout.find({
-      userId: { $in: doctorIds }
-    })
-      .select("userId fullAddress specialty fees hospitalName")
-      .populate("specialty", "name");
-
-    const labAbouts = await LabAddress.find({
-      userId: { $in: labIds }
-    }).select("userId fullAddress");
-
-    const pharAbouts = await PharAddress.find({
-      userId: { $in: pharIds }
-    }).select("userId fullAddress");
-
-    const hospitalAbouts = await HospitalAddress.find({
-      hospitalId: { $in: hospitalIds }
-    }).select("hospitalId fullAddress");
-
-    // Helper to merge
-    const mergeData = (users, abouts) => {
-      return users.map(user => {
-        const about = abouts.find(
-          a => a.userId.toString() === user._id.toString()
-        );
-        return {
-          ...user.toObject(),
-          about: about || null
-        };
+    if (lat && lng) {
+      doctorPipeline.push({
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [Number(lng), Number(lat)]
+          },
+          distanceField: "distance",
+          spherical: true,
+          query: {
+            "location.type": "Point"
+          }
+        }
       });
-    };
-    const mergeHospitalData = (users, abouts) => {
-      return users.map(user => {
-        const about = abouts.find(
-          a => a.hospitalId &&
-            user?.hospitalId?._id &&
-            a.hospitalId.toString() === user.hospitalId._id.toString()
-        );
-        return {
-          ...user.toObject(),
-          about: about || null
-        };
+    }
+    doctorPipeline.push({
+      $sort: { createdAt: -1 }
+    });
+
+    doctorPipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                contactNumber: 1,
+                doctorId: 1,
+                role: 1,
+                fcmToken: 1,
+              }
+            }
+          ],
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $match: {
+          "user.role": "doctor",
+          "user.fcmToken": { $ne: null }
+        }
+      },
+      {
+        $lookup: {
+          from: "doctors",
+          localField: "user.doctorId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                profileImage: 1,
+                rating: 1,
+                gender: 1,
+                status: 1
+              }
+            }
+          ],
+          as: "doctorProfile"
+        }
+      },
+      {
+        $unwind: {
+          path: "$doctorProfile",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $limit: 5
+      }
+    );
+    doctorPipeline.push(
+      {
+        $lookup: {
+          from: "specialities",
+          localField: "specialty",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+          as: "specialty"
+        }
+      },
+      {
+        $unwind: {
+          path: "$specialty",
+          preserveNullAndEmptyArrays: true
+        }
+      }
+    );
+
+    const doctors =
+      await DoctorAbout.aggregate(
+        doctorPipeline
+      );
+
+    const finalDoctors =
+      doctors.map(item => ({
+        _id: item.user._id,
+        name: item.user.name,
+        email: item.user.email,
+        contactNumber: item.user.contactNumber,
+
+        doctorId: item.user.doctorId,
+
+        profileImage:
+          item.doctorProfile?.profileImage,
+
+        about: item,
+
+        distanceInKm:
+          item.distance
+            ? (
+              item.distance / 1000
+            ).toFixed(2)
+            : null
+      }));
+    const labPipeline = [];
+    if (lat && lng) {
+      labPipeline.push({
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [Number(lng), Number(lat)]
+          },
+          distanceField: "distance",
+          spherical: true,
+          query: {
+            "location.type": "Point"
+          }
+        }
       });
-    };
-    const mergedDoctors = mergeData(fiveDoctors, doctorAbouts);
-    const mergedLabs = mergeData(fiveLabs, labAbouts);
-    const mergedPhar = mergeData(fivePhar, pharAbouts);
-    const mergedHospital = mergeHospitalData(fiveHospital, hospitalAbouts);
+    }
+    labPipeline.push({
+      $sort: { createdAt: -1 }
+    });
+
+    labPipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                contactNumber: 1,
+                labId: 1,
+                role: 1
+              }
+            }
+          ],
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $match: {
+          "user.labId": { $ne: null }
+        }
+      },
+      {
+        $lookup: {
+          from: "laboratories",
+          localField: "user.labId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                logo: 1,
+                rating: 1,
+              }
+            }
+          ],
+          as: "labProfile"
+        }
+      },
+      {
+        $unwind: {
+          path: "$labProfile",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $limit: 5
+      }
+    );
+
+    const labs =
+      await LabAddress.aggregate(
+        labPipeline
+      );
+
+    const finalLabs =
+      labs.map(item => ({
+        _id: item.user._id,
+        name: item.user.name,
+        email: item.user.email,
+        contactNumber: item.user.contactNumber,
+
+        labId: item.user.labId,
+
+        logo:
+          item.labProfile?.logo,
+
+        about: item,
+
+        distanceInKm:
+          item.distance
+            ? (
+              item.distance / 1000
+            ).toFixed(2)
+            : null
+      }));
+
+
+    const pharPipeline = [];
+    if (lat && lng) {
+      pharPipeline.push({
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [Number(lng), Number(lat)]
+          },
+          distanceField: "distance",
+          spherical: true,
+          query: {
+            "location.type": "Point"
+          }
+        }
+      });
+    }
+    pharPipeline.push({
+      $sort: { createdAt: -1 }
+    });
+
+    pharPipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                contactNumber: 1,
+                pharId: 1,
+                role: 1
+              }
+            }
+          ],
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $match: {
+          "user.pharId": { $ne: null }
+        }
+      },
+      {
+        $lookup: {
+          from: "pharmacies",
+          localField: "user.pharId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                logo: 1
+              }
+            }
+          ],
+          as: "pharProfile"
+        }
+      },
+      {
+        $unwind: {
+          path: "$pharProfile",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $limit: 5
+      }
+    );
+
+    const pharmacys =
+      await PharAddress.aggregate(
+        pharPipeline
+      );
+
+    const finalPhar =
+      pharmacys.map(item => ({
+        _id: item.user._id,
+        name: item.user.name,
+        email: item.user.email,
+        contactNumber: item.user.contactNumber,
+
+        pharId: item.user.pharId,
+
+        logo:
+          item.pharProfile?.logo,
+
+        about: item,
+
+        distanceInKm:
+          item.distance
+            ? (
+              item.distance / 1000
+            ).toFixed(2)
+            : null
+      }));
+    pharmacys.map(item => ({
+      _id: item.user._id,
+      name: item.user.name,
+      email: item.user.email,
+      contactNumber: item.user.contactNumber,
+
+      pharId: item.user.pharId,
+
+      logo:
+        item.pharProfile?.logo,
+
+      about: item,
+
+      distanceInKm:
+        item.distance
+          ? (
+            item.distance / 1000
+          ).toFixed(2)
+          : null
+    }));
+
+    const hospitalPipeline = [];
+    if (lat && lng) {
+      hospitalPipeline.push({
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [Number(lng), Number(lat)]
+          },
+          distanceField: "distance",
+          spherical: true,
+          query: {
+            "location.type": "Point"
+          }
+        }
+      });
+    }
+    hospitalPipeline.push({
+      $sort: { createdAt: -1 }
+    });
+
+    hospitalPipeline.push(
+      {
+        $lookup: {
+          from: "hospitalbasics",
+          localField: "hospitalId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                hospitalName: 1,
+                logoFileId: 1,
+                userId: 1,
+                category: 1
+              }
+            }
+          ],
+          as: "hospital"
+        }
+      },
+      {
+        $unwind: "$hospital"
+      },
+
+      // User lookup HospitalBasic.userId se
+      {
+        $lookup: {
+          from: "users",
+          localField: "hospital.userId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                contactNumber: 1,
+                role: 1
+              }
+            }
+          ],
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+
+      {
+        $match: {
+          "user.role": "hospital"
+        }
+      },
+
+      {
+        $limit: 5
+      }
+    );
+
+    const hosptials =
+      await HospitalAddress.aggregate(
+        hospitalPipeline
+      );
+
+    const finalHospitals = hosptials.map(item => ({
+      _id: item.user._id,
+
+      name:
+        item.hospital.hospitalName ||
+        item.user.name,
+
+      email: item.user.email,
+
+      contactNumber:
+        item.user.contactNumber,
+
+      hospitalId:
+        item.hospital._id,
+
+      logo:
+        item.hospital.logoFileId
+          ? `api/file/${item.hospital.logoFileId}`
+          : null,
+
+      about: item,
+
+      distanceInKm:
+        item.distance
+          ? (item.distance / 1000).toFixed(2)
+          : null
+    }));
 
     return res.status(200).json({
       message: "Top data fetched",
       success: true,
       data: {
-        doctors: mergedDoctors,
-        labs: mergedLabs,
-        pharmacy: mergedPhar,
-        hospitals: mergedHospital
+        doctors: finalDoctors,
+        labs: finalLabs,
+        pharmacy: finalPhar,
+        hospitals: finalHospitals
       }
     });
 
@@ -1103,38 +1488,153 @@ const getTopUserByCategory = async (req, res) => {
   page = parseInt(page);
   limit = parseInt(limit);
   const skip = (page - 1) * limit;
+  const lat = req.query.lat
+  const lng = req.query.long
+  const location = req.query.location
 
   try {
     if (catType == "hospital") {
-      const hospitalBasic = await HospitalBasic.find({ category: catId })
-        .select('userId category logoFileId')
-        .populate('category', 'name')
-        .populate('userId', 'name email contactNumber')
-        .skip(skip)
-        .limit(limit);
+      const filter = {}
+      if (catId) {
+        filter.category = new mongoose.Types.ObjectId(catId);
+      }
+      const pipeline = [];
 
-      const basicIds = hospitalBasic.map(item => item._id);
-
-      const hospitalAddress = await HospitalAddress.find({
-        hospitalId: { $in: basicIds }
-      }).select("fullAddress hospitalId");
-
-      const mergedHospital = hospitalBasic.map(user => {
-        const about = hospitalAddress.find(
-          a => a.hospitalId?.toString() === user._id.toString()
-        );
-        return {
-          ...user.toObject(),
-          about: about || null
-        };
+      if (lat && lng) {
+        pipeline.push({
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [
+                Number(lng),
+                Number(lat)
+              ]
+            },
+            distanceField: "distance",
+            spherical: true,
+            query: {
+              location: { $exists: true }
+            }
+          }
+        });
+      }
+      pipeline.push({
+        $lookup: {
+          from: "hospitalbasics",
+          localField: "hospitalId",
+          foreignField: "_id",
+          as: "hospital"
+        }
       });
 
-      const total = await HospitalBasic.countDocuments({ category: catId });
+      pipeline.push({
+        $unwind: "$hospital"
+      });
+      if (location) {
+        pipeline.push({
+          $match: {
+            city: new mongoose.Types.ObjectId(location)
+          }
+        });
+      }
+
+      const matchFilter = {};
+
+      if (catId) {
+        matchFilter["hospital.category"] = { $in: [new mongoose.Types.ObjectId(catId)] };
+      }
+
+      if (Object.keys(matchFilter).length) {
+        pipeline.push({
+          $match: matchFilter
+        });
+      }
+      if (!lat || !lng) {
+        pipeline.push({
+          $sort: {
+            createdAt: -1
+          }
+        });
+      }
+      const countPipeline = [...pipeline];
+
+      countPipeline.push({
+        $count: "total"
+      });
+
+      const totalResult =
+        await HospitalAddress.aggregate(countPipeline);
+
+      const total =
+        totalResult?.[0]?.total || 0;
+
+      pipeline.push({
+        $skip: (page - 1) * limit
+      });
+
+      pipeline.push({
+        $limit: limit
+      });
+      const data =
+        await HospitalAddress.aggregate(pipeline);
+
+      const hospitalIds =
+        data.map(item => item.hospital._id);
+      const address = await HospitalAddress.find({ hospitalId: { $in: hospitalIds } })
+      const addressMap = {};
+      address.forEach(addr => {
+        addressMap[addr.hospitalId.toString()] = addr;
+      });
+      // 3️⃣ Fetch rating stats (AVG + COUNT)
+      const ratingStats = await Rating.aggregate([
+        {
+          $match: {
+            hospitalId: { $in: hospitalIds }
+          }
+        },
+        {
+          $group: {
+            _id: "$hospitalId",
+            avgRating: { $avg: "$star" },
+            totalReviews: { $sum: 1 }
+          }
+        }
+      ]);
+
+      const ratingMap = {};
+      ratingStats.forEach(r => {
+        ratingMap[r._id.toString()] = {
+          avgRating: Number(r.avgRating.toFixed(1)),
+          totalReviews: r.totalReviews
+        };
+      });
+      const finalData = data.map(item => ({
+        ...item.hospital,
+
+        logo: item.hospital.logoFileId
+          ? `api/file/${item.hospital.logoFileId}`
+          : null,
+
+        address: item,
+
+        avgRating:
+          ratingMap[item.hospital._id.toString()]
+            ?.avgRating || 0,
+
+        totalReviews:
+          ratingMap[item.hospital._id.toString()]
+            ?.totalReviews || 0,
+
+        distanceInKm: item.distance
+          ? (item.distance / 1000).toFixed(2)
+          : null
+      }));
+
 
       return res.status(200).json({
         message: "hospital",
         success: true,
-        data: mergedHospital,
+        data: finalData,
         pagination: {
           total,
           page,
@@ -1143,77 +1643,450 @@ const getTopUserByCategory = async (req, res) => {
         }
       });
     }
-
     else if (catType == "doctor") {
-      const doctorAbout = await DoctorAbout.find({
-        $or: [
-          { specialty: catId },
-          { treatmentAreas: catId }
-        ]
-      })
-        .select('userId specialty fullAddress cityId stateId fees hospitalName')
-        .populate("specialty cityId stateId")
-        .populate({
-          path: 'userId',
-          select: 'name contactNumber email doctorId',
-          populate: {
-            path: "doctorId",
-            select: "profileImage rating"
+      const geoPipeline = [];
+
+      // location based sorting
+      if (lat && lng) {
+
+        geoPipeline.push({
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [Number(lng), Number(lat)]
+            },
+
+            distanceField: "distance",
+
+            spherical: true,
+            query: {
+              "location.type": "Point"
+            }
           }
-        })
-        .skip(skip)
-        .limit(limit);
+        });
+      }
 
+      if (location) {
+        geoPipeline.push({
 
-      const total = await DoctorAbout.countDocuments({
-        $or: [
-          { specialty: catId },
-          { treatmentAreas: catId }
-        ]
+          $match: {
+            cityId: new mongoose.Types.ObjectId(location)
+          }
+        });
+
+      }
+      const matchFilter = {};
+
+      if (catId?.length) {
+        geoPipeline.push({
+          $match: {
+            $or: [
+              { specialty: new mongoose.Types.ObjectId(catId) },
+              { treatmentAreas: new mongoose.Types.ObjectId(catId) }
+            ]
+          }
+        });
+      }
+      if (Object.keys(matchFilter).length) {
+        geoPipeline.push({
+          $match: matchFilter
+        });
+      }
+
+      /* ---------------- POPULATE ---------------- */
+
+      geoPipeline.push({
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                role: 1,
+                fcmToken: 1,
+                doctorId: 1,
+              }
+            }
+          ],
+          as: "user"
+        }
       });
+
+      geoPipeline.push({
+        $unwind: "$user"
+      });
+
+
+      geoPipeline.push({
+        $lookup: {
+          from: "doctors",
+          localField: "user.doctorId",
+          foreignField: "_id",
+          as: "doctorProfile"
+        }
+      });
+
+      geoPipeline.push({
+        $unwind: {
+          path: "$doctorProfile",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      geoPipeline.push({
+        $addFields: {
+          avgRating: {
+            $ifNull: ["$doctorProfile.rating", 0]
+          }
+        }
+      });
+
+
+      geoPipeline.push({
+        $lookup: {
+          from: "countries",
+          localField: "countryId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+          as: "countryData"
+        }
+      });
+
+      geoPipeline.push({
+        $unwind: {
+          path: "$countryData",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      geoPipeline.push({
+        $lookup: {
+          from: "states",
+          localField: "stateId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+          as: "stateId"
+        }
+      });
+
+      geoPipeline.push({
+        $unwind: {
+          path: "$stateId",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+
+      geoPipeline.push({
+        $lookup: {
+          from: "cities",
+          localField: "cityId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+          as: "cityId"
+        }
+      });
+
+      geoPipeline.push({
+        $unwind: {
+          path: "$cityId",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+      geoPipeline.push({
+        $lookup: {
+          from: "specialities",
+          localField: "specialty",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+          as: "specialty"
+        }
+      });
+
+      geoPipeline.push({
+        $unwind: {
+          path: "$specialty",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      const totalData = await DoctorAbout.aggregate(geoPipeline);
+
+      geoPipeline.push({
+        $skip: (page - 1) * limit
+      });
+
+      geoPipeline.push({
+        $limit: limit
+      });
+
+
+      const doctors = await DoctorAbout.aggregate(geoPipeline);
+
+      const finalData = doctors.map(item => ({
+        _id: item.user._id,
+        name: item.user.name,
+        email: item.user.email,
+        contactNumber: item.user.contactNumber,
+
+        doctorId: item.user.doctorId,
+
+        profileImage: item.doctorProfile?.profileImage || null,
+
+        avgRating: item.avgRating,
+
+        doctorAddress: item,
+
+        distanceInKm: item.distance
+          ? (item.distance / 1000).toFixed(2)
+          : null
+      }));
+
+
 
       return res.status(200).json({
         success: true,
         message: "Doctors data fetched",
-        data: doctorAbout,
+        data: finalData,
         pagination: {
-          total,
+          total: totalData.length,
           page,
           limit,
-          totalPages: Math.ceil(total / limit)
+          totalPages: Math.ceil(totalData.length / limit)
         }
       });
     }
 
     else if (catType == "pharmacy") {
-      const phar = await Pharmacy.find({ category: catId })
-        .select('userId logo')
-        .populate('userId', 'name email contactNumber')
-        .skip(skip)
-        .limit(limit);
+      const pipeline = [];
+      /* ================= GEO NEAR ================= */
 
-      const pharIds = phar.map(item => item.userId);
+      if (lat && lng) {
+        pipeline.push({
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [
+                Number(lng),
+                Number(lat)
+              ]
+            },
+            distanceField: "distance",
+            spherical: true,
+            query: {
+              location: { $exists: true }
+            }
+          }
+        });
+      }
+      if (location) {
+        pipeline.push({
 
-      const pharAddressData = await PharAddress.find({
-        userId: { $in: pharIds }
-      }).select("fullAddress userId");
+          $match: {
+            cityId: new mongoose.Types.ObjectId(location)
+          }
+        });
 
-      const mergedPharmacy = phar.map(user => {
-        const about = pharAddressData.find(
-          a => a.userId.toString() === user?.userId?._id.toString()
-        );
-        return {
-          ...user.toObject(),
-          about: about || null
+      }
+
+      /* ================= USER LOOKUP ================= */
+
+      pipeline.push({
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                nh12: 1,
+                email: 1,
+                pharId: 1,
+                role: 1,
+              }
+            }
+          ],
+          as: "user"
+        }
+      });
+
+      pipeline.push({
+        $unwind: "$user"
+      });
+
+      /* ================= FILTER ================= */
+
+      const matchFilter = {
+        "user.role": "pharmacy"
+      };
+
+
+
+      pipeline.push({
+        $match: matchFilter
+      });
+
+      /* ================= PHARMACY LOOKUP ================= */
+
+      pipeline.push({
+        $lookup: {
+          from: "pharmacies",
+          localField: "user.pharId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                logo: 1,
+                name: 1,
+              }
+            }
+          ],
+          as: "pharmacy"
+        }
+      });
+
+      pipeline.push({
+        $unwind: {
+          path: "$pharmacy",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      /* ================= DEFAULT SORT ================= */
+
+      if (!lat || !lng) {
+        pipeline.push({
+          $sort: {
+            createdAt: -1
+          }
+        });
+      }
+      pipeline.push({
+        $facet: {
+          data: [
+            {
+              $skip: (page - 1) * limit
+            },
+            {
+              $limit: limit
+            }
+          ],
+          totalCount: [
+            {
+              $count: "count"
+            }
+          ]
+        }
+      });
+
+      /* =======================================================
+         FETCH DATA
+      ======================================================= */
+
+      const result = await PharAddress.aggregate(pipeline);
+
+      const data = result[0]?.data || [];
+      const total = result[0]?.totalCount?.[0]?.count || 0
+
+      /* =======================================================
+         RATINGS
+      ======================================================= */
+
+      const userIds = data.map(item => item.user._id);
+
+      const ratingStats = await Rating.aggregate([
+
+        {
+          $match: {
+            pharId: { $in: userIds }
+          }
+        },
+
+        {
+          $group: {
+
+            _id: "$pharId",
+
+            avgRating: {
+              $avg: "$star"
+            },
+
+            totalReviews: {
+              $sum: 1
+            }
+          }
+        }
+      ]);
+
+      const ratingMap = {};
+
+      ratingStats.forEach((r) => {
+
+        ratingMap[r._id.toString()] = {
+
+          avgRating: Number(
+            r.avgRating.toFixed(1)
+          ),
+
+          totalReviews: r.totalReviews
         };
       });
 
-      const total = await Pharmacy.countDocuments({ category: catId });
+      /* =======================================================
+         FINAL FORMAT
+      ======================================================= */
+
+      const mergedData = data.map((item) => ({
+
+        ...item.user,
+
+        pharId: item.pharmacy,
+
+        pharAddress: item,
+
+        avgRating:
+          ratingMap[item.user._id.toString()]
+            ?.avgRating || 0,
+
+        totalReviews:
+          ratingMap[item.user._id.toString()]
+            ?.totalReviews || 0,
+        distanceInKm: item.distance
+          ? (item.distance / 1000).toFixed(2)
+          : null
+      }));
 
       return res.status(200).json({
         message: "pharmacy",
         success: true,
-        data: mergedPharmacy,
+        data: mergedData,
         pagination: {
           total,
           page,
@@ -1224,37 +2097,300 @@ const getTopUserByCategory = async (req, res) => {
     }
 
     else if (catType == "lab") {
-      const labs = await Laboratory.find({ category: catId })
-        .select('userId logo rating')
-        .populate('userId', 'name email contactNumber')
-        .skip(skip)
-        .limit(limit);
+      let locationUserIds = null;
 
-      const labIds = labs.map(item => item.userId).filter(Boolean);;
+      if (location) {
 
-      const labAddressData = await LabAddress.find({
-        userId: { $in: labIds }
-      });
+        const labAddressFilter = {};
+        labAddressFilter.cityId = new mongoose.Types.ObjectId(location);
 
 
+        const labAddresses =
+          await LabAddress.find(
+            labAddressFilter
+          )
+            .select('userId')
+            .lean();
 
+        locationUserIds =
+          labAddresses.map(
+            a => a.userId.toString()
+          );
+      }
 
-      const mergedLab = labs.map(user => {
-        const about = labAddressData.find(
-          a => a.userId.toString() === user?.userId?._id.toString()
-        );
-        return {
-          ...user.toObject(),
-          about: about || null
+      const userFilter = {
+
+        labId: {
+          $exists: true,
+          $ne: null
+        }
+      };
+
+      userFilter.role = { $in: ['lab', 'hospital'] };
+      if (locationUserIds) {
+
+        userFilter._id = {
+          $in: locationUserIds
         };
+      }
+      const users = await User.find(userFilter)
+        .select('-passwordHash')
+        .populate('labId')
+        .lean();
+
+      const fetchedUserIds =
+        users.map(u => u._id);
+
+      const pipeline = [];
+
+      /* ================= GEO NEAR ================= */
+
+      if (lat != null && lng != null) {
+
+        pipeline.push({
+
+          $geoNear: {
+
+            near: {
+              type: "Point",
+
+              coordinates: [
+                Number(lng),
+                Number(lat)
+              ]
+            },
+
+            distanceField: "distance",
+
+            spherical: true,
+
+            query: {
+              userId: {
+                $in: fetchedUserIds
+              },
+
+              location: {
+                $exists: true
+              }
+            }
+          }
+        });
+      } else {
+
+        pipeline.push({
+
+          $match: {
+
+            userId: {
+              $in: fetchedUserIds
+            }
+          }
+        });
+      }
+      pipeline.push({
+
+        $lookup: {
+
+          from: "countries",
+
+          localField: "countryId",
+
+          foreignField: "_id",
+
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+
+          as: "countryId"
+        }
       });
 
-      const total = await Laboratory.countDocuments({ category: catId });
+      pipeline.push({
+
+        $unwind: {
+          path: "$countryId",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      pipeline.push({
+
+        $lookup: {
+
+          from: "states",
+
+          localField: "stateId",
+
+          foreignField: "_id",
+
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+
+          as: "stateId"
+        }
+      });
+
+      pipeline.push({
+
+        $unwind: {
+          path: "$stateId",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      pipeline.push({
+
+        $lookup: {
+
+          from: "cities",
+
+          localField: "cityId",
+
+          foreignField: "_id",
+
+          pipeline: [
+            {
+              $project: {
+                name: 1
+              }
+            }
+          ],
+
+          as: "cityId"
+        }
+      });
+
+      pipeline.push({
+
+        $unwind: {
+          path: "$cityId",
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      /* ================= DEFAULT SORT ================= */
+
+      if (lat == null || lng == null) {
+
+        pipeline.push({
+
+          $sort: {
+            createdAt: -1
+          }
+        });
+      }
+      /* ================= PAGINATION ================= */
+
+      pipeline.push({
+
+        $facet: {
+
+          data: [
+
+            {
+              $skip:
+                (page - 1) * limit
+            },
+
+            {
+              $limit: limit
+            }
+          ],
+
+          totalCount: [
+
+            {
+              $count: "count"
+            }
+          ]
+        }
+      });
+
+      const result =
+        await LabAddress.aggregate(
+          pipeline
+        );
+
+      const labAddresses =
+        result[0]?.data || [];
+
+      const total =
+        result[0]?.totalCount?.[0]
+          ?.count || 0;
+
+      /* ======================================================
+         STEP 6: ADDRESS MAP
+      ====================================================== */
+
+      const labAddressMap = {};
+
+      labAddresses.forEach(a => {
+
+        labAddressMap[
+          a.userId.toString()
+        ] = a;
+      });
+
+      /* ======================================================
+         STEP 7: USER MAP
+      ====================================================== */
+
+      const userMap = {};
+
+      users.forEach(u => {
+
+        userMap[
+          u._id.toString()
+        ] = u;
+      });
+
+      /* ======================================================
+         STEP 8: MERGE DATA
+      ====================================================== */
+
+      let mergedData;
+
+
+
+      mergedData =
+        users.map(u => ({
+
+          ...u,
+
+          address:
+            labAddressMap[
+            u._id.toString()
+            ] || null,
+
+          avgRating:
+            u?.labId?.rating || 0,
+
+          distanceInKm:
+            labAddressMap[
+              u._id.toString()
+            ]?.distance
+              ? (
+                labAddressMap[
+                  u._id.toString()
+                ].distance / 1000
+              ).toFixed(2)
+              : null
+        }));
+
 
       return res.status(200).json({
         message: "lab",
         success: true,
-        data: mergedLab,
+        data: mergedData,
         pagination: {
           total,
           page,

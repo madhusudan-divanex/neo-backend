@@ -418,4 +418,42 @@ Add/Edit Department
     chat
  
 
+ Pharmacy->
+ Register 
+ Pharmacy Image 
+ Pharmacy address 
+ Pharmacy contact person 
+ Pharmacy License 
+ Add /Edit Inventory
+ Sell 
+ Generate Po
+ Supplier 
+ Return 
+ Employee 
+ Department 
+ Permission 
+ Payment Info 
+ Change Password 
+ Audit Logs
+ Staff login and test below permission
+    Add/edit inventory 
+    Add/edit Supplier 
+    sell 
+
+
+
+Hospital->
+Register 
+Hospital Image 
+Hospital address 
+Hospital contact person 
+Hospital License 
+Staff Add 
+Doctor Add with id 
+Doctor Time Slot 
+Appointment Prescription
+Lab Test 
+Lab Report,Sample,Payment
+Add Floor,room,bed,Allotment
+
  

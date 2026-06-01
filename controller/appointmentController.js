@@ -47,7 +47,7 @@ const bookDoctorAppointment = async (req, res) => {
             if (!data) {
                 return res.status(404).json({ message: "Doctor is not employed at this hospital", success: false })
             }
-            await PatientDepartment.create({ patientId, hospitalId, departmentId: data?.department })
+
             department = data?.department
             fees = data.fees
             const doctorAbout = await DoctorAbout.findOne({ userId: doctorId }).populate('specialty')
@@ -63,7 +63,17 @@ const bookDoctorAppointment = async (req, res) => {
         }
         const book = await DoctorAppointment.create({ patientId, department, doctorId, date, fees, hospitalId, status: isInsert.role == "hospital" ? "approved" : "pending" })
         if (book) {
+            if (hospitalId && isInsert.role == "hospital") {
+                await PatientDepartment.create({ patientId, hospitalId, departmentId: department, appointmentId: book._id })
+            }
             res.status(200).json({ message: "Appointment book successfully", success: true })
+            if (hospitalId) {
+                await Notification.create({
+                    userId: hospitalId,
+                    title: "New Appointment",
+                    message: `New appointment ${book?.customId} booked by ${isPatient?.name} with ${isExist?.name} on ${new Date(date)?.toLocaleString('en-GB')}`
+                })
+            }
             if (!hospitalId) {
                 await Notification.create({
                     userId: isExist._id,
@@ -290,6 +300,9 @@ const actionDoctorAppointment = async (req, res) => {
                 })
             }
             if (status == 'approved') {
+                if (isPatient.hospitalId) {
+                    await PatientDepartment.create({ patientId: isPatient?.patientId?._id, hospitalId: isPatient?.hospitalId, departmentId: isPatient?.department, appointmentId: isPatient._id })
+                }
                 if (isUser.fcmToken) {
                     await sendPush({
                         token: isUser.fcmToken,
@@ -307,17 +320,18 @@ const actionDoctorAppointment = async (req, res) => {
                     message: `Your doctor appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} has been approved by ${isExist.name}`
                 })
             } else if (status == 'rejected') {
-                if (isUser.fcmToken) {
-                    await sendPush({
-                        token: isUser.fcmToken,
-                        title: "Doctor Appointment Rejected",
-                        body: `Your appointment with ${isExist?.name} on ${new Date(isPatient?.date)?.toLocaleTimeString('en-GB')} was rejected.`,
-                        data: {
-                            type: "Doctor Appointment Rejected",
-                            time: Date.now().toString()
-                        }
-                    });
-                }
+                if (isPatient.department)
+                    if (isUser.fcmToken) {
+                        await sendPush({
+                            token: isUser.fcmToken,
+                            title: "Doctor Appointment Rejected",
+                            body: `Your appointment with ${isExist?.name} on ${new Date(isPatient?.date)?.toLocaleTimeString('en-GB')} was rejected.`,
+                            data: {
+                                type: "Doctor Appointment Rejected",
+                                time: Date.now().toString()
+                            }
+                        });
+                    }
                 await Notification.create({
                     userId: isPatient.patientId,
                     title: "Appointment Rejected!",
@@ -994,7 +1008,7 @@ const bookLabAppointment = async (req, res) => {
             await Notification.create({
                 userId: labId,
                 title: "New Appointment Request!",
-                message: `You have received a new appointment request from ${isPatient.name} on ${new Date(date).toLocaleString('en-GB')}.`
+                message: `You have received a new appointment request ${book.customId} from ${isPatient.name} on ${new Date(date).toLocaleString('en-GB')}.`
             });
 
             res.status(200).json({
@@ -1317,7 +1331,7 @@ const getDoctorPastAppointment = async (req, res) => {
     try {
         let isExist;
         if (patientId?.length < 24) {
-            isExist = await User.findOne({ unique_id: patientId });
+            isExist = await User.findOne({ nh12: patientId });
         } else {
             isExist = await User.findById(patientId);
         }
@@ -1328,52 +1342,12 @@ const getDoctorPastAppointment = async (req, res) => {
             })
             .populate({
                 path: 'labTest.tests.category',
-            }).lean();
-
-        const appointmentIds = appointments.map(a => a._id);
-
-        const labAppointments = await LabAppointment.find({
-            doctorAp: { $in: appointmentIds }
-        }).lean();
-
-        const labApptIds = labAppointments.map(l => l._id);
-
-        const reports = await TestReport.find({
-            appointmentId: { $in: labApptIds }
-        }).lean();
-        const reportMap = {};
-
-        for (const report of reports) {
-            const labApptId = report.appointmentId.toString();
-            if (!reportMap[labApptId]) {
-                reportMap[labApptId] = [];
-            }
-            reportMap[labApptId].push(report);
-        }
-        const labAppointmentMap = {};
-
-        for (const labAppt of labAppointments) {
-            const doctorApptId = labAppt.doctorAp.toString();
-
-            labAppt.reports = reportMap[labAppt._id.toString()] || [];
-
-            if (!labAppointmentMap[doctorApptId]) {
-                labAppointmentMap[doctorApptId] = [];
-            }
-            labAppointmentMap[doctorApptId].push(labAppt);
-        }
-        const finalAppointments = appointments.map(appt => {
-            const labAppts = labAppointmentMap[appt._id.toString()] || [];
-            return {
-                ...appt,
-                labAppointment: labAppts.length > 0 ? labAppts[0] : null
-            };
-        });
-        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
+            }).lean().sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId, doctorId })
         if (appointments?.length > 0) {
             return res.status(200).json({
                 message: "Appointment fetch successfully", totalDoctorApt,
-                data: finalAppointments, totalPage: Math.ceil(totalDoctorApt / limit), success: true
+                data: appointments, totalPage: Math.ceil(totalDoctorApt / limit), success: true
             })
         } else {
             return res.status(200).json({ message: "Appointment not found", success: false })
