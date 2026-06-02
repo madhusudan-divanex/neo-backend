@@ -394,7 +394,7 @@ export const getStaffList = async (req, res) => {
           path: 'staffId',
           select: 'profileImage gender'
         }
-      })
+      }).populate('department', 'departmentName')
       .populate('permissionId', 'name')
       .limit(limitInt)
       .skip(skip);

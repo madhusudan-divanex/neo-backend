@@ -713,7 +713,7 @@ const saveLabInvoice = async (req, res) => {
                 method: "CREATE",
                 panel: req?.user?.type,
                 shortDesc: "Invoice generated successfully",
-                description: `Invoice was generated successfully for appointment ${isApt?.customId} id for patient ${isApt?.patientId?.name}.`
+                description: `Invoice was generated successfully for lab appointment ${isApt?.customId} id for patient ${isApt?.patientId?.name}.`
             }]
         );
         res.status(201).json({
@@ -728,13 +728,10 @@ const getLabInvoice = async (req, res) => {
     try {
         const labId = req.user.id || req.user.userId
         const invoiceId = req.params.id
-
-
         const invoice = await LabPayment.findOne(({ labId, _id: invoiceId })).sort({ createdAt: -1 })
         if (!invoice) {
             return res.status(200).json({ message: "Invoice not found", success: false })
         }
-
         res.status(201).json({
             message: 'Invoice saved successfully',
             invoice
@@ -787,8 +784,6 @@ const getAppointmentSample = async (req, res) => {
     try {
         const data = await LabSample.find({ appointmentId })
         return res.status(200).json({ message: "Sample data fetched", data, success: true })
-
-
     } catch (error) {
         return res.status(500).json({ message: error?.message })
     }

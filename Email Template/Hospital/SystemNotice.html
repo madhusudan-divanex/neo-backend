@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>System Maintenance Notice</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
     rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Jacques+Francois&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
@@ -13,19 +13,35 @@
     crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <style>
+
+     .neo-mail-btn:hover {
+      background-color: #0E559C !important;
+      border-color: #0E559C !important;
+      color: #fff;
+    }
+
+    .neo-social-btn:hover {
+      background-color: #009899 !important;
+    }
+
     @media only screen and (max-width:767px) {
 
       .container {
         width: 100% !important;
       }
 
-      .content-padding {
+        .content-padding {
         padding: 25px 20px !important;
       }
 
-      .heading {
+      /* .heading {
         font-size: 38px !important;
         line-height: 44px !important;
+      } */
+
+       .heading h2 {
+        font-size: 22px !important;
+        line-height: 1.2;
       }
 
       .doctor-image {
@@ -43,16 +59,25 @@
       .social-icons td {
         padding: 0 3px !important;
       }
+
+      .right-empty {
+        display: none;
+      }
+
+      .left-row {
+        width: 80px;
+      }
+
     }
   </style>
 </head>
 
 <body style="margin:0;padding:0;background:#f4f7fb;font-family: Plus Jakarta Sans, sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
+  <table width="100%" style="min-height: 100vh;" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
 
     <tr>
-      <td align="center" style="padding:20px 10px;">
+      <td align="center" style="padding: 15px;">
 
         <!-- Main Container -->
         <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="
@@ -68,18 +93,15 @@
             <td style="
                 background-image:url('https://api.neohealthcard.com:9100/uploads/assets/panelBg.png');
                 background-size:cover;
-                background-position:center;
+                background-position:right;
                 background-repeat:no-repeat;
                 padding:20px 20px 30px 20px;
               ">
 
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
-
                 <tr>
-
                   <!-- Left Logo -->
-                  <td width="120" valign="top">
-
+                   <td class="left-row" width="120" valign="top">
                     <img src="https://api.neohealthcard.com:9100/uploads/assets/logo.png" width="90" alt="NeoHealthCard"
                       class="logo" style="
                         display:block;
@@ -88,26 +110,22 @@
                         max-width:100%;
                       " />
                     <!-- Brand -->
-
-
                   </td>
 
                   <!-- Center Heading -->
-                  <td align="center" valign="middle">
-
-                    <div class="heading" style="
+                     <td align="center" valign="middle">
+                    <div class="heading">
+                      <h2 style="
                         font-size:32px;
-                        color:#16345B;
-                        font-family:Georgia,serif;
-                        font-weight:500;
-                      ">
-                      System Maintenance Notice
+                        color:#052F59;
+                        letter-spacing: 2px;
+                        font-family:Jacques Francois, serif;
+                        font-weight:500; margin: 0;">System Maintenance Notice</h2>
                     </div>
-
                   </td>
 
                   <!-- Empty Right -->
-                  <td width="120"></td>
+                  <td width="120" class="right-empty"></td>
 
                 </tr>
 
@@ -119,275 +137,256 @@
           <!-- Body -->
           <tr>
             <td class="content-padding" style="
-                padding:35px 38px 40px 38px;
+                padding:20px 38px 20px 38px;
                 position:relative;
               ">
-
-
-
-              <!-- Greeting -->
-              <div style="
-                  font-size:14px;
-                  line-height:100%;
-                  color:#5f6368;
-                  margin-bottom:25px;
+               <div style="
+                  font-size:14x;
+                  line-height:1.4;
+                  color:#555555;
+                  margin-bottom:15px;
                   position:relative;
                   z-index:2;
+                  font-family: Plus Jakarta Sans;
                 ">
 
-                Dear Team,
+   
+                <h6 style="font-weight: 600; color: #555555; line-height: 1.4;  font-size:16px; margin: 0 0 10px 0; ">
+                    Dear Team,
+             </h6>
+
+                <p style="margin: 0;  font-size:14px; font-weight: 400; color:#555555;">We would like to inform you about a scheduled maintenance activity on the NeoHealthCard platform to improve system performance and reliability.
+                </p>
 
               </div>
 
-              <!-- Description -->
-              <div style="
-                  font-size:14px;
-                  line-height:100%;
-                  color:#5f6368;
-                  margin-bottom:35px;
-                  position:relative;
-                  z-index:2;
-                ">
 
-                We would like to inform you about a scheduled maintenance activity on the NeoHealthCard platform to
-                improve system performance and reliability
 
-              </div>
+
+
               <!-- Section Title -->
-              <div style="
-        font-size:20px;
-        font-weight:700;
-        color:#16345B;
-        margin-bottom:18px;
-      ">
-                Maintenance Details
-              </div>
+               <div>
+                                <h4 style="
+                              font-size:20px;
+                              font-weight:700;
+                              color:#16345B;
+                              margin:10px 0 18px 0;
+                              font-family: Plus Jakarta Sans;
+                              "> Maintenance Details</h4>
+                            </div>
+
+
 
               <!-- Details Box -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
 
                 <tr>
                   <td style="
-            background:#f4f7fb;
-            border-radius:6px;
-            padding:18px 14px;
-            font-size:15px;
-            line-height:100%;
-            color:#6b6b6b;
-          ">
-                    <strong>Date:</strong> 20
-                    May 2026
-                    <br />
-                    <strong>Time :</strong>
-                    12:00 AM-03:00AM (IST)
-                    <br />
-                    <strong>Expected Impact:</strong>
-                    Temporary unavailability of certain service
-                    <br />
+                                 background:#F4F9FB;
+                                 border-radius:6px;
+                                 padding:12px;
+                                 font-size:15px;
+                                 line-height:100%;
+                                 color:#6b6b6b;">
 
+                    <span style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Date:</span> 
+                    <span style="font-weight: 500;font-size: 14px;color: #555555; line-height: 1.5;">20 May 2026</span>
+                    <br />
+                    <span style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Time :</span>
+                    <span style="font-weight: 500;font-size: 14px;color: #555555; line-height: 1.5;">12:00 AM-03:00AM (IST)</span>
+                    <br />
+                    <span style="font-weight: 400;font-size: 14px;color: #888888; line-height: 1.5;">Expected Impact:</span>
+                    <span style="font-weight: 500;font-size: 14px;color: #555555; line-height: 1.5;">Temporary unavailability of certain service</span>
                   </td>
                 </tr>
 
               </table>
 
               <!-- Button -->
-              <table cellpadding="0" cellspacing="0" border="0" style="
-                  margin-bottom:40px;
-                  position:relative;
-                  z-index:2;
-                ">
 
-                <tr>
-                  <td bgcolor="#0f1f4a" class="button" style="border-radius:40px;">
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top:25px;">
+                                <tr>
+                                    <td align="center" bgcolor="" class="button">
+                                        <a class="neo-mail-btn" href="{{btnLink}}" style="
+                                    display:inline-block;
+                                    padding:16px 25px;
+                                    font-size:13px;
+                                    font-weight:700;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    box-shadow: #00000012;
+                                    font-family:Plus Jakarta Sans;
+                                    border-radius:40px;
+                                    background-color: #111C30;
+                                    letter-spacing: 1px; "> View System Status ➜
+                                            </i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
 
-                    <a href="#" style="
-                        display:inline-block;
-                        padding:14px 28px;
-                        font-size:12px;
-                        font-weight:600;
-                        color:#ffffff;
-                        text-decoration:none;
-                      ">
-
-                      View System Status <i class="fa-solid fa-arrow-right-long"></i>
-
-                    </a>
-
-                  </td>
-                </tr>
-
-              </table>
 
               <!-- Team -->
-              <div style="
-                  font-size:14px;
-                  font-weight:700;
-                  color:#16345B;
-                  position:relative;
-                  z-index:2;
-                ">
-                Team NeoHealthCard
-              </div>
+               <div>
+                                <h6 style="
+                              font-size:14px;
+                              font-weight:700;
+                              color:#052F59;
+                              position:relative;
+                              z-index:2;
+                              margin-top: 20px;
+                              margin-bottom: 0;
+                              ">
+                                    Team NeoHealthCard
+                                </h6>
+                            </div>
 
             </td>
           </tr>
 
           <!-- Footer -->
-          <tr>
-            <td align="center" style="
-                padding:35px 20px 30px 20px;
-                border-top:1px solid #ececec;
-                position: relative;
-              ">
-
-              <!-- Connect -->
-              <div style="
-                  font-size:14px;
-                  font-weight:600;
-                  color:#16345B;
-                  margin-bottom:18px;
-                ">
-                Connect with us
-              </div>
-
-              <!-- Social -->
-              <table cellpadding="0" cellspacing="0" border="0" class="social-icons">
-
-                <tr>
-
-                  <td style="padding:0 5px;">
-                    <a href={{facebook}} style="
-                        display:inline-block;
-                        width:38px;
-                        height:38px;
-                        line-height:45px;
-                        text-align:center;
-                        background:#11c5c9;
-                        border-radius:8px;
-                        color:#ffffff;
-                        text-decoration:none;
-                        font-size:14px;
-                      ">
-                      <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
-                        style="margin-top: 10px;" alt="">
-                    </a>
-                  </td>
-
-                  <td style="padding:0 5px;">
-                    <a href="{{twitter}}" style="
-                        display:inline-block;
-                        width:38px;
-                        height:38px;
-                        line-height:45px;
-                        text-align:center;
-                        background:#11c5c9;
-                        border-radius:8px;
-                        color:#ffffff;
-                        text-decoration:none;
-                        font-size:14px;
-                      ">
-                      <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png" style="margin-top: 10px;"
-                        alt="">
-                    </a>
-                  </td>
-
-                  <td style="padding:0 5px;">
-                    <a href="{{instagram}}" style="
-                        display:inline-block;
-                        width:38px;
-                        height:38px;
-                        line-height:45px;
-                        text-align:center;
-                        background:#11c5c9;
-                        border-radius:8px;
-                        color:#ffffff;
-                        text-decoration:none;
-                        font-size:14px;
-                      ">
-                      <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
-                        style="margin-top: 10px;" alt="">
-                    </a>
-                  </td>
-
-                  <td style="padding:0 5px;">
-                    <a href="{{youtube}}" style="
-                        display:inline-block;
-                        width:38px;
-                        height:38px;
-                        line-height:45px;
-                        text-align:center;
-                        background:#11c5c9;
-                        border-radius:8px;
-                        color:#ffffff;
-                        text-decoration:none;
-                        font-size:14px;
-                      ">
-                      <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png" style="margin-top: 10px;"
-                        alt="">
-                    </a>
-                  </td>
-                  <td style="padding:0 5px;">
-                    <a href="{{linkedin}}" style="
-                        display:inline-block;
-                        width:38px;
-                        height:38px;
-                        line-height:45px;
-                        text-align:center;
-                        background:#11c5c9;
-                        border-radius:8px;
-                        color:#ffffff;
-                        text-decoration:none;
-                        font-size:14px;
-                      ">
-                      <img src="https://api.neohealthcard.com:9100/uploads/assets/linkedin.png"
-                        style="margin-top: 10px;" alt="">
-                    </a>
-                  </td>
-
-                </tr>
-
-              </table>
-
-              <div style="
-                  margin-top:25px;
-                  font-size:13px;
-                  font-weight: 500;
-                  line-height:24px;
-                  color:#8b8b8b;
-                ">
-
-                123 Healthcare Street, Medical Neo,
-                State – 000000
-
-                <br />
-
-                hospital@email.com |
-                +91 98765 43210 |
-                www.hospital.com
-
-              </div>
-
-              <!-- Disclaimer -->
-              <div style="
-                  margin-top:18px;
-                  font-size:12px;
-                  font-weight: 500;
-                  line-height:22px;
-                  color:#b1b1b1;
-                ">
-
-                This email was sent to you because
-                you created an account with NeoHealthCard.
-
-                <br />
-
-                If you did not create an account,
-                please ignore this email.
-
-              </div>
-
-            </td>
-          </tr>
+           <tr>
+                        <td align="center" style="
+                        padding:20px 20px 20px 20px;
+                        position: relative;
+                        ">
+                            <div>
+                                <h6 style="
+                              font-size:14px;
+                              font-weight:700;
+                              color:#16345B;
+                              margin-bottom:15px;
+                              margin-top: 0px;
+                              ">Connect with us</h6>
+                            </div>
+                            <!-- Social -->
+                            <table cellpadding="0" cellspacing="0" border="0" class="social-icons">
+                                <tr>
+                                    <td style="padding:0 5px;">
+                                        <a class="neo-social-btn" href={{facebook}} style="
+                                    display:inline-block;
+                                    width:38px;
+                                    height:38px;
+                                    line-height:44px;
+                                    text-align:center;
+                                    background:#00B4B5;
+                                    border-radius:8px;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    font-size:14px;
+                                    ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/facebook.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+                                    <td style="padding:0 5px;">
+                                        <a class="neo-social-btn" href="{{twitter}}" style="
+                                    display:inline-block;
+                                    width:38px;
+                                    height:38px;
+                                    line-height:44px;
+                                    text-align:center;
+                                    background:#00B4B5;
+                                    border-radius:8px;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    font-size:14px;
+                                    ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/twitter.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+                                    <td style="padding:0 5px;">
+                                        <a class="neo-social-btn" href="{{instagram}}" style="
+                                    display:inline-block;
+                                    width:38px;
+                                    height:38px;
+                                    line-height:44px;
+                                    text-align:center;
+                                    background:#00B4B5;
+                                    border-radius:8px;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    font-size:14px;
+                                    ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/instagram.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+                                    <td style="padding:0 5px;">
+                                        <a class="neo-social-btn" href="{{youtube}}" style="
+                                    display:inline-block;
+                                    width:38px;
+                                    height:38px;
+                                    line-height:44px;
+                                    text-align:center;
+                                    background:#00B4B5;
+                                    border-radius:8px;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    font-size:14px;
+                                    ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/youtube.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+                                    <td style="padding:0 5px;">
+                                        <a class="neo-social-btn" href="{{linkedin}}" style="
+                                    display:inline-block;
+                                    width:38px;
+                                    height:38px;
+                                    line-height:44px;
+                                    text-align:center;
+                                    background:#00B4B5;
+                                    border-radius:8px;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    font-size:14px;
+                                    ">
+                                            <img src="https://api.neohealthcard.com:9100/uploads/assets/linkedin.png"
+                                                style="margin-top: 10px;" alt="">
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div>
+                                <h6 style="
+                              margin-top:15px;
+                              font-size:13px;
+                              font-weight: 500;
+                              line-height:24px;
+                              color:#555555;
+                              margin-bottom: 0;
+                              ">{{address}}</h6>
+                                <p style="
+                              margin: 0px;
+                              font-size:13px;
+                              font-weight: 500;
+                              line-height:24px;
+                              color:#555555;
+                              margin-bottom: 0;
+                              ">{{email}} |
+                                    {{phone}} |
+                                    {{website}}
+                                </p>
+                            </div>
+                            <!-- Disclaimer -->
+                            <div>
+                                <p style="
+                              margin-top:18px;
+                              font-size:12px;
+                              font-weight: 500;
+                              line-height:22px;
+                              color:#888888;
+                              margin-bottom: 0;
+                              ">This email was sent to you because
+                                    you created an account with NeoHealthCard.
+                                    <span style="display: block;">If you did not create an account,
+                                        please ignore this email.</span>
+                                </p>
+                            </div>
+                        </td>
+           </tr>
 
         </table>
 

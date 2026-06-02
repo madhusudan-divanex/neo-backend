@@ -2026,8 +2026,21 @@ export const getAuditLog = async (req, res) => {
     // Get page & limit from query (defaults)
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const fromDate = req.query.fromDate
+    const toDate = req.query.toDate
     const query = {
       orgId: panelId
+    }
+    if (fromDate && toDate) {
+      const startDate = new Date(fromDate);
+      const endDate = new Date(toDate);
+
+      endDate.setHours(23, 59, 59, 999);
+
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate
+      };
     }
     if (req.query.search) {
       const actor = await User.findOne({ nh12: req.query.search })
@@ -2046,7 +2059,7 @@ export const getAuditLog = async (req, res) => {
       .limit(limit);
 
     // Total count for frontend pagination
-    const total = await AuditLog.countDocuments({ orgId: panelId });
+    const total = await AuditLog.countDocuments(query);
 
     res.status(200).json({
       message: 'Audit fetched successfully',

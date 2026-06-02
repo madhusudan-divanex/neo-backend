@@ -55,6 +55,7 @@ export const createHospitalDoctor = async (req, res) => {
         location,
         lat: cityData?.latitude,
         long: cityData?.longitude,
+        hospitalName: req.body.hospitalName,
 
         contact: {
           emergencyContactName: req.body.emergencyContactName,
@@ -724,14 +725,6 @@ export const doctorEmploymentDetails = async (req, res) => {
         message: "Doctor ID is required",
       });
     }
-    /** -------- Save / Update Education & Work -------- */
-    // if (fees) {
-    //   await DoctorAbout.findOneAndUpdate(
-    //     { userId: doctorId },
-    //     { fees },
-    //     { new: true }
-    //   );
-    // }
     const empPayload = {
       userId: doctorId,
       role,

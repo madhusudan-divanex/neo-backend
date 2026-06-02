@@ -1460,7 +1460,7 @@ const getHospitalPastAppointment = async (req, res) => {
     try {
         let isExist;
         if (patientId?.length < 24) {
-            isExist = await User.findOne({ unique_id: patientId });
+            isExist = await User.findOne({ nh12: patientId });
         } else {
             isExist = await User.findById(patientId);
         }
@@ -1478,56 +1478,9 @@ const getHospitalPastAppointment = async (req, res) => {
                 select: 'name nh12',
                 populate: { path: 'doctorId', select: 'profileImage' }
             }).lean();
-        // .populate({
-        //     path: 'labTest.lab',
-        //     model: 'User',
-        //     populate: { path: 'labId', select: 'logo' }
-        // })
-        // .populate({
-        //     path: 'labTest.labTests',
-        //     model: 'Test'
-        // })
 
-        // const appointmentIds = appointments.map(a => a._id);
 
-        // const labAppointments = await LabAppointment.find({
-        //     doctorAp: { $in: appointmentIds }
-        // }).lean();
-
-        // const labApptIds = labAppointments.map(l => l._id);
-
-        // const reports = await TestReport.find({
-        //     appointmentId: { $in: labApptIds }
-        // }).lean();
-        // const reportMap = {};
-
-        // for (const report of reports) {
-        //     const labApptId = report.appointmentId.toString();
-        //     if (!reportMap[labApptId]) {
-        //         reportMap[labApptId] = [];
-        //     }
-        //     reportMap[labApptId].push(report);
-        // }
-        // const labAppointmentMap = {};
-
-        // for (const labAppt of labAppointments) {
-        //     const doctorApptId = labAppt.doctorAp.toString();
-
-        //     labAppt.reports = reportMap[labAppt._id.toString()] || [];
-
-        //     if (!labAppointmentMap[doctorApptId]) {
-        //         labAppointmentMap[doctorApptId] = [];
-        //     }
-        //     labAppointmentMap[doctorApptId].push(labAppt);
-        // }
-        // const finalAppointments = appointments.map(appt => {
-        //     const labAppts = labAppointmentMap[appt._id.toString()] || [];
-        //     return {
-        //         ...appt,
-        //         labAppointment: labAppts.length > 0 ? labAppts[0] : null
-        //     };
-        // });
-        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
+        const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id, hospitalId })
         if (appointments?.length > 0) {
             return res.status(200).json({
                 message: "Appointment fetch successfully", totalDoctorApt,

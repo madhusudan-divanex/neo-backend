@@ -443,6 +443,22 @@ Add/Edit Department
 
 
 Hospital->
+    Paitent IPD/OPD/EMERGENCY 
+    Add Allotment 
+    Department Transfer 
+    Allotment Payment 
+    Allotment Prescription 
+    Allotment Lab Test 
+    IPD Notes
+    Birth,Fitness,Medical,Death Certificate
+
+Doctor->
+    Lab Prescription
+
+Paitent location base data->
+    Home
+    doctor,hospital,lab,Pharmacy Category Users
+
 Register 
 Hospital Image 
 Hospital address 
@@ -455,5 +471,6 @@ Appointment Prescription
 Lab Test 
 Lab Report,Sample,Payment
 Add Floor,room,bed,Allotment
+
 
  

@@ -42,7 +42,6 @@ function getUploader(folderName = "general") {
         ];
 
         const mimetype = allowedMimeTypes.includes(file.mimetype);
-        console.log(file, extname)
         if (
             file.mimetype.startsWith("image/") ||
             file.mimetype.startsWith("audio/") ||

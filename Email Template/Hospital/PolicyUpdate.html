@@ -6,13 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Policy Update</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
-        integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jacques+Francois&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+    integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
-        @media only screen and (max-width:600px) {
+
+         .neo-mail-btn:hover {
+      background-color: #0E559C !important;
+      border-color: #0E559C !important;
+      color: #fff;
+    }
+
+    .neo-social-btn:hover {
+      background-color: #009899 !important;
+    }
+
+        @media only screen and (max-width:767px) {
 
             .container {
                 width: 100% !important;
@@ -22,10 +34,15 @@
                 padding: 25px 20px !important;
             }
 
-            .heading {
+            /* .heading {
                 font-size: 38px !important;
                 line-height: 44px !important;
-            }
+            } */
+
+              .heading h2 {
+        font-size: 22px !important;
+        line-height: 1.2;
+      }
 
             .doctor-image {
                 width: 120px !important;
@@ -42,16 +59,24 @@
             .social-icons td {
                 padding: 0 3px !important;
             }
+
+             .right-empty {
+        display: none;
+      }
+
+      .left-row {
+        width: 80px;
+      }
         }
     </style>
 </head>
 
 <body style="margin:0;padding:0;background:#f4f7fb;font-family: Plus Jakarta Sans, sans-serif;">
 
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
+    <table width="100%" style="min-height: 100vh;" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f7fb">
 
         <tr>
-            <td align="center" style="padding:20px 10px;">
+            <td  align="center" style="padding: 15px;">
 
                 <!-- Main Container -->
                 <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="
@@ -65,41 +90,41 @@
                     <!-- Header -->
                     <tr>
                         <td style="
-                background-image:url('https://api.neohealthcard.com:9100/uploads/assets/panelBg.png');
-                background-size:cover;
-                background-position:center;
-                background-repeat:no-repeat;
-                padding:20px 20px 30px 20px;
-              ">
+                        background-image:url('https://api.neohealthcard.com:9100/uploads/assets/panelBg.png');
+                        background-size:cover;
+                        background-position:right;
+                        background-repeat:no-repeat;
+                        padding:20px 20px 30px 20px;
+                    ">
 
                             <table width="100%" cellpadding="0" cellspacing="0" border="0">
 
                                 <tr>
 
                                     <!-- Left Logo -->
-                                    <td width="120" valign="top">
+                                    <td class="left-row" width="120" valign="top">
 
                                         <img src="https://api.neohealthcard.com:9100/uploads/assets/logo.png" width="90"
                                             alt="NeoHealthCard" class="logo" style="
-                        display:block;
-                        border:0;
-                        width:90px;
-                        max-width:100%;
-                      " />
+                                            display:block;
+                                            border:0;
+                                            width:90px;
+                                            max-width:100%;
+                                        " />
                                         <!-- Brand -->
 
 
                                     </td>
 
                                     <!-- Center Heading -->
-                                    <td align="center" valign="middle">
+                                    <td  align="center" valign="middle">
 
                                         <div class="heading" style="
-                        font-size:32px;
-                        color:#16345B;
-                        font-family:Georgia,serif;
-                        font-weight:500;
-                      ">
+                                        font-size:32px;
+                                        color:#16345B;
+                                        font-family:Georgia,serif;
+                                        font-weight:500;
+                                    ">
                                             Compliance & Policy Update
                                         </div>
 

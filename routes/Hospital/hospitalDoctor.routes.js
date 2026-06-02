@@ -22,6 +22,7 @@ import {
 } from "../../controller/Hospital/hospitalDoctor.controller.js";
 import getUploader from "../../config/multerConfig.js";
 import { checkPermission } from "../../middleware/permissionCheck.js";
+import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 
 const router = express.Router();
 
@@ -32,7 +33,17 @@ const storage = multer.diskStorage({
   }
 });
 const uploader = getUploader('doctor');
+const checkDoctorEmploymentPermission = async (req, res, next) => {
+  const { userId } = req.body;
 
+  const existingEmployment = await StaffEmployement.findOne({
+    userId, organizationId: req.user.id
+  });
+
+  const action = existingEmployment ? "edit" : "add";
+
+  return checkPermission("doctors", action)(req, res, next);
+};
 router.post(
   "/create",
   auth, checkPermission("doctors", "add"),
@@ -46,11 +57,11 @@ router.post(
   saveDoctorProfessionalDetails
 );
 router.post(
-  "/employment-details", auth,
+  "/employment-details", auth, checkDoctorEmploymentPermission,
   doctorEmploymentDetails
 );
 router.post(
-  "/access-details", auth,
+  "/access-details", auth, checkDoctorEmploymentPermission,
   saveDoctorAccess
 );
 router.get("/list", auth, getHospitalDoctorList);
@@ -75,5 +86,11 @@ router.put(
 
 router.get('/about/:id', auth, getDoctorAboutData)
 // router.delete("/:id", auth,checkPermission("doctors","delete"), deleteDoctor);
+
+
+
+
+
+
 
 export default router;

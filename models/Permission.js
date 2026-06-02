@@ -45,7 +45,6 @@ const permissionSchema = new Schema(
         add: { type: Boolean, default: false },
         edit: { type: Boolean, default: false },
         view: { type: Boolean, default: false },
-        delete: { type: Boolean, default: false }
       },
 
       appointments: {
@@ -91,8 +90,15 @@ const permissionSchema = new Schema(
         listInventory: { type: Boolean, default: false },
         addInventory: { type: Boolean, default: false },
         editInventory: { type: Boolean, default: false },
-        deleteInventory: { type: Boolean, default: false },
         sellMedicine: { type: Boolean, default: false },
+        customerReturn: { type: Boolean, default: false },
+        supplierReturn: { type: Boolean, default: false },
+        purchaseOrder: { type: Boolean, default: false },
+        editPurchaseOrder: { type: Boolean, default: false },
+        addReturn: { type: Boolean, default: false },
+        editReturn: { type: Boolean, default: false },
+        addSupplier: { type: Boolean, default: false },
+        editSupplier: { type: Boolean, default: false }
       },
       lab: {
         paymentStatus: { type: Boolean, default: false },
@@ -100,8 +106,8 @@ const permissionSchema = new Schema(
         addAppointment: { type: Boolean, default: false },
         addTest: { type: Boolean, default: false },
         editTest: { type: Boolean, default: false },
-        deleteTest: { type: Boolean, default: false },
         addReport: { type: Boolean, default: false },
+        collectSample: { type: Boolean, default: false }
       },
 
       chat: {
