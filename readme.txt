@@ -472,5 +472,14 @@ Lab Test
 Lab Report,Sample,Payment
 Add Floor,room,bed,Allotment
 
+Admin->
+    Prescription 
+    Lab Reports
+
+Hospital Testing->
+    Discharge Patient
+    Hospital Transfer
+    Staff Permission 
+
 
  

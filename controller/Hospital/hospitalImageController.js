@@ -34,14 +34,14 @@ export const uploadImages = async (req, res) => {
         fileUrl: `/api/file/${fileDoc._id}`, // frontend friendly
         type: "thumbnail"
       });
-      await LabImage.findOneAndUpdate({userId:userId},{        
+      await LabImage.findOneAndUpdate({ userId: userId }, {
         thumbnail: `/api/file/${fileDoc._id}`,
-      },{new:true});
+      }, { new: true });
       created.push(img);
     }
 
     // 2️⃣ Upload Gallery Images
-    const galleryImg=[]
+    const galleryImg = []
     for (const f of gallery) {
 
       const fileDoc = await saveToGrid(
@@ -63,11 +63,11 @@ export const uploadImages = async (req, res) => {
 
       created.push(img);
     }
-    if(galleryImg?.length>0){
+    if (galleryImg?.length > 0) {
 
-      await LabImage.findOneAndUpdate({userId:userId},{        
+      await LabImage.findOneAndUpdate({ userId: userId }, {
         labImg: galleryImg,
-      },{new:true});
+      }, { new: true });
     }
 
     res.json({
@@ -82,3 +82,28 @@ export const uploadImages = async (req, res) => {
     });
   }
 };
+
+export const deleteHospitalImage = async (req, res) => {
+  const hospitalId = req.user.created_by_id
+  try {
+    const { imageId } = req.params
+    const img = await HospitalImage.findOne({ hospitalId: hospitalId, _id: imageId })
+    if (!img) {
+      return res.status(404).json({ message: "Image not found" })
+    }
+    await LabImage.findOneAndUpdate(
+      { userId: req.user.id },
+      {
+        $pull: {
+          labImg: img.fileId,
+        },
+      },
+      { new: true }
+    );
+    await img.deleteOne()
+
+    res.json({ message: "Deleted successfully", success: true })
+  } catch (error) {
+    return res.status(500).json({ message: error?.message })
+  }
+}

@@ -1491,10 +1491,17 @@ export const saveFourthHospitalPage = async (req, res) => {
 };
 export const getHospitalLandingPage = async (req, res) => {
   try {
-    const firstSection = await FirstHospital.findOne();
-    const secondSection = await SecondHospital.findOne()
-    const thirdSection = await ThirdHospital.findOne()
-    const fourthSection = await FourthHospital.findOne()
+    const [
+      firstSection,
+      secondSection,
+      thirdSection,
+      fourthSection
+    ] = await Promise.all([
+      FirstHospital.findOne().lean(),
+      SecondHospital.findOne().lean(),
+      ThirdHospital.findOne().lean(),
+      FourthHospital.findOne().lean(),
+    ]);
 
     res.json({
       success: true,

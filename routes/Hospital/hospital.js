@@ -63,6 +63,7 @@ router.post(
   upload.single("profilePhoto"),
   contact.saveContact
 );
+router.delete("/image/:imageId", auth, images.deleteHospitalImage)
 
 // ================= STEP 5 : CERTIFICATE =================
 router.post(
@@ -71,6 +72,7 @@ router.post(
   auth,
   cert.uploadCertificate
 );
+router.delete("/certificate/:fileId", auth, cert.deleteHospitalCertificate)
 
 // ================= KYC =================
 router.post("/submit-kyc", auth, checkPermission("hospital", "updateProfile"), kyc.submitKyc);

@@ -19,7 +19,11 @@ export const saveAddress = async (req, res) => {
       const countrData = await Country.findById(req.body.country)
       await assignNH12(userId, countrData.phonecode)
     }
-
+    const location = {
+      type: "Point",
+      coordinates: [addressData?.long, addressData?.lat]
+    };
+    address.location = location
     Object.assign(address, req.body);
 
     await address.save();
@@ -34,6 +38,7 @@ export const saveAddress = async (req, res) => {
         pinCode: addressData.pinCode,
         lat: addressData?.lat,
         long: addressData?.long,
+        location
       }, { new: true, })
     }
 

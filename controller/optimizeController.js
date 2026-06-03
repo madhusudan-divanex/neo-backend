@@ -213,13 +213,16 @@ const getUserWithDetails = async ({
 };
 const getHospitalDoctor = async (req, res) => {
     const hospitalId = req.user.id || req.user.userId
-    const { status, deptType } = req.query
+    const { status, deptType, department } = req.query
     try {
         let departmentId = []
         if (deptType) {
             const departments = await Department.find({ type: deptType, userId: hospitalId })
             console.log(departments)
             departmentId = departments.map(d => d._id)
+        }
+        if (department) {
+            departmentId = department
         }
         let filter = {
             organizationId: hospitalId,

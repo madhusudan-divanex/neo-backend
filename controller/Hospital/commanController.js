@@ -89,7 +89,7 @@ export const searchUsers = async (req, res) => {
       if (user.doctorId?.profileImage) {
         image = user.doctorId.profileImage;
       } else if (user.hospitalId?.logoFileId) {
-        image = user.hospitalId.logoFileId;
+        image = `api/file/${user.hospitalId.logoFileId}`;
       } else if (user.labId?.logo) {
         image = user.labId.logo;
       } else if (user.pharId?.logo) {

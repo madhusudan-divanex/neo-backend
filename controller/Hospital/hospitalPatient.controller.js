@@ -324,12 +324,16 @@ export const listPatients = async (req, res) => {
 };
 export const ipdPatientsList = async (req, res) => {
   const hospitalId = req.user._id || req.user.id;
-
+  const { department } = req.query
   try {
-    const ptList = await PatientDepartment.find({
+    let matchStage = {
       hospitalId,
       status: "Active"
-    }).populate({
+    }
+    if (department) {
+      matchStage.departmentId = department
+    }
+    const ptList = await PatientDepartment.find(matchStage).populate({
       path: "departmentId",
       match: { type: { $in: ["IPD", "EMERGENCY"] } },
       select: "departmentName type"

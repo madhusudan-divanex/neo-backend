@@ -192,12 +192,16 @@ const getDoctorAppointment = async (req, res) => {
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
         const todayApt = req.query.todayApt;
+        const search = req.query.search || ''
 
         const skip = (page - 1) * limit;
 
         let filter = { doctorId, hospitalId: null };
         if (status) {
             filter.status = status;
+        }
+        if (search) {
+            filter.customId = search
         }
         if (statuses) {
             filter.status = { $in: statuses.split(',') };
