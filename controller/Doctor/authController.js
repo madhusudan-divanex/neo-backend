@@ -1161,7 +1161,7 @@ const getCustomProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
         // const ptDemographic=await PatientDemographic.findOne({userId:user._id}).sort({createdAt:-1})
-        console.log(user)
+
         const doctorData = await Doctor.findById(user.doctorId).lean()
         res.status(200).json({
             success: true,
@@ -1191,7 +1191,6 @@ const getDoctors = async (req, res) => {
 
         const specialties = specialty ? specialty.split(',') : [];
         const languages = language ? language.split(',') : [];
-        const minRating = rating ? Number(rating) : 0;
 
         const feesRange = fees ? fees.split('_') : [];
 
@@ -1345,12 +1344,17 @@ const getDoctors = async (req, res) => {
                 }
             }
         });
+        if (rating) {
 
-        geoPipeline.push({
-            $match: {
-                avgRating: { $gte: minRating }
-            }
-        });
+            geoPipeline.push({
+                $match: {
+                    avgRating: {
+                        $gte: Number(rating),
+                        $lt: Number(rating) + 1
+                    }
+                }
+            });
+        }
         geoPipeline.push({
             $lookup: {
                 from: "countries",

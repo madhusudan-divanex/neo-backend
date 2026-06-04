@@ -25,6 +25,8 @@ import PharAddress from "../../models/Pharmacy/pharmacyAddress.model.js";
 import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import Pharmacy from "../../models/Pharmacy/pharmacy.model.js";
 import Country from "../../models/Hospital/Country.js";
+import { populate } from "dotenv";
+import Sell from "../../models/Pharmacy/sell.model.js";
 
 
 async function favoriteController(req, res) {
@@ -688,6 +690,52 @@ async function getPatientPrescriptions(req, res) {
     });
   }
 }
+async function getPatientPrescriptionsInvoice(req, res) {
+  const pateintId = req.user.userId
+  const page = parseInt(req.query.page) || 1
+  const limit = parseInt(req.query.limit) || 10
+  try {
+    const sellData = await Sell.find({ patientId: pateintId })
+      .populate({ path: 'pharId', select: 'name email nh12 contactNumber pharId', populate: { path: 'pharId', select: 'logo' } })
+      .populate({ path: 'hospitalId', select: 'name email nh12 contactNumber hospitalId', populate: { path: 'hospitalId', select: 'logoFileId' } })
+      .skip((page - 1) * limit)
+      .limit(limit)
+
+    const finalData = await Promise.all(
+      sellData.map(async (item) => ({
+        ...item.toObject(),
+        pharmacyName: item?.pharId?.name || item?.hospitalId?.name,
+        pharmacyId: item?.pharId?.nh12 || item?.hospitalId?.nh12,
+        contactNumber: item?.pharId?.contactNumber || item?.hospitalId?.contactNumber,
+        email: item?.pharId?.email || item?.hospitalId?.email,
+        role: item?.pharId?._id ? "pharmacy" : "hospital",
+        logo:
+          item?.pharId?.pharId?.logo ||
+          (item?.hospitalId?.hospitalId?.logoFileId
+            ? `api/file/${item.hospitalId.hospitalId.logoFileId}`
+            : null),
+      }))
+    );
+
+    const total = await Sell.countDocuments({ patientId: pateintId })
+    return res.status(200).json({
+      message: "Prescription fetched successfully",
+      data: finalData,
+      pagination: {
+        totalRecords: total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        limit: limit,
+      },
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message,
+      success: false,
+    });
+  }
+}
 async function getPrescriptionLabDetail(req, res) {
   const appointmentId = req.params.id;
   if (!appointmentId) {
@@ -733,6 +781,34 @@ async function profileAction(req, res) {
     await Patient.findByIdAndUpdate(isExist.patientId, { status }, { new: true })
     await ProfileStatus.create({ patientId, doctorId, status, note })
     return res.status(200).json({ message: "Profile updated", success: true })
+
+  } catch (error) {
+    console.log(error)
+    return res.status(200).json({ message: "Server error", success: false })
+  }
+}
+async function userRating(req, res) {
+  const { pharId, patientId, star, message, hospitalId } = req.body
+  try {
+    const isExist = await User.findById(patientId)
+    if (!isExist) return res.status(200).json({ success: false, message: "patient not found" })
+
+    if (hospitalId) {
+      const isAlreadyGiven = await Rating.findOne({ patientId, hospitalId })
+      console.log(isAlreadyGiven)
+      if (isAlreadyGiven) {
+        return res.status(200).json({ success: false, message: "Already rated" })
+      }
+      await Rating.create({ patientId, hospitalId, star, message })
+    } else if (pharId) {
+      const isAlreadyGiven = await Rating.findOne({ patientId, pharId })
+      if (isAlreadyGiven) {
+        return res.status(200).json({ success: false, message: "Already rated" })
+      }
+      await Rating.create({ patientId, pharId, star, message })
+    }
+
+    return res.status(200).json({ message: "Rating added", success: true })
 
   } catch (error) {
     console.log(error)
@@ -2427,7 +2503,7 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
 };
 
 export {
-  getTopUsers, getTopUserByCategory, getSearchCity,
+  getTopUsers, getTopUserByCategory, getSearchCity, getPatientPrescriptionsInvoice, userRating,
   favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients, getNearByDoctor,
 
 }

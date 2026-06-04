@@ -1,25 +1,33 @@
-import mongoose, { Schema} from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const requestSchema=new Schema({
-    doctorId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'User'
+const requestSchema = new Schema({
+    doctorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        index: true
     },
-    patientId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'User',required:true
+    hospitalId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        index: true
     },
-    labId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'User'
+    patientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', required: true,
+        index: true
     },
-    pharId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'User'
+    labId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     },
-    message:{type:String,required:true},
-    star:{type:Number,min:1,max:5,required:true},
+    pharId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        index: true
+    },
+    message: { type: String, required: true },
+    star: { type: Number, min: 1, max: 5, required: true },
 
-},{timestamps:true})
-const Rating= mongoose.model('Rating', requestSchema);
+}, { timestamps: true })
+const Rating = mongoose.model('Rating', requestSchema);
 export default Rating

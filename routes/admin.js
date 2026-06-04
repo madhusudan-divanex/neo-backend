@@ -1,5 +1,5 @@
 import express from 'express'
-import { addDoctorByAdmin, addHospitalByAdmin, addHospitalCategory, addLabByAdmin, addPatientBanner, addPatientByAdmin, addPharmacyByAdmin, addPharmacyCategory, addScheduleMedicines, addSpecialty, addSubTestCategory, addTestCategory, deleteContactQuery, deleteHospitalCategory, deletePatientBanner, deletePharmacyCategory, deleteSpecialty, deleteTestCategory, generateCard, getBirthCertificates, getCmsData, getContactQuery, getDeathCertificates, getDepartment, getFitnessCertificates, getHospitalCategory, getMedicalCertificates, getPanelStaff, getPatientBanner, getPharmacyCategory, getScheduleMedicines, getServices, getSpecialty, getSubTestCategory, getTestCategory, getUsers, updateHospitalCategory, updatePatientBanner, updatePharmacyCategory, updateScheduleMedicines, updateSpecialty, updateSubTestCategory, updateTestCategory } from '../controller/Admin/adminController.js'
+import { addDoctorByAdmin, addHospitalByAdmin, addHospitalCategory, addLabByAdmin, addPatientBanner, addPatientByAdmin, addPharmacyByAdmin, addPharmacyCategory, addScheduleMedicines, addSpecialty, addSubTestCategory, addTestCategory, deleteContactQuery, deleteHospitalCategory, deletePatientBanner, deletePharmacyCategory, deleteSpecialty, deleteTestCategory, generateCard, getAllotmentList, getBirthCertificates, getCmsData, getContactQuery, getDeathCertificates, getDepartment, getFitnessCertificates, getHospitalCategory, getMedicalCertificates, getPanelStaff, getPatientBanner, getPharmacyCategory, getScheduleMedicines, getServices, getSpecialty, getSubTestCategory, getTestCategory, getUsers, updateHospitalCategory, updatePatientBanner, updatePharmacyCategory, updateScheduleMedicines, updateSpecialty, updateSubTestCategory, updateTestCategory } from '../controller/Admin/adminController.js'
 import getUploader from '../config/multerConfig.js'
 import { getAdminDashboard } from '../controller/Admin/dashboard.controller.js'
 import adminAuth from '../middleware/adminAuth.js'
@@ -60,4 +60,5 @@ admin.get('/fitness-certificate', adminAuth, getFitnessCertificates)
 admin.get('/medical-certificate', adminAuth, getMedicalCertificates)
 admin.get('/death-certificate', adminAuth, getDeathCertificates)
 admin.get('/departments/:id', adminAuth, getDepartment)
+admin.get('/allotment', adminAuth, getAllotmentList)
 export default admin

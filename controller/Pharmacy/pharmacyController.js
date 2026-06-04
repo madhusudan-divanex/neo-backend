@@ -112,7 +112,6 @@ const inventoryList = async (req, res) => {
         if (schedule !== 'all') {
             filter.schedule = schedule; // exact match
         }
-        console.log(filter)
         // Fetch data
         const [items, total] = await Promise.all([
             Inventory.find(filter).populate('schedule')
@@ -1340,7 +1339,6 @@ const completeReturn = async (req, res) => {
             }
             if (inv.quantity < p.quantity) {
                 await session.abortTransaction();
-                console.log(inv)
                 return res.status(400).json({ success: false, message: `Insufficient stock for ${inv.medicineName}` });
             }
             // Deduct

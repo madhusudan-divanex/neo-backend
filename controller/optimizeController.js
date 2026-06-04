@@ -218,7 +218,6 @@ const getHospitalDoctor = async (req, res) => {
         let departmentId = []
         if (deptType) {
             const departments = await Department.find({ type: deptType, userId: hospitalId })
-            console.log(departments)
             departmentId = departments.map(d => d._id)
         }
         if (department) {

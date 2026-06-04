@@ -477,9 +477,20 @@ Admin->
     Lab Reports
 
 Hospital Testing->
-    Discharge Patient
-    Hospital Transfer
-    Staff Permission 
+    Allotment Validation=>
+    phele hospital patient ko admit karta tha depart ment fir use bed allot karta tha vha agar OPD
+    department ha to vo patient show nhi hoga bed allotment me ,and jis department me add kiya ha patient ko 
+    already vo hi floors ,rooms and vo hi bed show honge baaki ke nhi honge
+    Hospital Profile Edit->
+        Hospita apni profile ko edit kar sakta ha uski personal detail,images,license and certification ,contact person
+Doctor->
+    Appointment search->
+        doctor appointment id se kisi appointment ko search kar sakta h a
+Lab/Hospital/Pharmacy/Doctor->
+    Date Period Filter Audit log ->
+        from and to date select karke us base pe audit log dekh sakta ha ki kis date me kya kya audits huye the
+
+
 
 
  

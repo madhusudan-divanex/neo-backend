@@ -929,7 +929,6 @@ export const availableDoctor = async (req, res) => {
     }
 
     const doctorIds = doctorEmp.map(item => item.userId);
-    console.log(doctorIds, doctorEmp)
     // 2. Get today's day
     const today = new Date().toLocaleString("en-US", { weekday: "long" });
 

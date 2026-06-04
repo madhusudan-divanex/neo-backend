@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { getLabReport, getPatientAppointment } from "../controller/appointmentController.js";
-import { favoriteController, getMyRating, getNearByDoctor, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPatients, getPrescriptionLabDetail, getTopUsers, profileAction, getSearchCity, getTopUserByCategory } from "../controller/Patient/patientController.js";
+import { favoriteController, getMyRating, getNearByDoctor, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPatients, getPrescriptionLabDetail, getTopUsers, profileAction, getSearchCity, getTopUserByCategory, getPatientPrescriptionsInvoice, userRating } from "../controller/Patient/patientController.js";
 
 import { sendPush } from "../utils/sendPush.js";
 import { getPatientFooterCategory } from "../controller/Admin/LandingPage.controller.js";
@@ -62,8 +62,10 @@ patient.get('/favorite/:id', authMiddleware, getPatientFavorite)
 patient.get('/favorite-data/:id', authMiddleware, getPatientFavoriteData)
 patient.get('/my-rating/:id', authMiddleware, getMyRating)
 patient.get('/prescriptions/:id', authMiddleware, getPatientPrescriptions)
+patient.get('/prescriptions-invoice/:id', authMiddleware, getPatientPrescriptionsInvoice)
 patient.get('/appointment-test-detail/:id', authMiddleware, getPrescriptionLabDetail)
 patient.post('/profile-action', authMiddleware, profileAction)
+patient.post('/user-rating', authMiddleware, userRating)
 
 
 patient.post("/test-push", async (req, res) => {

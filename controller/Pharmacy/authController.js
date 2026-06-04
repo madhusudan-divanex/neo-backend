@@ -654,7 +654,7 @@ const getPharData = async (req, res) => {
                 message: "Pharmacy not found"
             });
         }
-        const data = await Pharmacy.findById(user.pharId).select('name email contactNumber about category').populate('category')
+        const data = await Pharmacy.findById(user.pharId).select('name email contactNumber about category rating').populate('category')
 
         // 2️⃣ Fetch latest related documents
         // const pharPerson = await PharPerson.findOne({ userId }).sort({ createdAt: -1 });
@@ -666,38 +666,12 @@ const getPharData = async (req, res) => {
 
         // 3️⃣ Fetch ratings
         const rating = await Rating.find({ pharId: userId })
-            .populate("patientId")
-            .sort({ createdAt: -1 });
+            .populate({ path: "patientId", select: "name patientId", populate: { path: "patientId", select: "profileImage" } })
+            .limit(20).sort({ createdAt: -1 });
 
-        // 4️⃣ Calculate average rating
-        const avgStats = await Rating.aggregate([
-            { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: null,
-                    avgRating: { $avg: "$star" },
-                    total: { $sum: 1 }
-                }
-            }
-        ]);
 
-        const avgRating = avgStats.length ? avgStats[0].avgRating : 0;
 
-        // 5️⃣ Count star ratings
-        const ratingStats = await Rating.aggregate([
-            { $match: { pharId: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: "$star",
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
 
-        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        ratingStats.forEach(r => {
-            ratingCounts[r._id] = r.count;
-        });
 
         // 6️⃣ Return final response
         return res.status(200).json({
@@ -707,8 +681,7 @@ const getPharData = async (req, res) => {
             pharImg, customId: user.unique_id,
             pharLicense,
             rating,
-            avgRating,
-            ratingCounts,
+            avgRating: data?.rating || 0,
         });
 
     } catch (err) {
@@ -1076,8 +1049,9 @@ const deletePharImage = async (req, res) => {
 const getPharmacy = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-    const { name, lat, long, location } = req.query;
+    const { name, lat, long, location, rating } = req.query;
     try {
+        const minRating = rating ? Number(rating) : 0;
         /* =======================================================
            PIPELINE
         ======================================================= */
@@ -1168,6 +1142,7 @@ const getPharmacy = async (req, res) => {
                         $project: {
                             logo: 1,
                             name: 1,
+                            rating: 1,
                         }
                     }
                 ],
@@ -1181,6 +1156,25 @@ const getPharmacy = async (req, res) => {
                 preserveNullAndEmptyArrays: true
             }
         });
+        pipeline.push({
+            $addFields: {
+                avgRating: {
+                    $ifNull: ["$pharmacy.rating", 0]
+                }
+            }
+        });
+        if (rating) {
+
+
+            pipeline.push({
+                $match: {
+                    avgRating: {
+                        $gte: Number(rating),
+                        $lt: Number(rating) + 1
+                    }
+                }
+            });
+        }
 
         /* ================= DEFAULT SORT ================= */
 

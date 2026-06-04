@@ -16,6 +16,7 @@ import User from '../models/Hospital/User.js';
 import Rating from '../models/Rating.js';
 import Laboratory from '../models/Laboratory/laboratory.model.js';
 import Doctor from '../models/Doctor/doctor.model.js';
+import Pharmacy from '../models/Pharmacy/pharmacy.model.js';
 
 cron.schedule('0 0 * * *', async () => {
   try {
@@ -476,6 +477,77 @@ cron.schedule("0 2 * * *", async () => {
     });
 
     const result = await Laboratory.bulkWrite(bulkOps);
+
+    console.log(
+      `[RatingCron] Done. Modified: ${result.modifiedCount} | ` +
+      `Matched: ${result.matchedCount} | ` +
+      `Time: ${new Date().toISOString()}`
+    );
+
+  } catch (err) {
+    console.error('[RatingCron] Error:', err.message);
+  }
+});
+cron.schedule("0 2 * * *", async () => {
+  console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
+
+  try {
+    // Step 1: Saare lab/hospital users fetch karo
+    const pharUsers = await User.find({
+      pharId: { $exists: true, $ne: null },
+      role: { $in: ['pharmacy'] }
+    }).select('_id pharId').lean();
+
+    if (!pharUsers.length) {
+      console.log('[RatingCron] No pharmacy users found. Skipping.');
+      return;
+    }
+
+    const pharUserIds = pharUsers.map(u => u._id);
+
+    // Step 2: Ek hi aggregation mein saari ratings calculate karo
+    const ratings = await Rating.aggregate([
+      {
+        $match: { pharId: { $in: pharUserIds } }
+      },
+      {
+        $group: {
+          _id: '$pharId',
+          avgRating: { $avg: '$star' },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Step 3: Rating map banao  ->  userId => { avg, total }
+    const ratingMap = {};
+    ratings.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // Step 4: Har lab ke liye bulkWrite se ek saath update karo (efficient)
+    const bulkOps = pharUsers.map(u => {
+      const rating = ratingMap[u._id.toString()] || {
+        avgRating: 0,
+        totalReviews: 0
+      };
+
+      return {
+        updateOne: {
+          filter: { _id: u.pharId },          // Laboratory model ka _id
+          update: {
+            $set: {
+              rating: rating.avgRating,
+            }
+          }
+        }
+      };
+    });
+
+    const result = await Pharmacy.bulkWrite(bulkOps);
 
     console.log(
       `[RatingCron] Done. Modified: ${result.modifiedCount} | ` +

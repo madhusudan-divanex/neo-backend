@@ -1052,7 +1052,7 @@ const getLabs = async (req, res) => {
             location,
             category,
             sortBy,
-            type,
+            type, rating,
             lat,
             long
         } = req.query;
@@ -1098,6 +1098,27 @@ const getLabs = async (req, res) => {
                     );
                 }
             });
+            if (rating) {
+                const ratLabs = await Laboratory.find({
+                    userId: {
+                        $in: sortedLabUserIds
+                    },
+                    rating: {
+                        $gte: Number(rating),
+                        $lt: Number(rating) + 1
+                    }
+                })
+                sortedLabUserIds = ratLabs.map((lab) => lab.userId.toString());
+            }
+        }
+        if (rating && !category) {
+            const ratLabs = await Laboratory.find({
+                rating: {
+                    $gte: Number(rating),
+                    $lt: Number(rating) + 1
+                }
+            })
+            sortedLabUserIds = ratLabs.map((lab) => lab.userId.toString());
         }
 
         /* ======================================================

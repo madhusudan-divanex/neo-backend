@@ -1078,7 +1078,7 @@ const getTestReportForBedPatient = async (req, res) => {
     const isExist = await LabAppointment.findById(appointmentId);
 
     if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
-    const testReports = await TestReport.find({ appointmentId }).populate("testId").populate("appointmentId", "customId")
+    const testReports = await TestReport.find({ appointmentId }).populate("subCatId", "subCategory").populate("appointmentId", "customId")
 
     return res.status(200).json({
       message: "Lab test report fetched successfully", testReports,

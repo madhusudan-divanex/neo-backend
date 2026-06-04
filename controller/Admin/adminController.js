@@ -1161,4 +1161,98 @@ export const deleteUser = async (req, res) => {
     } catch (error) {
         return res.status(200).json({ message: error?.message, success: false })
     }
-} 
+}
+export const getAllotmentList = async (req, res) => {
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const status = req.query.status;
+    const paymentStatus = req.query.paymentStatus;
+    const floors = req.query.floor ? req.query.floor.split(",") : [];
+    const search = req.query.search?.trim(); // <-- added search
+
+    try {
+        let filter = {};
+
+        if (search) {
+            const user = await User.findOne({ $or: [{ nh12: search }, { email: search }, { name: { $regex: search, $options: "i" } }], role: { $in: ['patient', 'hospital'] } });
+
+            if (user?._id) {
+                filter.$or = [
+                    { hospitalId: user?._id },
+                    { patientId: user?._id }
+                ];
+            }
+            else {
+                return res.status(404).json({ message: "No results found", success: false })
+            }
+
+        }
+
+        if (status) {
+            filter.status = status;
+        }
+
+        let paymentFilter = {};
+
+
+
+
+        let query = BedAllotment.find(filter)
+            .populate({
+                path: "patientId",
+                select: "name email nh12",
+                populate: { path: "patientId", select: "contactNumber profileImage" }
+            })
+            .populate({ path: "hospitalId", select: "name nh12 email contactNumber", populate: { path: "hospitalId", select: "logoFileId" } })
+            .populate("dischargeId", "createdAt").populate('departmentId', 'departmentName')
+            .populate({
+                path: "bedId",
+                populate: [
+                    {
+                        path: "floorId",
+                        select: "floorName",
+                        match: floors.length > 0
+                            ? { _id: { $in: floors.map(f => new mongoose.Types.ObjectId(f)) } }
+                            : {}
+                    },
+                    { path: "roomId", select: "roomName" }
+                ]
+            })
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        const totalRecords = await BedAllotment.countDocuments(filter);
+        let allotment = await query.exec();
+
+        // Remove entries where patientId or floorId didn't match search/floor filter
+        allotment = allotment.filter(a => a.patientId && a.bedId && a.bedId.floorId);
+
+        if (!allotment.length) {
+            return res.status(200).json({
+                success: false,
+                message: "No allotment history found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: allotment,
+            pagination: {
+                totalRecords,
+                currentPage: page,
+                totalPages: Math.ceil(totalRecords / limit),
+                limit
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: "Failed to load allotment"
+        });
+    }
+};
