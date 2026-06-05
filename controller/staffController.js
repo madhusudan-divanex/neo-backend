@@ -366,7 +366,7 @@ export const updateStaffEmployement = async (req, res) => {
 };
 export const getStaffList = async (req, res) => {
   const id = req.user.id || req.user.userId;
-  const { name, limit = 10, page = 1, status, userRole } = req.query;
+  const { name, limit = 10, page = 1, status, userRole, department } = req.query;
 
   try {
     let filter = { organizationId: id, userRole: "staff" };
@@ -376,6 +376,9 @@ export const getStaffList = async (req, res) => {
     }
     if (userRole) {
       filter.userRole = userRole
+    }
+    if (department) {
+      filter.department = department
     }
 
     const limitInt = parseInt(limit);

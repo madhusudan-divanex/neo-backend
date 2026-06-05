@@ -564,6 +564,77 @@ cron.schedule("0 2 * * *", async () => {
 
   try {
     // Step 1: Saare lab/hospital users fetch karo
+    const hospitalUsers = await User.find({
+      hospitalId: { $exists: true, $ne: null },
+      role: { $in: ['hospital'] }
+    }).select('_id hospitalId').lean();
+
+    if (!hospitalUsers.length) {
+      console.log('[RatingCron] No hospital users found. Skipping.');
+      return;
+    }
+
+    const hospitalUserIds = hospitalUsers.map(u => u._id);
+
+    // Step 2: Ek hi aggregation mein saari ratings calculate karo
+    const ratings = await Rating.aggregate([
+      {
+        $match: { hospitalId: { $in: hospitalUserIds } }
+      },
+      {
+        $group: {
+          _id: '$hospitalId',
+          avgRating: { $avg: '$star' },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Step 3: Rating map banao  ->  userId => { avg, total }
+    const ratingMap = {};
+    ratings.forEach(r => {
+      ratingMap[r._id.toString()] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalReviews: r.totalReviews
+      };
+    });
+
+    // Step 4: Har lab ke liye bulkWrite se ek saath update karo (efficient)
+    const bulkOps = hospitalUsers.map(u => {
+      const rating = ratingMap[u._id.toString()] || {
+        avgRating: 0,
+        totalReviews: 0
+      };
+
+      return {
+        updateOne: {
+          filter: { _id: u.hospitalId },          // Laboratory model ka _id
+          update: {
+            $set: {
+              rating: rating.avgRating,
+            }
+          }
+        }
+      };
+    });
+
+    const result = await HospitalBasic.bulkWrite(bulkOps);
+
+    console.log(
+      `[RatingCron] Done. Modified: ${result.modifiedCount} | ` +
+      `Matched: ${result.matchedCount} | ` +
+      `Time: ${new Date().toISOString()}`
+    );
+
+  } catch (err) {
+    console.error('[RatingCron] Error:', err.message);
+  }
+});
+cron.schedule("0 2 * * *", async () => {
+  console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
+
+  try {
+    // Step 1: Saare lab/hospital users fetch karo
     const doctorUsers = await User.find({
       doctorId: { $exists: true, $ne: null },
       role: { $in: ['doctor'] }

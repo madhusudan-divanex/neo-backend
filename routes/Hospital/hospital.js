@@ -153,4 +153,5 @@ router.get('/check-patient-ipd/:id', auth, profile.getIsInIpd)
 
 router.post('/lab/sample', auth, checkPermission("lab", "collectSample"), addSample)
 router.post('/lab/test-report-data', auth, getTestReport)
+router.post('/add-patient-vitals', auth, checkPermission("appointments", "addVitals"), doctorAptVitals)
 export default router;

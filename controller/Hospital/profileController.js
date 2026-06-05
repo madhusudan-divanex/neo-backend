@@ -268,6 +268,7 @@ export const getHospitals = async (req, res) => {
   const lat = req.query.lat
   const lng = req.query.long
   const location = req.query.location
+  const rating = parseInt(req.query.rating) || 0
   try {
     // 1️⃣ Fetch hospital users
     const filter = {}
@@ -306,6 +307,16 @@ export const getHospitals = async (req, res) => {
     pipeline.push({
       $unwind: "$hospital"
     });
+    if (rating) {
+      pipeline.push({
+        $match: {
+          "hospital.rating": {
+            $gte: Number(rating),
+            $lt: Number(rating) + 1
+          }
+        }
+      });
+    }
     if (location) {
       pipeline.push({
         $match: {
@@ -572,61 +583,16 @@ export const getHospitalProfile = async (req, res) => {
         ...img._doc,
         url: baseUrl + img.fileId
       }));
-    // const filter = { hospitalId: user._id }
-    // const query = { role: 'doctor' };
-    // const users = await EmpEmployement.find(filter).select('userId')
-    // const usersIds = users.map(item => item.userId)
-    // query._id = { $in: usersIds };
 
-    // const [staff, total] = await Promise.all([
-    //   User.find(query)
-    //     .populate('doctorId')
-    //     .select("-passwordHash")
-    //     .sort({ createdAt: -1 })
-    //     .limit(10),
-    //   User.countDocuments(query)
-    // ]);
+    const rating = await Rating.find({ hospitalId: user?._id })
+      .populate({ path: "patientId", select: "name email patientId", populate: { path: "patientId", select: "profileImage" } })
+      .limit(20).sort({ createdAt: -1 })
 
-    // const userIds = staff.map(user => user._id);
-
-    // const doctorAbouts = await DoctorAbout.find({ userId: { $in: userIds } }).populate('specialty treatmentAreas', 'name');
-    // const doctorEmp = await EmpEmployement.find({ userId: { $in: userIds } });
-    // const ratingStats = await Rating.aggregate([
-    //   {
-    //     $match: {
-    //       doctorId: { $in: userIds }
-    //     }
-    //   },
-    //   {
-    //     $group: {
-    //       _id: "$doctorId",
-    //       avgRating: { $avg: "$star" },
-    //       totalReviews: { $sum: 1 }
-    //     }
-    //   }
-    // ]);
-    // const ratingMap = {};
-    // ratingStats.forEach(r => {
-    //   ratingMap[r._id.toString()] = {
-    //     avgRating: Number(r.avgRating.toFixed(1)),
-    //     totalReviews: r.totalReviews
-    //   };
-    // });
-    // const staffWithAbout = staff.map(user => {
-    //   const about = doctorAbouts.find(da => da.userId.toString() === user._id.toString());
-    //   const employement = doctorEmp.find(da => da.userId.toString() === user._id.toString());
-
-    //   return {
-    //     ...user.toObject(),
-    //     doctorAbout: about || null,
-    //     avgRating: ratingMap[user._id.toString()]?.avgRating || 0,
-    //     fees: employement?.fees || null,
-    //   };
-    // });
 
     return res.json({
       message: "Hospital profile fetched",
       success: true,
+      rating,
       // doctors: staffWithAbout,
       profile: {
         basic, user,

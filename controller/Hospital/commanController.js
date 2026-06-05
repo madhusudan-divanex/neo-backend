@@ -276,8 +276,8 @@ export const addExistingDoctorToHospital = async (req, res) => {
 // ================= SEARCH USERS =================
 export const getNotification = async (req, res) => {
   try {
-    const myId = req.user.id;
-
+    const myId = req.user.id || req.user.userId;
+    console.log(myId)
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;

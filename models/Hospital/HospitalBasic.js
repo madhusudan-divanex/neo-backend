@@ -10,15 +10,16 @@ const Schema = new mongoose.Schema(
     email: String,
     gstNumber: String,
     about: String,
-    services:[String],
-    category:[{ type: mongoose.Schema.Types.ObjectId, ref: 'hospital-category',}],
+    services: [String],
+    category: [{ type: mongoose.Schema.Types.ObjectId, ref: 'hospital-category', }],
     logoFileId: String, // GridFS file id (string)
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User',index:true }, 
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
     kycStatus: {
       type: String,
-      enum: ["draft", "pending", "in_review", "approved", "rejected","block"],
+      enum: ["draft", "pending", "in_review", "approved", "rejected", "block"],
       default: "pending"
-    }
+    },
+    rating: { type: Number, default: 0, decimal: true },
   },
   { timestamps: true }
 );

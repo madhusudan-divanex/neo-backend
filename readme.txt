@@ -473,8 +473,10 @@ Lab Report,Sample,Payment
 Add Floor,room,bed,Allotment
 
 Admin->
-    Prescription 
-    Lab Reports
+    Hospital Bed Allotment List 
+Patient->
+    Pharmacy Invoice 
+    Pharmacy Rating
 
 Hospital Testing->
     Allotment Validation=>

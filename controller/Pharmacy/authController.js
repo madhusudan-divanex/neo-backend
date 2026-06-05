@@ -1164,8 +1164,6 @@ const getPharmacy = async (req, res) => {
             }
         });
         if (rating) {
-
-
             pipeline.push({
                 $match: {
                     avgRating: {

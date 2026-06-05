@@ -624,7 +624,7 @@ const getPatientAppointment = async (req, res) => {
             isExist = await User.findById(patientId);
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
-        const appointments = await DoctorAppointment.find({ patientId }).populate('prescriptionId').populate('hospitalId', 'name')
+        const appointments = await DoctorAppointment.find({ patientId }).populate('prescriptionId').populate('hospitalId', 'name hospitalId')
             .populate({
                 path: 'doctorId', select: 'name email contactNumber', populate: {
                     path: 'doctorId',
@@ -645,12 +645,47 @@ const getPatientAppointment = async (req, res) => {
         doctorAddresses.forEach(addr => {
             addressMap[addr.userId.toString()] = addr;
         });
+        const hospitalUserIds = appointments
+            .map(a => a.hospitalId?._id)
+            .filter(Boolean);
+
+        // step 1: users -> hospitalBasicId
+        const hospitalUsers = await User.find({
+            _id: { $in: hospitalUserIds }
+        }).select('hospitalId').lean();
+
+        const userToBasicMap = {};
+        hospitalUsers.forEach(u => {
+            userToBasicMap[u._id.toString()] = u.hospitalId;
+        });
+
+        // step 2: HospitalBasic -> address
+        const hospitalBasicIds = Object.values(userToBasicMap).filter(Boolean);
+
+        const hospitalAddresses = await HospitalAddress.find({
+            hospitalId: { $in: hospitalBasicIds }
+        }).select('hospitalId fullAddress').lean();
+
+        const hospitalMap = {};
+        hospitalAddresses.forEach(h => {
+            hospitalMap[h.hospitalId.toString()] = h;
+        });
 
         // appointment me address attach
-        const finalData = appointments.map(app => ({
-            ...app,
-            doctorAddress: addressMap[app.doctorId?._id?.toString()] || null
-        }));
+        const finalData = appointments.map(app => {
+            const doctorId = app.doctorId?._id?.toString();
+            const userId = app.hospitalId?._id?.toString();
+
+            const hospitalBasicId = userToBasicMap[userId];
+            const hospitalAddress = hospitalBasicId
+                ? hospitalMap[hospitalBasicId]
+                : null;
+
+            return {
+                ...app,
+                doctorAddress: hospitalAddress || addressMap[doctorId] || null
+            };
+        });
 
 
         const totalDoctorApt = await DoctorAppointment.countDocuments({ patientId: isExist._id })
@@ -733,18 +768,28 @@ const getPatientLabAppointment = async (req, res) => {
     }
 }
 const giveRating = async (req, res) => {
-    const { patientId, doctorId, message, star, labId } = req.body;
+    const { patientId, doctorId, message, star, labId, hospitalId } = req.body;
     try {
         if (doctorId) {
             const isExist = await User.findById(doctorId);
             if (!isExist) return res.status(200).json({ message: 'Doctor not exist' });
+            const isAlreadyRated = await Rating.findOne({ patientId, doctorId })
+            if (isAlreadyRated) return res.status(200).json({ message: "Already rated" })
+        } else if (hospitalId) {
+            const isExist = await User.findById(hospitalId);
+            if (!isExist) return res.status(200).json({ message: 'Hospital not exist' });
+            const isAlreadyRated = await Rating.findOne({ patientId, hospitalId })
+            if (isAlreadyRated) return res.status(200).json({ message: "Already rated" })
         } else {
             const isExist = await User.findById(labId);
             if (!isExist) return res.status(200).json({ message: 'Lab not exist' });
+            const isAlreadyRated = await Rating.findOne({ patientId, labId })
+            if (isAlreadyRated) return res.status(200).json({ message: "Already rated" })
         }
         const isPatient = await User.findById(patientId);
         if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
-        const add = await Rating.create({ patientId, doctorId, message, star, labId })
+
+        const add = await Rating.create({ patientId, doctorId, message, star, labId, hospitalId })
         if (add) {
             return res.status(200).json({ message: "Rating add successfully", success: true })
         } else {
@@ -1340,7 +1385,7 @@ const getDoctorPastAppointment = async (req, res) => {
             isExist = await User.findById(patientId);
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
-        const appointments = await DoctorAppointment.find({ patientId, doctorId }).populate('prescriptionId')
+        const appointments = await DoctorAppointment.find({ patientId, doctorId, hospitalId: null }).populate('prescriptionId')
             .populate({
                 path: 'labTest.tests.subCat',
             })

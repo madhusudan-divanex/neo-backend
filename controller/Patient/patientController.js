@@ -118,7 +118,7 @@ async function getMyRating(req, res) {
   }
 }
 async function getPatientFavoriteData(req, res) {
-  const userId = req.params.id;
+  const userId = req.user.userId;
   if (!userId) {
     return res.status(400).json({
       message: "userId is required",
@@ -145,6 +145,15 @@ async function getPatientFavoriteData(req, res) {
             from: "users",
             localField: "labId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  email: 1,
+                  labId: 1
+                }
+              }
+            ],
             as: "lab"
           }
         },
@@ -154,6 +163,14 @@ async function getPatientFavoriteData(req, res) {
             from: "laboratories",
             localField: "labId",   // User._id
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  rating: 1,
+                  logo: 1,
+                }
+              }
+            ],
             as: "labProfile"
           }
         },
@@ -168,6 +185,16 @@ async function getPatientFavoriteData(req, res) {
             from: "lab-addresses",
             localField: "labId",   // User._id
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  lat: 1,
+                  long: 1,
+                  cityId: 1,
+                  stateId: 1,
+                }
+              }
+            ],
             as: "labAbout"
           }
         },
@@ -182,6 +209,13 @@ async function getPatientFavoriteData(req, res) {
             from: "cities",
             localField: "labAbout.cityId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                }
+              }
+            ],
             as: "city"
           }
         },
@@ -196,6 +230,13 @@ async function getPatientFavoriteData(req, res) {
             from: "states",
             localField: "labAbout.stateId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                }
+              }
+            ],
             as: "state"
           }
         },
@@ -266,6 +307,16 @@ async function getPatientFavoriteData(req, res) {
             from: "hospitalbasics",
             localField: "hospitalId",
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  logoFileId: 1,
+                  hospitalName: 1,
+                  userId: 1,
+                  rating: 1,
+                }
+              },
+            ],
             as: "hospitalBasic"
           }
         },
@@ -282,6 +333,17 @@ async function getPatientFavoriteData(req, res) {
             from: "hospitaladdresses",
             localField: "hospitalBasic._id",
             foreignField: "hospitalId",
+            pipeline: [
+              {
+                $project: {
+                  cityId: 1,
+                  fullAddress: 1,
+                  stateId: 1,
+                  lat: 1,
+                  long: 1,
+                }
+              },
+            ],
             as: "hospitalAddress"
           }
         },
@@ -347,6 +409,17 @@ async function getPatientFavoriteData(req, res) {
             from: "users",
             localField: "doctorId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  email: 1,
+                  nh12: 1,
+                  doctorId: 1,
+
+                }
+              },
+            ],
             as: "doctor"
           }
         },
@@ -356,6 +429,15 @@ async function getPatientFavoriteData(req, res) {
             from: "doctors",
             localField: "doctorId",   // User._id
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  rating: 1,
+                  profileImage: 1,
+                  userId: 1,
+                }
+              },
+            ],
             as: "doctorProfile"
           }
         },
@@ -370,6 +452,20 @@ async function getPatientFavoriteData(req, res) {
             from: "doctor-abouts",
             localField: "doctorId",   // User._id
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  cityId: 1,
+                  stateId: 1,
+                  specialty: 1,
+                  fees: 1,
+                  hospitalName: 1,
+                  userId: 1,
+                  lat: 1,
+                  long: 1
+                }
+              },
+            ],
             as: "doctorAbout"
           }
         },
@@ -384,6 +480,13 @@ async function getPatientFavoriteData(req, res) {
             from: "cities",
             localField: "doctorAbout.cityId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                }
+              }
+            ],
             as: "city"
           }
         },
@@ -398,6 +501,13 @@ async function getPatientFavoriteData(req, res) {
             from: "states",
             localField: "doctorAbout.stateId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                }
+              }
+            ],
             as: "state"
           }
         },
@@ -484,6 +594,15 @@ async function getPatientFavoriteData(req, res) {
             from: "users",
             localField: "pharId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  email: 1,
+                  pharId: 1
+                }
+              }
+            ],
             as: "phar"
           }
         },
@@ -493,6 +612,15 @@ async function getPatientFavoriteData(req, res) {
             from: "pharmacies",
             localField: "pharId",   // User._id
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  logo: 1,
+                  userId: 1,
+                  rating: 1,
+                }
+              }
+            ],
             as: "pharProfile"
           }
         },
@@ -507,6 +635,16 @@ async function getPatientFavoriteData(req, res) {
             from: "phar-addresses",
             localField: "pharId",   // User._id
             foreignField: "userId",
+            pipeline: [
+              {
+                $project: {
+                  lat: 1,
+                  long: 1,
+                  cityId: 1,
+                  stateId: 1,
+                }
+              }
+            ],
             as: "pharAbout"
           }
         },
@@ -521,6 +659,13 @@ async function getPatientFavoriteData(req, res) {
             from: "cities",
             localField: "pharAbout.cityId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                }
+              }
+            ],
             as: "city"
           }
         },
@@ -535,6 +680,13 @@ async function getPatientFavoriteData(req, res) {
             from: "states",
             localField: "pharAbout.stateId",
             foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                }
+              }
+            ],
             as: "state"
           }
         },

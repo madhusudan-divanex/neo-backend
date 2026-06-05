@@ -24,6 +24,7 @@ export const checkPermission = (module, action) => {
 
     const panelType = payload.type; // lab / doctor / hospital / pharmacy
 
+
     // 🔍 Check permission
     const hasPermission =
       permission?.[panelType]?.[module]?.[action] === true ||

@@ -53,7 +53,8 @@ const permissionSchema = new Schema(
         view: { type: Boolean, default: false },
         addPrescription: { type: Boolean, default: false },
         editPrescription: { type: Boolean, default: false },
-        status: { type: Boolean, default: false }
+        status: { type: Boolean, default: false },
+        addVitals: { type: Boolean, default: false }
       },
       billing: {
         doctorPayment: { type: Boolean, default: false },
