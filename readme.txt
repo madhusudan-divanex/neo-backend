@@ -496,3 +496,13 @@ Lab/Hospital/Pharmacy/Doctor->
 
 
  
+Patient->
+    Hospital Admit List 
+    Hospital Transfer letter 
+    Discharge letter 
+    Bed Invoice
+    Hospital Bill
+    Allot lab Report 
+Hospital Staff->
+    jab doctor login karega tab usme sirf vo hi data show hoga jisme uski id exists karti ha
+

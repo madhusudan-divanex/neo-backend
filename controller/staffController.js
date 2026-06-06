@@ -11,6 +11,7 @@ import { generateOTP, sendEmailOtp, sendMobileOtp } from "../utils/globalFunctio
 import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import { sendDoctorEmail, sendEmpEmail, sendEmpOtpEmail } from "../utils/sendTemplateEmail.js";
 import AuditLog from "../models/AuditLog.js";
+import Department from "../models/Department.js";
 
 
 export const createStaffProfile = async (req, res) => {
@@ -378,7 +379,20 @@ export const getStaffList = async (req, res) => {
       filter.userRole = userRole
     }
     if (department) {
-      filter.department = department
+      const isExist = await Department.findById(department).populate('headOfDepartment', 'role').populate('employees.employeeId', 'role')
+      if (isExist) {
+        let users = []
+        if (isExist.headOfDepartment?.role == 'staff') {
+          users.push(isExist.headOfDepartment?._id)
+        }
+        isExist?.employees?.forEach(s => {
+          if (s?.employeeId?.role == 'staff') {
+            users.push(s?.employeeId?._id)
+          }
+        })
+        // filter.department = { $in: department }
+        filter.userId = { $in: users }
+      }
     }
 
     const limitInt = parseInt(limit);

@@ -17,6 +17,7 @@ import { assignNH12 } from "../../utils/nh12.js";
 import StaffEmployement from "../../models/Staff/StaffEmployement.js";
 import AuditLog from "../../models/AuditLog.js";
 import City from "../../models/Hospital/City.js";
+import Department from "../../models/Department.js";
 export const createHospitalDoctor = async (req, res) => {
   const image = req.file?.path;
   try {
@@ -914,12 +915,24 @@ export const availableDoctor = async (req, res) => {
   const hospitalId = req.user.id;
 
   try {
-    // 1. Get doctors in department
-    const doctorEmp = await StaffEmployement.find({
-      department,
+    let filter = {
       organizationId: hospitalId,
       userRole: "doctor"
-    });
+    }
+    const departmentData = await Department.findById(department).populate('headOfDepartment', 'role').populate('employees.employeeId', 'role')
+    if (departmentData) {
+      let users = [departmentData.headOfDepartment._id]
+      if (departmentData.employees?.length) {
+        departmentData.employees.forEach(item => {
+          if (item.employeeId?.role == 'doctor') {
+            users.push(item.employeeId._id)
+          }
+        })
+      }
+      filter.userId = { $in: users }
+    }
+    // 1. Get doctors in department
+    const doctorEmp = await StaffEmployement.find(filter);
 
     if (doctorEmp.length === 0) {
       return res.status(404).json({
@@ -954,7 +967,6 @@ export const availableDoctor = async (req, res) => {
       hospitalId,
       time
     });
-    console.log(todayAppointments, availableDoctorIds, availableSlotDoctors)
 
     const bookedDoctorIds = todayAppointments.map(a => a.doctorId.toString());
 

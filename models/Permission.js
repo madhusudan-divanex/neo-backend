@@ -64,11 +64,14 @@ const permissionSchema = new Schema(
 
       beds: {
         add: { type: Boolean, default: false },
+        edit: { type: Boolean, default: false },
         viewDetails: { type: Boolean, default: false },
         addAllotment: { type: Boolean, default: false },
         editAllotment: { type: Boolean, default: false },
         dischargePatient: { type: Boolean, default: false },
         delete: { type: Boolean, default: false },
+        addPrescription: { type: Boolean, default: false },
+        editPrescription: { type: Boolean, default: false },
       },
 
       patients: {

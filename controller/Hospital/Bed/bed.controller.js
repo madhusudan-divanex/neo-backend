@@ -754,7 +754,7 @@ const allotmentPrescription = async (req, res) => {
     if (!isPatient) return res.status(200).json({ message: 'Patient not exist' });
 
     const isAllotment = await BedAllotment.findById(allotmentId);
-    if (!isAllotment) return res.status(200).json({ message: 'Appointment not exist' });
+    if (!isAllotment) return res.status(200).json({ message: 'Allotment not exist' });
     const add = await Prescriptions.create({ patientId, hospitalId: isAllotment.hospitalId, doctorId, medications, diagnosis, status, notes, allotmentId, reVisit, type: "allotment" })
     if (add) {
       await BedAllotment.findByIdAndUpdate(isAllotment._id, { prescriptionId: add._id }, { new: true })
@@ -865,8 +865,8 @@ const editAllotmentPrescription = async (req, res) => {
     const add = await Prescriptions.findByIdAndUpdate(prescriptionId, { patientId, doctorId, reVisit, medications, diagnosis, status, notes, allotmentId }, { new: true })
     if (add) {
       await AuditLog.create({
-        orgId: isExist.hospitalId,
-        actorId: req.user.loginUser || isExist.hospitalId,
+        orgId: isAllotment.hospitalId,
+        actorId: req.user.loginUser || isAllotment.hospitalId,
         panel: "hospital",
         method: "UPDATE",
         shortDesc: "Prescription updated",

@@ -74,37 +74,37 @@ router.put("/room/update/:id", auth, updateRoom);
 router.get("/room/:floorId", auth, listRoomsByFloor);
 
 // ---------- BED ----------
-router.post("/bed/add", auth,checkPermission("beds","add"), addBed);
+router.post("/bed/add", auth, checkPermission("beds", "add"), addBed);
 router.get("/bed/single/:id", auth, getBedById);
 router.get("/bed/available", auth, isBedAvailable);
-router.put("/bed/update/:id", auth,checkPermission("beds","add"), updateBed);
+router.put("/bed/update/:id", auth, checkPermission("beds", "edit"), updateBed);
 // router.delete("/bed/:id", auth,checkPermission("beds","delete"), deleteBed);
 
 // ---------- ALLOTMENT ----------
-router.post("/allotment/add", auth,checkPermission("beds","addAllotment"), addAllotment);
+router.post("/allotment/add", auth, checkPermission("beds", "addAllotment"), addAllotment);
 router.put("/allotment/discharge/:allotmentId", auth, dischargePatient);
 router.get("/allotment/:id", auth, getAllotmentById);
-router.put("/allotment/update/:id", auth,checkPermission("beds","editAllotment"), updateAllotment);
+router.put("/allotment/update/:id", auth, checkPermission("beds", "editAllotment"), updateAllotment);
 
 // ---------- MANAGEMENT ----------
 router.get("/management/list", auth, bedManagementList);
-router.get("/allotment/history/:id",authMiddleware,getAllotmentHistory)
-router.post("/allotment/payment",authMiddleware,checkPermission("billing","allotmentPayment"),addOrUpdateHospitalPayment)
-router.get("/allotment-payment/:id",authMiddleware,getAllotmentPayment)
+router.get("/allotment/history/:id", authMiddleware, getAllotmentHistory)
+router.post("/allotment/payment", authMiddleware, checkPermission("billing", "allotmentPayment"), addOrUpdateHospitalPayment)
+router.get("/allotment-payment/:id", authMiddleware, getAllotmentPayment)
 
 // router.post("/discharge-patient",authMiddleware,checkPermission("beds","dischargePatient"),addOrUpdateDischargePatient)
-router.post("/discharge-patient",authMiddleware,checkPermission("beds","dischargePatient"),addOrUpdateDischargePatient)
-router.get("/discharge-patient/:id",authMiddleware,getDischargePatient)
-router.get("/discharge-scan/:id",getDischargeScan)
+router.post("/discharge-patient", authMiddleware, checkPermission("beds", "dischargePatient"), addOrUpdateDischargePatient)
+router.get("/discharge-patient/:id", authMiddleware, getDischargePatient)
+router.get("/discharge-scan/:id", getDischargeScan)
 
-router.post('/prescription',authMiddleware,allotmentPrescription)
-router.get('/prescription-data/:id',authMiddleware,getAllotmentPrescriptiondata)
-router.put('/prescription',authMiddleware,editAllotmentPrescription)
-router.post('/prescription-action',authMiddleware,prescriptionAction)
-router.delete('/prescription/:id',authMiddleware,deleteAllotmentPrescription)
+router.post('/prescription', authMiddleware, checkPermission("beds", "addPrescription"), allotmentPrescription)
+router.get('/prescription-data/:id', authMiddleware, getAllotmentPrescriptiondata)
+router.put('/prescription', authMiddleware, checkPermission("beds", "editPrescription"), editAllotmentPrescription)
+router.post('/prescription-action', authMiddleware, prescriptionAction)
+router.delete('/prescription/:id', authMiddleware, deleteAllotmentPrescription)
 
-router.post('/add-tests',authMiddleware,addTestForBedPatient)
-router.get('/test-reports/:appointmentId',authMiddleware,getTestReportForBedPatient)
+router.post('/add-tests', authMiddleware, addTestForBedPatient)
+router.get('/test-reports/:appointmentId', authMiddleware, getTestReportForBedPatient)
 router.get("/hospital", auth, getHospitalBed);
 router.post("/department-transfer", auth, departmentTransfer);
 router.get("/department-transfer/:id", auth, getDepartmentTransfer);

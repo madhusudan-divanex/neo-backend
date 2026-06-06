@@ -26,6 +26,7 @@ import HospitalBasic from "../../models/Hospital/HospitalBasic.js";
 import Pharmacy from "../../models/Pharmacy/pharmacy.model.js";
 import Country from "../../models/Hospital/Country.js";
 import { populate } from "dotenv";
+import BedAllotment from "../../models/Hospital/BedAllotment.js";
 import Sell from "../../models/Pharmacy/sell.model.js";
 
 
@@ -965,6 +966,38 @@ async function userRating(req, res) {
   } catch (error) {
     console.log(error)
     return res.status(200).json({ message: "Server error", success: false })
+  }
+}
+async function getHospitalAdmit(req, res) {
+  const patientId = req.user.userId
+  const page = parseInt(req.query.page) || 1
+  const limit = parseInt(req.query.limit) || 10
+  try {
+    const admitList = await BedAllotment.find({ patientId: patientId })
+      .populate({ path: 'primaryDoctorId', select: 'name email nh12 contactNumber doctorId', populate: { path: 'doctorId', select: 'profileImage' } })
+      .populate({ path: 'hospitalId', select: 'name email nh12 contactNumber hospitalId', populate: { path: 'hospitalId', select: 'logoFileId' } })
+      .populate('dischargeId', 'createdAt')
+      .skip((page - 1) * limit)
+      .limit(limit)
+
+
+    const total = await BedAllotment.countDocuments({ patientId: patientId })
+    return res.status(200).json({
+      message: "Admit list fetched successfully",
+      data: admitList,
+      pagination: {
+        totalRecords: total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        limit: limit,
+      },
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message,
+      success: false,
+    });
   }
 }
 async function getPatients(req, res) {
@@ -2655,7 +2688,7 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
 };
 
 export {
-  getTopUsers, getTopUserByCategory, getSearchCity, getPatientPrescriptionsInvoice, userRating,
+  getTopUsers, getTopUserByCategory, getSearchCity, getPatientPrescriptionsInvoice, userRating, getHospitalAdmit,
   favoriteController, getPatientFavorite, getMyRating, getPatientFavoriteData, getPatientPrescriptions, getPrescriptionLabDetail, profileAction, getPatients, getNearByDoctor,
 
 }

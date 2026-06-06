@@ -442,10 +442,27 @@ export const getHospitals = async (req, res) => {
   }
 };
 export const hospitalDashboard = async (req, res) => {
+  const { doctorId } = req.query;
   try {
     const hospitalId = req.user.id;
     if (!hospitalId) {
       return res.status(400).json({ message: "Hospital ID missing" });
+    }
+    if (doctorId) {
+      const totalAppointments = await DoctorAppointment.countDocuments({ hospitalId, doctorId });
+      const completedAppointments = await DoctorAppointment.countDocuments({ hospitalId, status: 'completed', doctorId });
+      const pendingAppointments = await DoctorAppointment.countDocuments({ hospitalId, status: 'pending', doctorId });
+      const bookedBed = await BedAllotment.countDocuments({ hospitalId, status: 'Active', doctorId });
+
+      return res.json({
+        success: true,
+        totalAppointments,
+        completedAppointments,
+        pendingAppointments,
+        bookedBed,
+
+      });
+
     }
     // Total Appointments
     const totalAppointments = await DoctorAppointment.countDocuments({ hospitalId });
@@ -1048,7 +1065,11 @@ export const getHospitalDepartments = async (req, res) => {
   }
 }
 export const IpdPatientsList = async (req, res) => {
+  const { doctorId } = req.query
   try {
+    const doctorObjectId = doctorId
+      ? new mongoose.Types.ObjectId(doctorId)
+      : null
     const hospitalId = req.user._id || req.user.id;
     const deptType = req.query.deptType
     const status = req.query.status?.trim(); // could be "Active", "Inactive", etc.
@@ -1122,6 +1143,16 @@ export const IpdPatientsList = async (req, res) => {
           preserveNullAndEmptyArrays: true
         }
       },
+      ...(doctorObjectId
+        ? [{
+          $match: {
+            $or: [
+              { "allotmentInfo.primaryDoctorId": doctorObjectId },
+              { "allotmentInfo.attendingStaff.staffId": doctorObjectId }
+            ]
+          }
+        }]
+        : []),
 
       // 🏥 Filter hospital
       {

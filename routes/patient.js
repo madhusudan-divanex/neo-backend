@@ -3,7 +3,7 @@ import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
 import { getLabReport, getPatientAppointment } from "../controller/appointmentController.js";
-import { favoriteController, getMyRating, getNearByDoctor, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPatients, getPrescriptionLabDetail, getTopUsers, profileAction, getSearchCity, getTopUserByCategory, getPatientPrescriptionsInvoice, userRating } from "../controller/Patient/patientController.js";
+import { favoriteController, getMyRating, getNearByDoctor, getPatientFavorite, getPatientFavoriteData, getPatientPrescriptions, getPatients, getPrescriptionLabDetail, getTopUsers, profileAction, getSearchCity, getTopUserByCategory, getPatientPrescriptionsInvoice, userRating, getHospitalAdmit } from "../controller/Patient/patientController.js";
 
 import { sendPush } from "../utils/sendPush.js";
 import { getPatientFooterCategory } from "../controller/Admin/LandingPage.controller.js";
@@ -39,7 +39,7 @@ patient.post('/kyc', uploader.fields([{ name: 'frontImage', maxCount: 1 },
 { name: 'backImage', maxCount: 1 }
 ]), authMiddleware, patientKyc)
 patient.get('/kyc/:id', getPatientKyc)
-patient.post('/prescription', uploader.array('fileUrl'), authMiddleware, addPrescriptions);
+patient.post('/prescription', authMiddleware, uploader.array('fileUrl'), addPrescriptions);
 patient.delete('/prescription/:id/:itemId', authMiddleware, deletePrescription)
 patient.post('/medical-history', authMiddleware, patientMedicalHistory)
 patient.get('/medical-history/:id', authMiddleware, getMedicalHistory)
@@ -66,6 +66,7 @@ patient.get('/prescriptions-invoice/:id', authMiddleware, getPatientPrescription
 patient.get('/appointment-test-detail/:id', authMiddleware, getPrescriptionLabDetail)
 patient.post('/profile-action', authMiddleware, profileAction)
 patient.post('/user-rating', authMiddleware, userRating)
+patient.get('/hospital-admit/:id', authMiddleware, getHospitalAdmit)
 
 
 patient.post("/test-push", async (req, res) => {

@@ -215,18 +215,34 @@ const getHospitalDoctor = async (req, res) => {
     const hospitalId = req.user.id || req.user.userId
     const { status, deptType, department } = req.query
     try {
+        let filter = {
+            organizationId: hospitalId,
+            userRole: "doctor",
+            status: "active",
+        }
         let departmentId = []
         if (deptType) {
             const departments = await Department.find({ type: deptType, userId: hospitalId })
             departmentId = departments.map(d => d._id)
         }
-        if (department) {
-            departmentId = department
+        if (departmentId.length > 0) {
+            filter.department = { $in: departmentId }
         }
-        let filter = {
-            organizationId: hospitalId,
-            userRole: "doctor",
-            status: "active", department: departmentId ? { $in: departmentId } : null
+        if (department) {
+            const isExist = await Department.findById(department).populate('headOfDepartment', 'role').populate('employees.employeeId', 'role')
+            if (isExist) {
+                let users = []
+                if (isExist.headOfDepartment?.role == 'doctor') {
+                    users.push(isExist.headOfDepartment?._id)
+                }
+                isExist?.employees?.forEach(s => {
+                    if (s?.employeeId?.role == 'doctor') {
+                        users.push(s?.employeeId?._id)
+                    }
+                })
+                // filter.department = { $in: department }
+                filter.userId = { $in: users }
+            }
         }
         if (status) {
             filter.status = status
