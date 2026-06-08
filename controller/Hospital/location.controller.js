@@ -9,7 +9,7 @@ export const getCountries = async (req, res) => {
     const countries = await Country.find().sort({ name: 1 });
     res.json(countries);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -20,7 +20,7 @@ export const getStates = async (req, res) => {
     const states = await State.find({ countryCode }).sort({ name: 1 });
     res.json(states);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -31,6 +31,6 @@ export const getCities = async (req, res) => {
     const cities = await City.find({ stateCode }).sort({ name: 1 });
     res.json(cities);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };

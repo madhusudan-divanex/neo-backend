@@ -24,7 +24,7 @@ export const getNotifications = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       message: "Failed to load notifications",
-      error: err.message
+      error: "Internal server error"
     });
   }
 };

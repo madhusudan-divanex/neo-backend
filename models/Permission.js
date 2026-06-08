@@ -29,6 +29,7 @@ const permissionSchema = new Schema(
       appointmentAdd: { type: Boolean, default: false },
       appointmentPayment: { type: Boolean, default: false },
       appointmentStatus: { type: Boolean, default: false },
+      addConsultationNote: { type: Boolean, default: false },
 
       addPrescription: { type: Boolean, default: false },
       editPrescription: { type: Boolean, default: false },
@@ -54,7 +55,8 @@ const permissionSchema = new Schema(
         addPrescription: { type: Boolean, default: false },
         editPrescription: { type: Boolean, default: false },
         status: { type: Boolean, default: false },
-        addVitals: { type: Boolean, default: false }
+        addVitals: { type: Boolean, default: false },
+        addConsultationNote: { type: Boolean, default: false }
       },
       billing: {
         doctorPayment: { type: Boolean, default: false },

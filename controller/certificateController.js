@@ -96,7 +96,7 @@ export const createDeathCertificate = async (req, res) => {
       res.status(201).json({ cert, success: true });
     }
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getAllDeathCertificates = async (req, res) => {
@@ -155,7 +155,7 @@ export const getAllDeathCertificates = async (req, res) => {
       data,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getDeathCertificatesData = async (req, res) => {
@@ -193,7 +193,7 @@ export const getDeathCertificatesData = async (req, res) => {
 
   } catch (err) {
     console.log(err)
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -301,7 +301,7 @@ export const createBirthCertificate = async (req, res) => {
     }
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getAllBirthCertificates = async (req, res) => {
@@ -360,7 +360,7 @@ export const getAllBirthCertificates = async (req, res) => {
       data,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getBirthCertificatesData = async (req, res) => {
@@ -400,7 +400,7 @@ export const getBirthCertificatesData = async (req, res) => {
 
   } catch (err) {
     console.log(err)
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -453,7 +453,7 @@ export const createFitnessCertificate = async (req, res) => {
       res.status(201).json({ cert, success: true });
     }
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getAllFitnessCertificates = async (req, res) => {
@@ -514,7 +514,7 @@ export const getAllFitnessCertificates = async (req, res) => {
       data,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getFitnessCertificatesData = async (req, res) => {
@@ -551,7 +551,7 @@ export const getFitnessCertificatesData = async (req, res) => {
     }
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const createMedicalCertificate = async (req, res) => {
@@ -628,7 +628,7 @@ export const createMedicalCertificate = async (req, res) => {
     }
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getAllMedicalCertificates = async (req, res) => {
@@ -689,7 +689,7 @@ export const getAllMedicalCertificates = async (req, res) => {
       data,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getMedicalCertificatesData = async (req, res) => {
@@ -728,7 +728,7 @@ export const getMedicalCertificatesData = async (req, res) => {
 
   } catch (err) {
     console.log(err)
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getCertificateDataByCertId = async (req, res) => {
@@ -861,7 +861,7 @@ export const getCertificateDataByCertId = async (req, res) => {
     }
   } catch (error) {
     console.log(error)
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 

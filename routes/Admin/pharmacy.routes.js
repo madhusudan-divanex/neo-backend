@@ -17,7 +17,7 @@ const router = express.Router();
 router.get("/", getPharmacies);
 router.get("/requests", getPharmacyRequests);
 router.get("/:id", getPharmaciesDetail);
-router.patch("/:id/status", togglePharmacyStatus);
+router.patch("/:id/status/:status", togglePharmacyStatus);
 router.delete("/:id", deletePharmacy);
 router.get("/:id/medicine-requests", getH1MedicineReqeusts);
 router.patch("/medicine-requests/status/:id", updateMedicineReqeustStatus);

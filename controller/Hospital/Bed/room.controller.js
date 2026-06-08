@@ -55,7 +55,7 @@ export const addRoom = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -80,7 +80,7 @@ export const listRoomsByFloor = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -109,7 +109,7 @@ export const getRoomById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -180,7 +180,7 @@ export const updateRoom = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

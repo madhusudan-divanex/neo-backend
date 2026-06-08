@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
     const data = await Blog.find(filter).sort({ createdAt: -1 })
       .skip((page - 1) * limit).limit(Number(limit));
     res.json({ success: true, data, baseUrl, total, totalPages: Math.ceil(total / limit) });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 });
 
 // Get single blog
@@ -31,7 +31,7 @@ router.get("/:id", async (req, res) => {
     blog.views = (blog.views || 0) + 1;
     await blog.save();
     res.json({ success: true, data: blog, baseUrl });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 });
 
 // Create blog (admin only)
@@ -39,7 +39,7 @@ router.post("/", authMiddleware, uploader.single("image"), async (req, res) => {
   try {
     const blog = await Blog.create({ ...req.body, image: req.file?.filename, authorId: req.admin?._id });
     res.json({ success: true, data: blog });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 });
 
 // Update blog
@@ -49,7 +49,7 @@ router.put("/:id", authMiddleware, uploader.single("image"), async (req, res) =>
     if (req.file) update.image = req.file.filename;
     const blog = await Blog.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json({ success: true, data: blog });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 });
 
 // Delete blog
@@ -57,7 +57,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   try {
     await Blog.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: "Deleted" });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 });
 
 export default router;

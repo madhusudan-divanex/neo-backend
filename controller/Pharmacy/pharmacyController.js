@@ -68,7 +68,7 @@ const addInventry = async (req, res) => {
 
     } catch (error) {
         console.log(error)
-        res.status(400).json({ success: false, error: error.message });
+        res.status(400).json({ success: false, error: "Internal server error" });
     }
 }
 const inventoryList = async (req, res) => {
@@ -135,7 +135,7 @@ const inventoryList = async (req, res) => {
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const inventoryGetById = async (req, res) => {
@@ -162,7 +162,7 @@ const inventoryGetById = async (req, res) => {
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 const inventoryUpdate = async (req, res) => {
@@ -200,7 +200,7 @@ const inventoryUpdate = async (req, res) => {
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 const inventoryDelete = async (req, res) => {
@@ -234,7 +234,7 @@ const inventoryDelete = async (req, res) => {
         console.error(error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -293,7 +293,7 @@ const medicineData = async (req, res) => {
                 $group: {
                     _id: null,
                     totalSalesAmount: {
-                        $sum: "$products.price"
+                        $sum: "$products.totalAmount"
                     },
                     totalSoldQuantity: {
                         $sum: "$products.quantity"
@@ -321,7 +321,7 @@ const medicineData = async (req, res) => {
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getMedicineRequestsList = async (req, res) => {
@@ -475,7 +475,7 @@ const sendMedicineRequest = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const changeRequestStatus = async (req, res) => {
@@ -499,7 +499,7 @@ const changeRequestStatus = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getAllMedicineRequestsForAdmin = async (req, res) => {
@@ -553,7 +553,7 @@ const getAllMedicineRequestsForAdmin = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -591,7 +591,7 @@ const createPO = async (req, res) => {
 
         res.json({ success: true, message: "PO Created", data: newPO });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
@@ -717,7 +717,7 @@ const getPOList = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -729,7 +729,7 @@ const getPODetails = async (req, res) => {
         const po = await PurchaseOrder.findById({ _id: req.params.id, });
         res.status(200).json({ success: true, data: po })
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 
@@ -780,7 +780,7 @@ const updatePO = async (req, res) => {
         res.status(200).json({ success: true, message: "PO updated successfully", data: updatedPO });
 
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -791,7 +791,7 @@ const deletePO = async (req, res) => {
         return res.status(200).json({ success: true, message: "PO Deleted" })
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ success: false, message: error.message })
+        return res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
 
@@ -842,7 +842,7 @@ const receivePO = async (req, res) => {
         res.status(200).json({ success: true, message: "PO received & inventory updated" });
 
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -865,7 +865,7 @@ const addSupplier = async (req, res) => {
         return res.status(200).json({ success: true, message: "Supplier added successfully", supplier });
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ success: false, message: error.message })
+        return res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
 
@@ -937,7 +937,7 @@ const getSupplier = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -958,7 +958,7 @@ const getSupplierById = async (req, res) => {
         res.status(200).json({ success: true, data: supplier });
 
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
 
@@ -988,7 +988,7 @@ const updateSupplier = async (req, res) => {
         res.status(200).json({ success: true, message: "Supplier updated" });
 
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
 
@@ -1006,7 +1006,7 @@ const deleteSupplier = async (req, res) => {
         res.status(200).json({ success: true, message: "Supplier deleted successfully" });
 
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
 async function validateProductsAvailability(pharId, products) {
@@ -1125,7 +1125,7 @@ const createReturn = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1252,7 +1252,7 @@ const listReturns = async (req, res) => {
         });
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ success: false, message: error.message })
+        return res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
 
@@ -1269,7 +1269,7 @@ const getReturnById = async (req, res) => {
 
         return res.status(200).json({ success: true, data: doc });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message })
+        return res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
 
@@ -1314,7 +1314,7 @@ const updateReturn = async (req, res) => {
         return res.status(200).json({ success: true, data: ret, message: "Return Updated" });
     } catch (err) {
         console.error("updateReturn:", err);
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -1356,7 +1356,7 @@ const completeReturn = async (req, res) => {
         await session.abortTransaction().catch(() => { });
         session.endSession();
         console.error("completeReturn:", err);
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -1373,7 +1373,7 @@ const deleteReturn = async (req, res) => {
         return res.status(200).json({ success: true, message: "Return deleted" });
     } catch (err) {
         console.error("deleteReturn:", err);
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -1537,7 +1537,7 @@ const pharDashboardData = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const sellMedicine = async (req, res) => {
@@ -1725,7 +1725,7 @@ const sellMedicine = async (req, res) => {
             safeUnlink(prescriptionFile);
         }
         console.log(error)
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -1897,7 +1897,7 @@ const getSellMedicine = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1914,7 +1914,7 @@ const getSellData = async (req, res) => {
         return res.status(200).json({ success: true, sell, message: "Sell record deleted successfully" });
     }
     catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 const deleteSellData = async (req, res) => {
@@ -1938,7 +1938,7 @@ const deleteSellData = async (req, res) => {
         return res.status(200).json({ success: true, message: "Sell record deleted successfully" });
     }
     catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 const getPatientPrescriptionData = async (req, res) => {
@@ -1983,7 +1983,7 @@ const getPatientPrescriptionData = async (req, res) => {
         });
     } catch (err) {
         console.log(err)
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -2071,7 +2071,7 @@ const patientHospitalAllotment = async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -2150,7 +2150,7 @@ const patientHospitalPrescriptions = async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -2208,7 +2208,7 @@ export const addPatient = async (req, res) => {
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -2346,7 +2346,7 @@ export const getEODSale = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message
+            message: "Internal server error"
         });
     }
 };
@@ -2452,7 +2452,7 @@ export const customerReturn = async (req, res) => {
 
         return res.status(400).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -2511,7 +2511,7 @@ export const getMySchedule = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ message: error.message, success: false });
+        return res.status(500).json({ message: "Internal server error", success: false });
     }
 };
 export const getCustomerReturn = async (req, res) => {
@@ -2564,7 +2564,7 @@ export const getCustomerReturn = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -2627,10 +2627,48 @@ export const requestableMedicine = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
+export const patientSellHistory = async (req, res) => {
+    const pharmacyId = new mongoose.Types.ObjectId(req.user.userId)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    try {
+        let patientId = '';
+        if (req.params.id?.length == 24) {
+            patientId = new mongoose.Types.ObjectId(req.params.id);
+        } else {
+            const pt = await User.findOne({ nh12: req.params.id })
+            patientId = new mongoose.Types.ObjectId(pt?._id)
+        }
+        const sellData = await Sell.find({ $or: [{ pharId: pharmacyId }, { hospitalId: pharmacyId }], patientId })
+            .populate('doctorId', 'nh12 name').skip(skip).limit(limit).sort({ createdAt: -1 });
+
+        const total = await Sell.countDocuments({ $or: [{ pharId: pharmacyId }, { hospitalId: pharmacyId }], patientId })
+
+        return res.status(200).json({
+            success: true,
+            data: sellData,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
 export {
     getAllMedicineRequestsForAdmin, getMedicineRequestsList, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById,
     addInventry, inventoryUpdate, inventoryDelete, inventoryGetById, inventoryList, changeRequestStatus, sendMedicineRequest,

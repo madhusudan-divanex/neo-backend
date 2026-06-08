@@ -22,7 +22,7 @@ async function createDepartment(req, res) {
         }
         return res.status(400).json({ message: "Department not created", success: false })
     } catch (error) {
-        return res.status(200).json({ message: error?.message, success: false })
+        return res.status(200).json({ message: "Internal server error", success: false })
     }
 }
 async function updateDepartment(req, res) {
@@ -46,7 +46,7 @@ async function updateDepartment(req, res) {
         }
         return res.status(400).json({ message: "Department not updated", success: false })
     } catch (error) {
-        return res.status(200).json({ message: error?.message, success: false })
+        return res.status(200).json({ message: "Internal server error", success: false })
     }
 }
 async function getDepartment(req, res) {
@@ -91,7 +91,7 @@ async function getDepartment(req, res) {
             }
         });
     } catch (error) {
-        return res.status(500).json({ message: error?.message, success: false });
+        return res.status(500).json({ message: "Internal server error", success: false });
     }
 }
 export { getDepartment, createDepartment, updateDepartment }

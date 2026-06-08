@@ -12,7 +12,7 @@ export const getSocialLinks = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -37,7 +37,7 @@ export const saveSocialLinks = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

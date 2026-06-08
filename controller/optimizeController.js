@@ -118,7 +118,7 @@ const getPatientDashboard = async (req, res) => {
 
     } catch (error) {
         return res.status(500).json({
-            message: error?.message,
+            message: "Internal server error",
             success: false
         });
     }
@@ -250,7 +250,7 @@ const getHospitalDoctor = async (req, res) => {
         const staffEmp = await StaffEmployement.find(filter).select('userId fees').populate('userId', 'name')
         return res.status(200).json({ message: "Doctor Fetched", success: true, doctors: staffEmp })
     } catch (error) {
-        return res.status(500).json({ message: error?.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }
 const saveFrotnendQuery = async (req, res) => {
@@ -261,7 +261,7 @@ const saveFrotnendQuery = async (req, res) => {
         }
         return res.status(200).json({ message: "Message not sent", success: false })
     } catch (error) {
-        return res.status(500).json({ message: error?.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }
 const getScanUserData = async (req, res) => {
@@ -278,7 +278,7 @@ const getScanUserData = async (req, res) => {
             const prescriptions = await PatientPrescriptions.findOne({ userId })
         }
     } catch (error) {
-        return res.status(500).json({ message: error?.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }
 const getUserProfileData = async (req, res) => {

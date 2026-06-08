@@ -82,6 +82,9 @@ cron.schedule('0 0 * * *', async () => {
   } catch (error) {
     console.error("❌ Error in revisit cron job:", error);
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 0 * * *", async () => {
   // Runs daily at 12:00 AM
@@ -160,8 +163,11 @@ cron.schedule("0 0 * * *", async () => {
     await session.abortTransaction();
     session.endSession();
 
-    console.error("❌ Cron failed:", err.message);
+    console.error("❌ Cron failed:", "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 
 cron.schedule("0 0 * * *", async () => {
@@ -194,8 +200,11 @@ cron.schedule("0 0 * * *", async () => {
 
     console.log(`✅ Expiry check completed. Notified ${expiredYesterday.length} medicines that expired yesterday.`);
   } catch (err) {
-    console.error("❌ Cron failed:", err.message);
+    console.error("❌ Cron failed:", "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 0 * * *", async () => {
   try {
@@ -267,8 +276,11 @@ cron.schedule("0 0 * * *", async () => {
     );
 
   } catch (err) {
-    console.error("❌ Upcoming expiry cron failed:", err.message);
+    console.error("❌ Upcoming expiry cron failed:", "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("* * * * *", async () => {
   try {
@@ -355,6 +367,9 @@ cron.schedule("* * * * *", async () => {
   } catch (error) {
     console.error("Cron Error:", error);
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 9 * * 1", async () => {
 
@@ -412,10 +427,13 @@ cron.schedule("0 9 * * 1", async () => {
 
   } catch (err) {
 
-    console.error("❌ Low stock cron failed:", err.message);
+    console.error("❌ Low stock cron failed:", "Internal server error");
 
   }
 
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 2 * * *", async () => {
   console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
@@ -485,8 +503,11 @@ cron.schedule("0 2 * * *", async () => {
     );
 
   } catch (err) {
-    console.error('[RatingCron] Error:', err.message);
+    console.error('[RatingCron] Error:', "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 2 * * *", async () => {
   console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
@@ -556,8 +577,11 @@ cron.schedule("0 2 * * *", async () => {
     );
 
   } catch (err) {
-    console.error('[RatingCron] Error:', err.message);
+    console.error('[RatingCron] Error:', "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 2 * * *", async () => {
   console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
@@ -627,8 +651,11 @@ cron.schedule("0 2 * * *", async () => {
     );
 
   } catch (err) {
-    console.error('[RatingCron] Error:', err.message);
+    console.error('[RatingCron] Error:', "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 cron.schedule("0 2 * * *", async () => {
   console.log(`[RatingCron] Started at ${new Date().toISOString()}`);
@@ -698,8 +725,11 @@ cron.schedule("0 2 * * *", async () => {
     );
 
   } catch (err) {
-    console.error('[RatingCron] Error:', err.message);
+    console.error('[RatingCron] Error:', "Internal server error");
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 
 cron.schedule("0 * * * *", async () => {
@@ -733,5 +763,8 @@ cron.schedule("0 * * * *", async () => {
   } catch (error) {
     console.error("❌ Error in reject expired appointments cron job:", error);
   }
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 

@@ -12,6 +12,10 @@ import DoctorAbout from "../models/Doctor/addressAbout.model.js";
 import { sendDoctorEmail, sendEmpEmail, sendEmpOtpEmail } from "../utils/sendTemplateEmail.js";
 import AuditLog from "../models/AuditLog.js";
 import Department from "../models/Department.js";
+import Laboratory from "../models/Laboratory/laboratory.model.js";
+import HospitalBasic from "../models/Hospital/HospitalBasic.js";
+import Pharmacy from "../models/Pharmacy/pharmacy.model.js";
+import Doctor from "../models/Doctor/doctor.model.js";
 
 
 export const createStaffProfile = async (req, res) => {
@@ -117,7 +121,7 @@ export const createStaffProfile = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Internal server error"
     });
   }
 };
@@ -183,7 +187,7 @@ export const createStaffProffessional = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: "Internal server error"
     });
   }
 };
@@ -205,7 +209,7 @@ export const getStaffByNHId = async (req, res) => {
     }
 
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getStaffById = async (req, res) => {
@@ -229,7 +233,7 @@ export const getStaffById = async (req, res) => {
 
   } catch (error) {
     console.log(error)
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const createStaffEmployement = async (req, res) => {
@@ -313,7 +317,7 @@ export const createStaffEmployement = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Internal server error"
     });
   }
 };
@@ -331,7 +335,7 @@ export const getStaffEmployement = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Internal server error"
     });
   }
 };
@@ -361,7 +365,7 @@ export const updateStaffEmployement = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Internal server error"
     });
   }
 };
@@ -431,7 +435,7 @@ export const getStaffList = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false });
+    return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
 export const staffAction = async (req, res) => {
@@ -451,7 +455,7 @@ export const staffAction = async (req, res) => {
       return res.status(404).json({ message: "Staff employment not found", success: false })
     }
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const staffLogin = async (req, res) => {
@@ -470,6 +474,27 @@ export const staffLogin = async (req, res) => {
     })
     if (!isStaff) {
       return res.status(404).json({ message: "Staff not found " })
+    }
+    if (panelData.role == "doctor") {
+      const isDoctor = await Doctor.findById(panelData?.doctorId)
+      if (isDoctor?.status == "block") {
+        return res.status(403).json({ message: "Your organization is blocked please contact admin" })
+      }
+    } else if (panelData.role == "lab") {
+      const isLab = await Laboratory.findById(panelData?.labId)
+      if (isLab?.status == "block") {
+        return res.status(403).json({ message: "Your organization is blocked please contact admin" })
+      }
+    } else if (panelData.role == "pharmacy") {
+      const isPharmacy = await Pharmacy.findById(panelData?.pharId)
+      if (isPharmacy?.status == "block") {
+        return res.status(403).json({ message: "Your organization is blocked please contact admin" })
+      }
+    } else if (panelData.role == "hospital") {
+      const isHospital = await HospitalBasic.findById(panelData?.hospitalId)
+      if (isHospital?.kycStatus == "block") {
+        return res.status(403).json({ message: "Your organization is blocked please contact admin" })
+      }
     }
     const staffUser = await User.findById(isStaff.userId)
     const isMatch = await bcrypt.compare(password, isStaff.password);
@@ -538,7 +563,7 @@ export const staffLogin = async (req, res) => {
 
 
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const verifyOtp = async (req, res) => {
@@ -645,7 +670,7 @@ export const verifyOtp = async (req, res) => {
 
 
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const staffResendOtp = async (req, res) => {
@@ -667,7 +692,7 @@ export const staffResendOtp = async (req, res) => {
     }
     const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
     if (isOtpExist) {
-      await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+      await Otp.findByIdAndDelete(isOtpExist._id)
       const otp = await Otp.create({ phone: contactNumber, email, code })
     } else {
       const otp = await Otp.create({ phone: contactNumber, email, code })
@@ -678,6 +703,6 @@ export const staffResendOtp = async (req, res) => {
       message: "OTP sent!"
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

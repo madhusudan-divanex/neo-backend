@@ -3,7 +3,7 @@ import Faq from "../../models/Admin/Faq.js";
 /* ================= CREATE FAQ ================= */
 export const createFaq = async (req, res) => {
   try {
-    const { question, answer,panel } = req.body;
+    const { question, answer, panel } = req.body;
 
     if (!question || !answer) {
       return res.status(400).json({ message: "Question & Answer required" });
@@ -11,7 +11,7 @@ export const createFaq = async (req, res) => {
 
     const faq = await Faq.create({
       question,
-      answer,panel,
+      answer, panel,
       createdBy: req.admin.id   // from adminAuth middleware
     });
 
@@ -20,17 +20,17 @@ export const createFaq = async (req, res) => {
       data: faq
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 /* ================= GET ALL FAQ ================= */
 export const getFaqs = async (req, res) => {
-  const {panel}=req.query
+  const { panel } = req.query
   try {
-    let filter={};
-    if(panel){
-      filter.panel=panel
+    let filter = {};
+    if (panel) {
+      filter.panel = panel
     }
     const faqs = await Faq.find(filter)
       .sort({ createdAt: -1 });
@@ -40,7 +40,7 @@ export const getFaqs = async (req, res) => {
       data: faqs
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -54,18 +54,18 @@ export const getFaqById = async (req, res) => {
 
     res.json({ data: faq });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 /* ================= UPDATE FAQ ================= */
 export const updateFaq = async (req, res) => {
   try {
-    const { question, answer, status,panel } = req.body;
+    const { question, answer, status, panel } = req.body;
 
     const faq = await Faq.findByIdAndUpdate(
       req.params.id,
-      { question, answer, status,panel },
+      { question, answer, status, panel },
       { new: true }
     );
 
@@ -78,7 +78,7 @@ export const updateFaq = async (req, res) => {
       data: faq
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -92,6 +92,6 @@ export const deleteFaq = async (req, res) => {
 
     res.json({ message: "FAQ deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

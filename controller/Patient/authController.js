@@ -76,7 +76,7 @@ const signUpPatient = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: "Internal server error" });
     }
 }
 const signInPatient = async (req, res) => {
@@ -87,6 +87,10 @@ const signInPatient = async (req, res) => {
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid credentials', success: false });
+        const isPatient = await Patient.findById(isExist.patientId)
+        if (isPatient?.status === 'block') {
+            return res.status(200).json({ success: false, message: 'Your account has been blocked. Please contact support for assistance.' });
+        }
         if (withOtp) {
             const code = generateOTP()
             if (contactNumber && contactNumber !== "7375046291") {
@@ -316,7 +320,7 @@ const verifyOtp = async (req, res) => {
 
     } catch (err) {
         console.log(err);
-        return res.status(400).json({ success: false, error: err.message });
+        return res.status(400).json({ success: false, error: "Internal server error" });
     }
 };
 const resendOtp = async (req, res) => {
@@ -337,7 +341,7 @@ const resendOtp = async (req, res) => {
         }
         const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
         if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+            await Otp.findByIdAndDelete(isOtpExist._id)
             const otp = await Otp.create({ phone: contactNumber, email, code })
         } else {
             const otp = await Otp.create({ phone: contactNumber, email, code })
@@ -348,7 +352,7 @@ const resendOtp = async (req, res) => {
             message: "OTP sent!"
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const sendOtp = async (req, res) => {
@@ -362,7 +366,7 @@ const sendOtp = async (req, res) => {
         await sendMobileOtp(contactNumber, code)
         const isOtpExist = await Otp.findOne({ phone: contactNumber })
         if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+            await Otp.findByIdAndDelete(isOtpExist._id)
             const otp = await Otp.create({ phone: contactNumber, code })
         } else {
             const otp = await Otp.create({ phone: contactNumber, code })
@@ -384,7 +388,7 @@ const sendOtp = async (req, res) => {
             message: "OTP sent!"
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -410,7 +414,7 @@ const forgotPassword = async (req, res) => {
             message: "Otp sent!"
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -431,8 +435,8 @@ const resetPassword = async (req, res) => {
             return res.status(200).json({ message: "Error occure in password reset", success: false })
         }
     } catch (err) {
-        console.error(err.message);
-        return res.status(500).json({ message: err?.message });
+        console.error("Internal server error");
+        return res.status(500).json({ message: "Internal server error" });
     }
 }
 const changePassword = async (req, res) => {
@@ -451,8 +455,8 @@ const changePassword = async (req, res) => {
             return res.status(200).json({ message: "Error occure in password reset", success: false })
         }
     } catch (err) {
-        console.error(err.message);
-        return res.status(500).json({ message: err?.message });
+        console.error("Internal server error");
+        return res.status(500).json({ message: "Internal server error" });
     }
 }
 
@@ -500,8 +504,8 @@ const updatePatient = async (req, res) => {
         if (fs.existsSync(profileImage)) {
             safeUnlink(profileImage)
         }
-        console.error(err.message);
-        if (err.message.includes(' duplicate key error collection')) {
+        console.error("Internal server error");
+        if ("Internal server error".includes(' duplicate key error collection')) {
             return res.status(200).json({ message: "Email already exist " })
         } else {
             return res.status(200).json({ message: 'Server Error' });
@@ -520,7 +524,7 @@ const getProfile = async (req, res) => {
             data: user
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getCustomProfile = async (req, res) => {
@@ -546,7 +550,7 @@ const getCustomProfile = async (req, res) => {
         });
 
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getProfileDetail = async (req, res) => {
@@ -599,7 +603,7 @@ const getProfileDetail = async (req, res) => {
         });
 
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getPatientProfile = async (req, res) => {
@@ -643,7 +647,7 @@ const getPatientProfile = async (req, res) => {
         });
 
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -662,7 +666,7 @@ const deletePatient = async (req, res) => {
             success: true,
         });
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -708,7 +712,7 @@ const patientKyc = async (req, res) => {
         console.error("Error saving profile image:", error);
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -743,7 +747,7 @@ const patientDemographic = async (req, res) => {
         console.log(error)
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -774,7 +778,7 @@ const patientLocation = async (req, res) => {
         console.log(error)
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -796,7 +800,7 @@ const getPatientDemographic = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -824,7 +828,7 @@ const getPatientKyc = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -853,7 +857,7 @@ const patientMedicalHistory = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -881,7 +885,7 @@ const getMedicalHistory = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -904,7 +908,7 @@ const familyMedicalHistory = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -996,7 +1000,7 @@ const addPrescriptions = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
 
@@ -1020,7 +1024,7 @@ const deletePrescription = async (req, res) => {
         return res.json({ success: true, message: "Prescription deleted" });
 
     } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
 const updateImage = async (req, res) => {
@@ -1042,7 +1046,7 @@ const updateImage = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -1063,7 +1067,7 @@ const editRequest = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error?.message,
+            message: "Internal server error",
         });
     }
 };
@@ -1092,7 +1096,7 @@ const getNameProfile = async (req, res) => {
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };

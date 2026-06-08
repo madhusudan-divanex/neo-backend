@@ -34,7 +34,7 @@ export const addFloor = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -53,7 +53,7 @@ export const listFloors = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -71,7 +71,7 @@ export const deleteFloor = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -97,7 +97,7 @@ export const getFloorById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -137,7 +137,7 @@ export const updateFloor = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

@@ -197,7 +197,7 @@ export const GetDoctor = async (req, res) => {
     console.error(err);
     return res.status(500).json({
       success: false,
-      message: err?.message
+      message: "Internal server error"
     });
   }
 };
@@ -268,7 +268,7 @@ export const addExistingDoctorToHospital = async (req, res) => {
     console.error("addExistingDoctorToHospital error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -758,7 +758,7 @@ export const getProfile = async (req, res) => {
       data: user
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -784,7 +784,7 @@ export const allowedChat = async (req, res) => {
       allowedChat: !!approvedAppointment
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 export const createGroup = async (req, res) => {
@@ -810,7 +810,7 @@ export const createGroup = async (req, res) => {
     });
   } catch (err) {
     safeUnlink(image)
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 export const createChatSessionController = async (req, res) => {
@@ -1228,7 +1228,7 @@ export const addOrUpatePaymentInfo = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message || "Something went wrong",
+      message: "Internal server error" || "Something went wrong",
     });
   }
 };
@@ -1320,7 +1320,7 @@ export const doctorAppointmentInvoice = async (req, res) => {
     }
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const opdInvoicePdf = async (req, res) => {
@@ -1373,7 +1373,7 @@ export const opdInvoicePdf = async (req, res) => {
 
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const doctorEmpanelmentPdf = async (req, res) => {
@@ -1421,7 +1421,7 @@ export const doctorEmpanelmentPdf = async (req, res) => {
 
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const pharmacyInvoicePdf = async (req, res) => {
@@ -1481,7 +1481,7 @@ export const pharmacyInvoicePdf = async (req, res) => {
     }
     return res.status(200).json({ message: "Pharmacy data fetched", patientData, orgData, sellData, success: true })
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const pharmacyReturnPdf = async (req, res) => {
@@ -1542,7 +1542,7 @@ export const pharmacyReturnPdf = async (req, res) => {
     }
     return res.status(200).json({ message: "Pharmacy data fetched", patientData, orgData, sellData, success: true })
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const prescriptionPdf = async (req, res) => {
@@ -1621,7 +1621,7 @@ export const prescriptionPdf = async (req, res) => {
 
   } catch (error) {
     console.log(error)
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const consentLetterPdf = async (req, res) => {
@@ -1667,7 +1667,7 @@ export const consentLetterPdf = async (req, res) => {
 
   } catch (error) {
     console.log(error)
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const bedInvoicePdf = async (req, res) => {
@@ -1700,7 +1700,7 @@ export const bedInvoicePdf = async (req, res) => {
     return res.status(200).json({ message: "Data Fetched", patientData, allotmentData, hospitalData, dischargeData, paymentData, success: true })
   } catch (error) {
     console.log(error)
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
 
   }
 }
@@ -1758,7 +1758,7 @@ export const labReportPdf = async (req, res) => {
       return res.status(404).json({ message: "User not found", success: false })
     }
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const labInvoicePdf = async (req, res) => {
@@ -1809,7 +1809,7 @@ export const labInvoicePdf = async (req, res) => {
       return res.status(404).json({ message: "User not found", success: false })
     }
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const labSamplePdf = async (req, res) => {
@@ -1863,7 +1863,7 @@ export const labSamplePdf = async (req, res) => {
       return res.status(404).json({ message: "User not found", success: false })
     }
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const labOrderPdf = async (req, res) => {
@@ -1935,7 +1935,7 @@ export const labOrderPdf = async (req, res) => {
 
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message })
+    return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 export const dischargeSummaryPdf = async (req, res) => {
@@ -1975,7 +1975,7 @@ export const dischargeSummaryPdf = async (req, res) => {
     return res.status(200).json({ message: "Data Fetched", patientData, allotmentData, hospitalData, dischargeData, paymentData, success: true })
   } catch (error) {
     console.log(error)
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
 
   }
 }
@@ -1984,7 +1984,7 @@ export const getTestCatAndSub = async (req, res) => {
     const testData = await TestCategory.find().populate('subCat')
     return res.status(200).json({ message: "Test category and sub category data fetched", success: true, data: testData })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getSubTestCatById = async (req, res) => {
@@ -1995,7 +1995,7 @@ export const getSubTestCatById = async (req, res) => {
     }
     return res.status(200).json({ message: "Sub Test category  data fetched", success: true, data: testData })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getSubTestCatDataById = async (req, res) => {
@@ -2006,7 +2006,7 @@ export const getSubTestCatDataById = async (req, res) => {
     }
     return res.status(200).json({ message: "Sub Test category data fetched", success: true, data: testData })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getMyTestCat = async (req, res) => {
@@ -2016,7 +2016,7 @@ export const getMyTestCat = async (req, res) => {
 
     return res.status(200).json({ message: " Test category  data fetched", success: true, data: testData })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getAuditLog = async (req, res) => {
@@ -2074,6 +2074,6 @@ export const getAuditLog = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };

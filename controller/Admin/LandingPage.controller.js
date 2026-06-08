@@ -173,7 +173,7 @@ export const saveFirstPharPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -244,7 +244,7 @@ export const saveSecondPharPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -275,7 +275,7 @@ export const saveThirdPharPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -306,7 +306,7 @@ export const saveFourthPharPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -376,7 +376,7 @@ export const saveFivethPharPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -428,7 +428,7 @@ export const saveFirstLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -499,7 +499,7 @@ export const saveSecondLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -570,7 +570,7 @@ export const saveThirdLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -641,7 +641,7 @@ export const saveFourthLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -712,7 +712,7 @@ export const saveFivethLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -783,7 +783,7 @@ export const saveSixLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -814,7 +814,7 @@ export const saveSevenLabPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -862,7 +862,7 @@ export const saveFirstDoctorPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -887,7 +887,7 @@ export const saveSecondDoctorPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -912,7 +912,7 @@ export const saveThirdDoctorPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -937,7 +937,7 @@ export const saveFourthDoctorPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -962,7 +962,7 @@ export const saveFivethDoctorPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1037,7 +1037,7 @@ export const saveFirstPatientPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1092,7 +1092,7 @@ export const savePatentTesimonial = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1113,7 +1113,7 @@ export const deletePatentTesimonial = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1166,7 +1166,7 @@ export const saveHowItWork = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1187,7 +1187,7 @@ export const deleteHowItWorks = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1240,7 +1240,7 @@ export const savePatientService = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1261,7 +1261,7 @@ export const deletePatientService = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1324,7 +1324,7 @@ export const saveFirstHospitalPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1433,7 +1433,7 @@ export const saveSecondHospitalPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1457,7 +1457,7 @@ export const saveThirdHospitalPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1485,7 +1485,7 @@ export const saveFourthHospitalPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1604,7 +1604,7 @@ export const saveFirstMainPage = async (req, res) => {
     console.error("ERROR:", err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1675,7 +1675,7 @@ export const saveSecondMainPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1746,7 +1746,7 @@ export const saveThirdMainPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -1773,7 +1773,7 @@ export const saveFourthMainPage = async (req, res) => {
     console.error(err);
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };

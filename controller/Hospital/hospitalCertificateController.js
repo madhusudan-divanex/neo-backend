@@ -93,7 +93,7 @@ export const uploadCertificate = async (req, res) => {
     console.error("UPLOAD CERTIFICATE ERROR:", err);
     res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: "Internal server error"
     });
   }
 };
@@ -118,7 +118,7 @@ export const deleteHospitalCertificate = async (req, res) => {
 
     res.json({ message: "Deleted successfully", success: true })
   } catch (error) {
-    return res.status(500).json({ message: error?.message })
+    return res.status(500).json({ message: "Internal server error" })
   }
 }
 

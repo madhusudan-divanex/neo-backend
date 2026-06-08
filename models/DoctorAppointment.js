@@ -15,6 +15,13 @@ const vitalSchema = new Schema({
     hearing: String,
     other: String,
 })
+const notesSchema = new Schema({
+    chiefComplaint: String,
+    history: String,
+    investigation: String,
+    diagnosis: String,
+    advice: String,
+})
 const requestSchema = new Schema({
     doctorId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -64,6 +71,7 @@ const requestSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'DoctorAptPayment'
     },
+    consultationNotes: notesSchema,
     vitals: vitalSchema,
     paymentStatus: { type: String, enum: ['due', 'paid'], default: 'due' },
     status: { type: String, enum: ['pending', 'approved', 'completed', 'rejected', 'cancel'], default: 'pending', index: true },

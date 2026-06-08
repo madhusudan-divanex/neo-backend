@@ -11,7 +11,7 @@ export const getAdminProfile = async (req, res) => {
     if (!admin) return res.status(404).json({ message: "Admin not found" });
     res.json({ success: true, data: admin });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -29,7 +29,7 @@ export const updateAdminProfile = async (req, res) => {
 
     res.json({ success: true, message: "Profile updated", data: admin });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 

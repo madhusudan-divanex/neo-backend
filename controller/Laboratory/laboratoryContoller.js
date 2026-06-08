@@ -259,7 +259,7 @@ const addTest = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
 
     } finally {
@@ -334,7 +334,7 @@ const updateTest = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -353,7 +353,7 @@ const labTestAction = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getTest = async (req, res) => {
@@ -415,7 +415,7 @@ const getTest = async (req, res) => {
 
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getTestData = async (req, res) => {
@@ -430,7 +430,7 @@ const getTestData = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const deleteTest = async (req, res) => {
@@ -453,7 +453,7 @@ const deleteTest = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const saveReport = async (req, res) => {
@@ -611,7 +611,7 @@ export const collectSample = async (req, res) => {
         return res.status(404).json({ message: "Appointment not found", success: false })
 
     } catch (error) {
-        return res.status(500).json({ message: error?.message })
+        return res.status(500).json({ message: "Internal server error" })
     }
 }
 export const addPatient = async (req, res) => {
@@ -672,7 +672,7 @@ export const addPatient = async (req, res) => {
         console.log(err)
         res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -721,7 +721,7 @@ const saveLabInvoice = async (req, res) => {
             invoice, success: true
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal server error" });
     }
 };
 const getLabInvoice = async (req, res) => {
@@ -737,7 +737,7 @@ const getLabInvoice = async (req, res) => {
             invoice
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal server error" });
     }
 };
 const addSample = async (req, res) => {
@@ -776,7 +776,7 @@ const addSample = async (req, res) => {
         return res.status(400).json({ message: "Sample data not saved", success: false })
 
     } catch (error) {
-        return res.status(500).json({ message: error?.message })
+        return res.status(500).json({ message: "Internal server error" })
     }
 }
 const getAppointmentSample = async (req, res) => {
@@ -785,7 +785,7 @@ const getAppointmentSample = async (req, res) => {
         const data = await LabSample.find({ appointmentId })
         return res.status(200).json({ message: "Sample data fetched", data, success: true })
     } catch (error) {
-        return res.status(500).json({ message: error?.message })
+        return res.status(500).json({ message: "Internal server error" })
     }
 }
 

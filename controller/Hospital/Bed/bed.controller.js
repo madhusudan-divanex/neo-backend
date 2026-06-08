@@ -85,7 +85,7 @@ export const addBed = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -112,7 +112,7 @@ export const getBedById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -135,7 +135,7 @@ export const isBedAvailable = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -193,7 +193,7 @@ export const updateBed = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -231,7 +231,7 @@ export const deleteBed = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -457,7 +457,7 @@ export const addOrUpdateHospitalPayment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message
+      error: "Internal server error"
     });
   }
 };
@@ -546,7 +546,7 @@ export const getAllotmentPayment = async (req, res) => {
 //     res.status(500).json({
 //       success: false,
 //       message: "Server error",
-//       error: error.message
+//       error: "Internal server error"
 //     });
 //   }
 // };
@@ -693,7 +693,7 @@ export const addOrUpdateDischargePatient = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message
+      error: "Internal server error"
     });
   }
 };
@@ -1111,7 +1111,7 @@ export const getHospitalBed = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -1223,7 +1223,7 @@ export const departmentTransfer = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -1261,7 +1261,7 @@ export const getDepartmentTransfer = async (req, res) => {
 
   } catch (error) {
     return res.status(500).json({
-      message: error.message,
+      message: "Internal server error",
       success: false
     });
   }

@@ -138,7 +138,7 @@ export const LabAppointmentGet = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -222,7 +222,7 @@ export const getLaboratorieDetail = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 }
@@ -276,7 +276,7 @@ export const getLaboratories = async (req, res) => {
       totalPages: Math.ceil(total / limit)
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getLabRequests = async (req, res) => {
@@ -332,7 +332,7 @@ export const getLabRequests = async (req, res) => {
       totalPages: Math.ceil(total / limit)
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -341,10 +341,7 @@ export const toggleLabStatus = async (req, res) => {
   const lab = await Laboratory.findById({ _id: req.params.id });
   if (!lab) return res.status(404).json({ message: "Lab not found" });
 
-  lab.status =
-    lab.status === "approved" || lab.status === "verify"
-      ? "pending"
-      : "approved";
+  lab.status = req?.params?.status
 
   await lab.save();
 
@@ -379,7 +376,7 @@ export const approveRejectLab = async (req, res) => {
     if (reason) lab.rejectReason = reason;
     await lab.save();
     res.json({ success: true, message: `Lab ${status}`, data: lab });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 };
 export const getLabAppointmentData = async (req, res) => {
   const id = req.params.id
@@ -404,6 +401,6 @@ export const getLabAppointmentData = async (req, res) => {
     const lab = { ...labPersonal, ...labAbout }
     return res.status(200).json({ message: "Appointment Data fetched", patient, lab, appointmentData, testReports, success: true })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }

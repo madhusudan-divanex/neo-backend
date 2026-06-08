@@ -98,7 +98,7 @@ export const getPharmaciesDetail = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 }
@@ -224,18 +224,13 @@ export const getPharmacyRequests = async (req, res) => {
 /* ================= STATUS TOGGLE ================= */
 export const togglePharmacyStatus = async (req, res) => {
   try {
-    const pharmacy = await Pharmacy.findById(req.params.id);
+    const pharmacy = await Pharmacy.findById({ _id: new mongoose.Types.ObjectId(req.params.id) });
     if (!pharmacy) {
       return res.status(404).json({ message: "Pharmacy not found" });
     }
 
     // 🔄 verify → approved → pending
-    pharmacy.status =
-      pharmacy.status === "approved"
-        ? "pending"
-        : pharmacy.status === "pending"
-          ? "approved"
-          : "pending";
+    pharmacy.status = req.params.status
 
     await pharmacy.save();
 
@@ -256,7 +251,7 @@ export const togglePharmacyStatus = async (req, res) => {
     res.json({ success: true, status: pharmacy.status });
   } catch (err) {
     console.log(err)
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -276,7 +271,7 @@ export const approveRejectPharmacy = async (req, res) => {
     if (reason) phar.rejectReason = reason;
     await phar.save();
     res.json({ success: true, message: `Pharmacy ${status}`, data: phar });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 };
 
 export const getH1MedicineReqeusts = async (req, res) => {
@@ -287,7 +282,7 @@ export const getH1MedicineReqeusts = async (req, res) => {
     const requests = await MedicineRequest.find({ pharId: req.params.id }).sort({ createdAt: -1 }).populate('medicineId').skip(skip).limit(limit);
     const count = await MedicineRequest.countDocuments({ pharId: req.params.id });
     res.json({ success: true, data: requests, totalPages: Math.ceil(count / limit) });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 }
 
 export const updateMedicineReqeustStatus = async (req, res) => {
@@ -299,7 +294,7 @@ export const updateMedicineReqeustStatus = async (req, res) => {
     request.status = status;
     await request.save();
     res.json({ success: true, message: `Request ${status}` });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 }
 export const getSellH1Medicines = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -318,7 +313,7 @@ export const getSellH1Medicines = async (req, res) => {
 
     res.json({ success: true, data: sellData, totalPages: Math.ceil(count / limit) });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 
@@ -329,6 +324,6 @@ export const getSellH1MedicineDetails = async (req, res) => {
       .populate({ path: 'prescriptionId', populate: { path: 'doctorId', select: 'name nh12', populate: { path: 'doctorId', select: 'profileImage' } } });
     res.json({ success: true, data: sell });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({ success: false, message: "Internal server error" })
   }
 }

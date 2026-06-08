@@ -42,7 +42,7 @@ export const createDepartment = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -106,7 +106,7 @@ export const getDepartments = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -137,7 +137,7 @@ export const getDepartmentById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -161,7 +161,7 @@ export const updateDepartment = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -186,17 +186,17 @@ export const deleteDepartment = async (req, res) => {
     if (inAllotment) {
       return res.status(400).json({ message: "An allotment is under this department ", success: false })
     }
-    const doctorEmployement=await EmpEmployement.findOne({hospitalId,departmentId:id})
-    if(doctorEmployement){
-      return res.status(400).json({message:"A doctor employement under this department",success:false})
+    const doctorEmployement = await EmpEmployement.findOne({ hospitalId, departmentId: id })
+    if (doctorEmployement) {
+      return res.status(400).json({ message: "A doctor employement under this department", success: false })
     }
-    const staffEmployement=await Staff.findOne({hospitalId,"employmentInfo.department":id})
-    if(staffEmployement){
-      return res.status(400).json({message:"A staff employement under this department",success:false})
+    const staffEmployement = await Staff.findOne({ hospitalId, "employmentInfo.department": id })
+    if (staffEmployement) {
+      return res.status(400).json({ message: "A staff employement under this department", success: false })
     }
-    const deptTransfer=await DepartmentTransfer.findOne({hospitalId,$or:[{departmentFrom:id},{departmentTo:id}]})
-    if(deptTransfer){
-      return res.status(400).json({message: "Department is already used in transfer history",success:false})
+    const deptTransfer = await DepartmentTransfer.findOne({ hospitalId, $or: [{ departmentFrom: id }, { departmentTo: id }] })
+    if (deptTransfer) {
+      return res.status(400).json({ message: "Department is already used in transfer history", success: false })
     }
     await HospitalDepartment.findOneAndDelete({
       _id: id,
@@ -211,7 +211,7 @@ export const deleteDepartment = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

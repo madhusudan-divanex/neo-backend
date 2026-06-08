@@ -55,7 +55,7 @@ router.get("/all-appointments", adminAuth, async (req, res) => {
 
     res.json({ success: true, data, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -65,7 +65,7 @@ router.get("/appointment/:id", adminAuth, getDoctorAppointmentData);
 
 router.get("/:id", adminAuth, getDoctorDetail);
 router.get("/:id/appointments", adminAuth, getDoctorAppointments);
-router.patch("/:doctorId/status", adminAuth, toggleDoctorStatus);
+router.patch("/:doctorId/status/:status", adminAuth, toggleDoctorStatus);
 router.patch("/:id/approve-reject", adminAuth, approveRejectDoctor);
 router.delete("/:id", adminAuth, deleteDoctor);
 export default router;

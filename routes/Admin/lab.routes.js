@@ -52,7 +52,7 @@ router.get("/all-appointments", async (req, res) => {
       }).populate('tests.category');
     res.json({ success: true, data, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -64,7 +64,7 @@ router.get("/appointment/:id", adminAuth, getLabAppointmentData);
 router.get("/lab-detail/:id", getLaboratorieDetail);
 router.get("/lab-appointments/:id", LabAppointmentGet);
 router.get("/appointments-detail/:id", getLabAppointmentDetail);
-router.patch("/:id/status", toggleLabStatus);
+router.patch("/:id/status/:status", toggleLabStatus);
 router.patch("/:id/approve-reject", approveRejectLab);
 router.delete("/:id", deleteLab);
 

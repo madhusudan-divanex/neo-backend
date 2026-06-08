@@ -119,15 +119,15 @@ const signUpLab = async (req, res) => {
 const signInLab = async (req, res) => {
     const { contactNumber, password, email, withOtp } = req.body;
     try {
-
-
         const isExist = contactNumber ? await User.findOne({ contactNumber, role: "lab" }) : await User.findOne({ email, role: "lab" });
         if (!isExist) return res.status(200).json({ message: 'Lab not Found', success: false });
         const hashedPassword = isExist.passwordHash
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(200).json({ message: 'Invalid email or password', success: false });
-        // const isLab = await Laboratory.findById(isExist.labId);
-        // if (isLab.status !== "approved") return res.status(200).json({ message: `Your profile was ${isLab.status}`, success: false });
+        const isLab = await Laboratory.findById(isExist.labId)
+        if (isLab?.status === 'block') {
+            return res.status(200).json({ success: false, message: 'Your account has been blocked. Please contact support for assistance.' });
+        }
         if (withOtp) {
             const code = generateOTP()
             if (contactNumber) {
@@ -392,7 +392,7 @@ const verifyOtp = async (req, res) => {
         console.error(err);
         return res.status(400).json({
             success: false,
-            error: err.message
+            error: "Internal server error"
         });
     }
 };
@@ -414,7 +414,7 @@ const resendOtp = async (req, res) => {
         }
         const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
         if (isOtpExist) {
-            await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+            await Otp.findByIdAndDelete(isOtpExist._id)
             const otp = await Otp.create({ phone: contactNumber, email, code })
         } else {
             const otp = await Otp.create({ phone: contactNumber, email, code })
@@ -425,7 +425,7 @@ const resendOtp = async (req, res) => {
             message: "OTP sent!"
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -451,7 +451,7 @@ const forgotPassword = async (req, res) => {
             message: "Otp sent!"
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 
@@ -469,7 +469,7 @@ const resetPassword = async (req, res) => {
             return res.status(200).json({ message: "Error occure in password reset", success: false })
         }
     } catch (err) {
-        console.error(err.message);
+        console.error("Internal server error");
         return res.status(500).json({ message: 'Server Error' });
     }
 }
@@ -514,8 +514,8 @@ const updateLab = async (req, res) => {
             return res.status(200).json({ message: "Error occure in user data", success: false })
         }
     } catch (err) {
-        console.error(err.message);
-        if (err.message.includes('duplicate key error collection')) {
+        console.error("Internal server error");
+        if ("Internal server error".includes('duplicate key error collection')) {
             return res.status(200).json({ message: "Email already exist " })
         } else {
             return res.status(200).json({ message: 'Server Error' });
@@ -560,7 +560,7 @@ const getProfile = async (req, res) => {
             data: labData, nextStep
         });
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const getProfileDetail = async (req, res) => {
@@ -640,7 +640,7 @@ const getProfileDetail = async (req, res) => {
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -660,7 +660,7 @@ const deleteLab = async (req, res) => {
             success: true,
         });
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 const labAddress = async (req, res) => {
@@ -868,7 +868,7 @@ const deleteLicense = async (req, res) => {
         return res.json({ success: true, message: "Education deleted" });
 
     } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
 const updateImage = async (req, res) => {
@@ -943,7 +943,7 @@ const labImage = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1528,7 +1528,7 @@ const getLabs = async (req, res) => {
 
             success: false,
 
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -1579,7 +1579,7 @@ const getLabList = async (req, res) => {
         console.error(err);
         return res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };
@@ -1624,7 +1624,7 @@ const getLabDeptTest = async (req, res) => {
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: err.message,
+            message: "Internal server error",
         });
     }
 };
@@ -1697,7 +1697,7 @@ const getLabDetail = async (req, res) => {
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: err.message
+            message: "Internal server error"
         });
     }
 };

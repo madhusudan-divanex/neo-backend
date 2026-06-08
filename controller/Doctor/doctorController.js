@@ -407,7 +407,7 @@ export const addTimeSlot = async (req, res) => {
     return res.json({ success: true, message: "Slot added successfully" });
   } catch (error) {
     console.log(error)
-    return res.status(200).json({ message: error?.message, success: false })
+    return res.status(200).json({ message: "Internal server error", success: false })
   }
 };
 export const getTimeSlots = async (req, res) => {
@@ -418,7 +418,7 @@ export const getTimeSlots = async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(200).json({ message: error?.message, success: false })
+    return res.status(200).json({ message: "Internal server error", success: false })
   }
 };
 export const updateTimeSlot = async (req, res) => {
@@ -443,7 +443,7 @@ export const updateTimeSlot = async (req, res) => {
     return res.json({ success: true, message: "Slot updated" });
   } catch (error) {
     console.log(error)
-    return res.status(200).json({ message: error?.message, success: false })
+    return res.status(200).json({ message: "Internal server error", success: false })
   }
 };
 export const updateDaySlot = async (req, res) => {
@@ -466,7 +466,7 @@ export const updateDaySlot = async (req, res) => {
 
   } catch (error) {
     console.log(error)
-    return res.status(200).json({ message: error?.message, success: false })
+    return res.status(200).json({ message: "Internal server error", success: false })
   }
 };
 export const deleteTimeSlot = async (req, res) => {
@@ -482,7 +482,7 @@ export const deleteTimeSlot = async (req, res) => {
 
     return res.json({ success: true, message: "Slot deleted" });
   } catch (error) {
-    return res.status(200).json({ message: error?.message, success: false })
+    return res.status(200).json({ message: "Internal server error", success: false })
   }
 };
 export const addPatient = async (req, res) => {
@@ -531,7 +531,7 @@ export const addPatient = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

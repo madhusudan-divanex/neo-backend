@@ -155,7 +155,7 @@ export const createHospitalStaff = async (req, res) => {
     console.error("createHospitalStaff error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -176,7 +176,7 @@ export const getMyAllStaffList = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -240,7 +240,7 @@ export const getHospitalStaffList = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -285,7 +285,7 @@ export const getHospitalStaffByIdNew = async (req, res) => {
     console.error("getHospitalStaffById error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -319,7 +319,7 @@ export const getHospitalStaffById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -349,7 +349,7 @@ export const deleteHospitalStaffById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -482,7 +482,7 @@ export const updateHospitalStaff = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -523,7 +523,7 @@ export const getHospitalStaffData = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -551,7 +551,7 @@ export const getHospitalStaffNh12 = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

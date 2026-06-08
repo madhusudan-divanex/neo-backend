@@ -884,7 +884,7 @@ async function getPatientPrescriptionsInvoice(req, res) {
     });
   } catch (error) {
     return res.status(500).json({
-      message: error?.message,
+      message: "Internal server error",
       success: false,
     });
   }
@@ -995,7 +995,7 @@ async function getHospitalAdmit(req, res) {
     });
   } catch (error) {
     return res.status(500).json({
-      message: error?.message,
+      message: "Internal server error",
       success: false,
     });
   }

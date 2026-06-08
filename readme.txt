@@ -504,5 +504,5 @@ Patient->
     Hospital Bill
     Allot lab Report 
 Hospital Staff->
-    jab doctor login karega tab usme sirf vo hi data show hoga jisme uski id exists karti ha
+    jab doctor login karega tab IPD/OPD/EMERGENCY/Allotment History me sirf vo hi data show hoga jisme uski id exists karti ha
 

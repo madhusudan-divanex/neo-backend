@@ -73,7 +73,7 @@ export const getPatients = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -151,7 +151,7 @@ export const getPatientDetail = async (req, res) => {
     console.error(err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -222,7 +222,7 @@ export const deletePatient = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Internal server error",
     });
   }
 };
@@ -243,7 +243,7 @@ export const togglePatientStatus = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 }
@@ -424,7 +424,7 @@ export const getPatientAllotments = async (req, res) => {
       .lean();
     res.json({ success: true, data: allotments });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -462,7 +462,7 @@ export const getPatientDoctorAppointment = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
 export const getPatientDoctorPrescription = async (req, res) => {
@@ -503,7 +503,7 @@ export const getPatientDoctorPrescription = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
 export const getPatientLabAppointment = async (req, res) => {
@@ -538,7 +538,7 @@ export const getPatientLabAppointment = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
 export const getPatientLabReport = async (req, res) => {
@@ -549,14 +549,14 @@ export const getPatientLabReport = async (req, res) => {
     const reportData = await TestReport.find({
       patientId: id,
     })
-      .populate('labId', 'name email nh12 contactNumber').populate('appointmentId','customId')
-      .populate('testId','shortName')
+      .populate('labId', 'name email nh12 contactNumber').populate('appointmentId', 'customId')
+      .populate('testId', 'shortName')
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 }).lean()
     const doctorIds = reportData?.map(item => item.doctorId?._id)
 
-  
+
     const total = await TestReport.countDocuments({
       patientId: id,
     });
@@ -569,6 +569,6 @@ export const getPatientLabReport = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }

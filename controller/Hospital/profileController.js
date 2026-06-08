@@ -59,7 +59,7 @@ export const changePassword = async (req, res) => {
     res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err?.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -209,7 +209,7 @@ export const updateProfile = async (req, res) => {
     res.json({ message: "Profile updated" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err?.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -230,7 +230,7 @@ export const sendEditRequest = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err?.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -257,7 +257,7 @@ export const approveEditRequest = async (req, res) => {
     res.json({ message: "Edit request approved" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err?.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -437,7 +437,7 @@ export const getHospitals = async (req, res) => {
     console.error(err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -565,7 +565,7 @@ export const getHospitalList = async (req, res) => {
     console.error(err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -721,7 +721,7 @@ export const getHospitalDoctorList = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -957,7 +957,7 @@ export const addHospitalService = async (req, res) => {
     }
     return res.status(404).json({ message: "User not found", success: false })
   } catch (error) {
-    return res.status(500).json({ message: error?.message })
+    return res.status(500).json({ message: "Internal server error" })
   }
 }
 export const createTransfer = async (req, res) => {
@@ -1044,7 +1044,7 @@ export const createTransfer = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error creating transfer",
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1061,7 +1061,7 @@ export const getHospitalDepartments = async (req, res) => {
     }).select('departmentName').sort({ createdAt: -1 })
     res.status(200).json({ message: "Departments fetched", success: true, data: departments })
   } catch (error) {
-    return res.status(500).json({ message: error?.message })
+    return res.status(500).json({ message: "Internal server error" })
   }
 }
 export const IpdPatientsList = async (req, res) => {
@@ -1283,7 +1283,7 @@ export const IpdPatientsList = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -1308,7 +1308,7 @@ export const getPatientTransferLetter = async (req, res) => {
 
 
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 
@@ -1330,7 +1330,7 @@ export const getHospitalAllStaff = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 }
@@ -1345,6 +1345,6 @@ export const getIsInIpd = async (req, res) => {
     }
     return res.status(200).json({ message: "Patient is in Ipd", success: true, data: ptDept })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }

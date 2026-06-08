@@ -123,7 +123,7 @@ export const createIPDHeader = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
 // GET SINGLE
@@ -168,7 +168,7 @@ export const getIPDHeaderById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -265,7 +265,7 @@ export const updateIPDHeader = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -288,7 +288,7 @@ export const deleteIPDHeader = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -324,7 +324,7 @@ export const createSubjective = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -350,7 +350,7 @@ export const getSubjectiveById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -384,7 +384,7 @@ export const updateSubjective = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -409,7 +409,7 @@ export const deleteSubjective = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -449,7 +449,7 @@ export const createObjective = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -475,7 +475,7 @@ export const getObjectiveById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -508,7 +508,7 @@ export const updateObjective = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -533,7 +533,7 @@ export const deleteObjective = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -575,7 +575,7 @@ export const createLabImaging = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -600,7 +600,7 @@ export const getLabImagingById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -633,7 +633,7 @@ export const updateLabImaging = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -658,7 +658,7 @@ export const deleteLabImaging = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -700,7 +700,7 @@ export const createAssessment = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -725,7 +725,7 @@ export const getAssessmentById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -758,7 +758,7 @@ export const updateAssessment = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -783,7 +783,7 @@ export const deleteAssessment = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -825,7 +825,7 @@ export const createTodayPlan = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -851,7 +851,7 @@ export const getTodayPlanById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -884,7 +884,7 @@ export const updateTodayPlan = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -909,7 +909,7 @@ export const deleteTodayPlan = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -988,7 +988,7 @@ export const createSignOff = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1017,7 +1017,7 @@ export const getSignOffById = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1071,7 +1071,7 @@ export const updateSignOff = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1096,7 +1096,7 @@ export const deleteSignOff = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -1120,7 +1120,7 @@ export const getDailyNotesByHeader = async (req, res) => {
             }
         })
     } catch (error) {
-        return res.status(500).json({ message: error.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }
 export const getLatestAllotmentNotes = async (req, res) => {
@@ -1143,7 +1143,7 @@ export const getLatestAllotmentNotes = async (req, res) => {
             }
         })
     } catch (error) {
-        return res.status(500).json({ message: error.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }
 export const getIpdFeesData = async (req, res) => {
@@ -1152,6 +1152,6 @@ export const getIpdFeesData = async (req, res) => {
         const data = await IPDHeader.find({ allotmentId, patientId }).populate("authorId doctorId", "name role")
         return res.status(200).json({ message: "Data fetched", data, success: true })
     } catch (error) {
-        return res.status(500).json({ message: error.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }

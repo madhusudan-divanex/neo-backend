@@ -30,7 +30,7 @@ export const getStaffs = async (req, res) => {
         });
 
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: "Internal server error" });
     }
 };
 
@@ -49,7 +49,7 @@ export const getStaffData = async (req, res) => {
 
         })
     } catch (error) {
-        return res.status(500).json({ message: error.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }
 export const getStaffEmp = async (req, res) => {
@@ -86,6 +86,6 @@ export const getStaffEmp = async (req, res) => {
             currentPage: page
         })
     } catch (error) {
-        return res.status(500).json({ message: error.message, success: false })
+        return res.status(500).json({ message: "Internal server error", success: false })
     }
 }

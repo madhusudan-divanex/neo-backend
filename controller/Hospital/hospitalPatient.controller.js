@@ -79,7 +79,7 @@ export const addPatient = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -123,7 +123,7 @@ export const admitPatient = async (req, res) => {
     console.log(err)
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -318,7 +318,7 @@ export const listPatients = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -350,7 +350,7 @@ export const ipdPatientsList = async (req, res) => {
 
   } catch (error) {
     return res.status(500).json({
-      message: error?.message,
+      message: "Internal server error",
       success: false
     });
   }
@@ -382,7 +382,7 @@ export const getPatientById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -435,7 +435,7 @@ export const updatePatient = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -475,7 +475,7 @@ export const getPatientByPatientId = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -507,7 +507,7 @@ export const deletePatient = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

@@ -135,7 +135,7 @@ export const CreateConversation = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };

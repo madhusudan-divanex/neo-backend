@@ -145,7 +145,7 @@ const bookDoctorAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const updateDoctorAppointment = async (req, res) => {
@@ -177,7 +177,7 @@ const updateDoctorAppointment = async (req, res) => {
             return res.status(200).json({ message: "Appointment not found", success: false })
         }
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getDoctorAppointment = async (req, res) => {
@@ -272,7 +272,7 @@ const getDoctorAppointment = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: err?.message, success: false });
+        return res.status(500).json({ message: "Internal server error", success: false });
     }
 };
 
@@ -348,7 +348,7 @@ const actionDoctorAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const cancelDoctorAppointment = async (req, res) => {
@@ -372,7 +372,7 @@ const cancelDoctorAppointment = async (req, res) => {
             return res.status(200).json({ message: "Appointment not cancel", success: false })
         }
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const cancelLabAppointment = async (req, res) => {
@@ -391,7 +391,7 @@ const cancelLabAppointment = async (req, res) => {
             return res.status(200).json({ message: "Appointment not cancel", success: false })
         }
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 
@@ -471,7 +471,7 @@ const doctorPrescription = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getDoctorPrescriptiondata = async (req, res) => {
@@ -498,7 +498,7 @@ const getDoctorPrescriptiondata = async (req, res) => {
         return res.status(200).json({ message: "Presctiption data fetch successfully", data: isExist, success: true })
 
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const deleteDoctorPrescription = async (req, res) => {
@@ -518,7 +518,7 @@ const deleteDoctorPrescription = async (req, res) => {
         return res.status(200).json({ message: "Presctiption deleted", success: true })
 
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const prescriptionAction = async (req, res) => {
@@ -544,7 +544,7 @@ const prescriptionAction = async (req, res) => {
             return res.status(200).json({ message: "Prescription not updated", success: false })
         }
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const editDoctorPrescription = async (req, res) => {
@@ -584,7 +584,7 @@ const editDoctorPrescription = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const doctorLabTest = async (req, res) => {
@@ -610,7 +610,7 @@ const doctorLabTest = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getPatientAppointment = async (req, res) => {
@@ -700,7 +700,7 @@ const getPatientAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getPatientLabAppointment = async (req, res) => {
@@ -764,7 +764,7 @@ const getPatientLabAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const giveRating = async (req, res) => {
@@ -797,7 +797,7 @@ const giveRating = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getLabAppointment = async (req, res) => {
@@ -874,7 +874,7 @@ const getLabAppointment = async (req, res) => {
 
     } catch (err) {
         console.log(err);
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 };
 
@@ -903,7 +903,7 @@ const getLabAppointmentData = async (req, res) => {
         return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, labAddress, labReports, demographic, success: true })
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const labDashboardData = async (req, res) => {
@@ -925,7 +925,7 @@ const labDashboardData = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 
@@ -1135,7 +1135,7 @@ const bookLabAppointment = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: err?.message, success: false });
+        res.status(500).json({ message: "Internal server error", success: false });
     }
 };
 const rescheduleLabAppointment = async (req, res) => {
@@ -1156,7 +1156,7 @@ const rescheduleLabAppointment = async (req, res) => {
 
     } catch (err) {
         console.log(err);
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 };
 
@@ -1269,7 +1269,7 @@ const paymentLabAppointment = async (req, res) => {
         }
 
     } catch (err) {
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getLabReport = async (req, res) => {
@@ -1306,7 +1306,7 @@ const getLabReport = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getNearByDoctor = async (req, res) => {
@@ -1330,7 +1330,7 @@ const getNearByDoctor = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getDoctorAppointmentData = async (req, res) => {
@@ -1370,7 +1370,7 @@ const getDoctorAppointmentData = async (req, res) => {
         return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress, success: true, labAppointment })
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getDoctorPastAppointment = async (req, res) => {
@@ -1403,7 +1403,7 @@ const getDoctorPastAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getHospitalAppointment = async (req, res) => {
@@ -1498,7 +1498,7 @@ const getHospitalAppointment = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: err?.message, success: false });
+        return res.status(500).json({ message: "Internal server error", success: false });
     }
 };
 const getHospitalPastAppointment = async (req, res) => {
@@ -1540,7 +1540,7 @@ const getHospitalPastAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 
@@ -1602,7 +1602,7 @@ const getPastPatientLabAppointment = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 //      get patient lab report for specific lab
@@ -1640,7 +1640,7 @@ const getPatientLabReport = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const getHospitalDoctorAppointment = async (req, res) => {
@@ -1719,7 +1719,7 @@ const getHospitalDoctorAppointment = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: err?.message, success: false });
+        return res.status(500).json({ message: "Internal server error", success: false });
     }
 };
 const doctorAptPayment = async (req, res) => {
@@ -1860,7 +1860,7 @@ const getDoctorAptPayment = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 const doctorAptVitals = async (req, res) => {
@@ -1886,7 +1886,33 @@ const doctorAptVitals = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return res.status(200).json({ message: err?.message });
+        return res.status(200).json({ message: "Internal server error" });
+    }
+}
+const doctorConsultationNote = async (req, res) => {
+    const id = req.user.id || req.user.userId;
+    const { appointmentId, } = req.body;
+    try {
+        const isUser = await User.findById(id);
+        if (!isUser) {
+            return res.status(400).json({ message: 'User not exist', success: false });
+        }
+        const isApt = await DoctorAppointment.findByIdAndUpdate(appointmentId, { consultationNotes: req.body }, { new: true }).populate('patientId', 'name')
+        if (!isApt) return res.status(200).json({ message: 'Appointment  not exist' })
+        await AuditLog.create({
+            orgId: req.user.id || req.user.userId,
+            actorId: req.user.loginUser || req.user.id || req.user.userId,
+            panel: req.user.type,
+            method: "CREATE",
+            shortDesc: "Consultation notes added",
+            description: `Added consultation notes in doctor appointment no. ${isApt?.customId} of patient ${isApt?.patientId?.name}`
+        })
+        return res.status(200).json({ message: 'Consultation notes add in doctor appointment', success: true, data: isApt })
+
+
+    } catch (err) {
+        console.log(err)
+        return res.status(200).json({ message: "Internal server error" });
     }
 }
 export {
@@ -1895,5 +1921,5 @@ export {
     getPatientAppointment, giveRating, getPatientLabAppointment, getLabAppointment, bookLabAppointment, paymentLabAppointment, actionLabAppointment,
     getLabReport, getDoctorPrescriptiondata, getNearByDoctor, cancelLabAppointment, getDoctorAppointmentData, getPastPatientLabAppointment,
     getDoctorPastAppointment, deleteDoctorPrescription, prescriptionAction, updateDoctorAppointment, getHospitalAppointment, getHospitalPastAppointment,
-    doctorAptPayment, getDoctorAptPayment, doctorAptVitals, rescheduleLabAppointment
+    doctorAptPayment, getDoctorAptPayment, doctorAptVitals, rescheduleLabAppointment, doctorConsultationNote
 }

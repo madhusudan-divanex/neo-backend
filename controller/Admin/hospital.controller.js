@@ -108,7 +108,7 @@ export const getHospitalDetail = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Internal server error",
     });
   }
 };
@@ -159,7 +159,7 @@ export const deleteHospital = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Internal server error",
     });
   }
 };
@@ -228,7 +228,7 @@ export const getHospitals = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -301,7 +301,7 @@ export const getHospitalRequests = async (req, res) => {
     console.log(err)
     res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -316,7 +316,7 @@ export const approveRejectHospital = async (req, res) => {
     if (reason) hosp.rejectReason = reason;
     await hosp.save();
     res.json({ success: true, message: `Hospital ${status}`, data: hosp });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 };
 
 export const getHospitalDoctors = async (req, res) => {
@@ -393,7 +393,7 @@ export const getHospitalDoctors = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };
@@ -415,7 +415,7 @@ export const getHospitalDocApt = async (req, res) => {
 
     return res.json({ message: "Appointment fetched successfully", success: true, data: apt, total, totalPages: Math.ceil(total / limit), currentPage: page })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getHospitalLabApt = async (req, res) => {
@@ -435,7 +435,7 @@ export const getHospitalLabApt = async (req, res) => {
 
     return res.json({ message: "Appointment fetched successfully", success: true, data: apt, total, totalPages: Math.ceil(total / limit), currentPage: page })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }
 export const getAllotmentHistory = async (req, res) => {

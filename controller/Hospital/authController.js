@@ -33,7 +33,7 @@ export const resetPassword = async (req, res) => {
 
     res.json({ message: "Password reset successfully", success: true });
   } catch (err) {
-    res.status(500).json({ message: "Server Error", error: err.message });
+    res.status(500).json({ message: "Server Error", error: "Internal server error" });
   }
 };
 
@@ -203,7 +203,7 @@ export const verifyOtp = async (req, res) => {
     console.error(err);
     res.status(500).json({
       message: "Server Error",
-      error: err.message,
+      error: "Internal server error",
       success: false
     });
   }
@@ -230,7 +230,7 @@ export const forgotPassword = async (req, res) => {
 
     res.json({ message: "OTP sent successfully", success: true });
   } catch (err) {
-    res.status(500).json({ message: "Server Error", error: err.message });
+    res.status(500).json({ message: "Server Error", error: "Internal server error" });
   }
 };
 
@@ -271,7 +271,7 @@ export const register = async (req, res) => {
 
     res.json({ token, user, success: true });
   } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error", error: "Internal server error" });
   }
 };
 
@@ -286,8 +286,10 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, hospital.passwordHash);
     if (!match)
       return res.status(400).json({ message: "Invalid password" });
-    // const isHospital = await HospitalBasic.findById(hospital.hospitalId);
-    // if (isHospital.kycStatus !== "approved") return res.status(200).json({ message: `Your profile was ${isHospital.kycStatus}`, success: false });
+    const isHospital = await HospitalBasic.findById(hospital.hospitalId)
+    if (isHospital?.kycStatus === "block") {
+      return res.status(200).json({ success: false, message: 'Your account has been blocked. Please contact support for assistance.' });
+    }
     if (withOtp) {
       const code = generateOTP()
       if (contactNumber) {
@@ -376,7 +378,7 @@ export const resendOtp = async (req, res) => {
     }
     const isOtpExist = await Otp.findOne({ phone: contactNumber, email })
     if (isOtpExist) {
-      await Otp.findByIdAndDelete(isOtpExist.contactNumber)
+      await Otp.findByIdAndDelete(isOtpExist._id)
       const otp = await Otp.create({ phone: contactNumber, email, code })
     } else {
       const otp = await Otp.create({ phone: contactNumber, email, code })
@@ -387,6 +389,6 @@ export const resendOtp = async (req, res) => {
       message: "OTP sent!"
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 }

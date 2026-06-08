@@ -56,7 +56,7 @@ export const getDoctorDetail = async (req, res) => {
     console.error("getDoctorDetail error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Internal server error"
     });
   }
 };
@@ -140,7 +140,7 @@ export const getDoctors = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -225,7 +225,7 @@ export const getDoctorRequests = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 /**
@@ -233,7 +233,7 @@ export const getDoctorRequests = async (req, res) => {
  */
 export const toggleDoctorStatus = async (req, res) => {
   try {
-    const { doctorId, } = req.params; // 👈 this is USER ID
+    const { doctorId, status } = req.params; // 👈 this is USER ID
 
     // ✅ doctor ko USER ID se find karo
     const doctor = await Doctor.findOne({ _id: doctorId });
@@ -243,7 +243,7 @@ export const toggleDoctorStatus = async (req, res) => {
     }
 
     // 🔄 toggle status
-    doctor.status = doctor.status === "approved" ? "pending" : "approved";
+    doctor.status = status;
     await doctor.save();
 
     // 🔔 push only when approved
@@ -269,7 +269,7 @@ export const toggleDoctorStatus = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -354,7 +354,7 @@ export const getDoctorAppointments = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -371,7 +371,7 @@ export const approveRejectDoctor = async (req, res) => {
     if (reason) doctor.rejectReason = reason;
     await doctor.save();
     res.json({ success: true, message: `Doctor ${status}`, data: doctor });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { res.status(500).json({ success: false, message: "Internal server error" }); }
 };
 
 export const getDoctorAppointmentData = async (req, res) => {
@@ -401,6 +401,6 @@ export const getDoctorAppointmentData = async (req, res) => {
     const doctor = { ...doctorPersonal, ...doctorAbout }
     return res.status(200).json({ message: "Appointment Data fetched", patient, doctor, appointmentData, success: true })
   } catch (error) {
-    return res.status(500).json({ message: error?.message, success: false })
+    return res.status(500).json({ message: "Internal server error", success: false })
   }
 }

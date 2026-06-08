@@ -29,7 +29,7 @@ export const adminRegister = async (req, res) => {
 
     res.json({ message: "Admin registered", success: true, admin: { id: admin._id, name: admin.name, email: admin.email } });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -58,7 +58,7 @@ export const adminLogin = async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -87,7 +87,7 @@ export const adminForgotPassword = async (req, res) => {
 
     res.json({ message: "OTP sent successfully", success: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -110,7 +110,7 @@ export const adminVerifyOtp = async (req, res) => {
 
     res.json({ message: "OTP verified", success: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -131,6 +131,6 @@ export const adminResetPassword = async (req, res) => {
 
     res.json({ message: "Password reset successful", success: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

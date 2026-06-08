@@ -63,21 +63,21 @@ export const assignNH12 = async (userId, countryCode) => {
         if (!userId || !countryCode) {
             throw new Error("Missing userId or countryCode");
         }
-        
-        console.log("in nh12",countryCode)
+
+        console.log("in nh12", countryCode)
         const cleanedCountryCode = normalizeCountryCode(countryCode);
 
         const user = await User.findById(userId);
-        
+
         console.log("NH12 assigned/updated successfully")
         if (!user) {
             throw new Error("User not found");
         }
-        
+
         if (!user.unique_id || user.unique_id.length !== 8) {
             throw new Error("Invalid or missing unique_id (must be 8 digits)");
         }
-        
+
         const M = roleToM[user.role];
 
         if (!M) {
@@ -86,7 +86,7 @@ export const assignNH12 = async (userId, countryCode) => {
 
         // Create first 11 digits
         const prefix11 = M + cleanedCountryCode + user.unique_id;
-        console.log("prefix",prefix11)
+        console.log("prefix", prefix11)
         // Generate Luhn check digit
         const checkDigit = generateLuhnDigit(prefix11);
 
@@ -104,7 +104,7 @@ export const assignNH12 = async (userId, countryCode) => {
     } catch (error) {
         return {
             success: false,
-            message: error.message
+            message: "Internal server error"
         };
     }
 };

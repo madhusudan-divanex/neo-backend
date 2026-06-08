@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import User   from "../../models/Hospital/User.js";
+import User from "../../models/Hospital/User.js";
 
 export const changeAdminPassword = async (req, res) => {
   try {
@@ -18,6 +18,6 @@ export const changeAdminPassword = async (req, res) => {
     await admin.save();
     res.json({ success: true, message: "Password changed successfully" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

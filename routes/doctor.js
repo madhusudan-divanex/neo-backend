@@ -2,7 +2,7 @@ import { changePassword, deleteDoctor, getCustomProfile, getProfile, getProfileD
 import express from 'express'
 import authMiddleware from "../middleware/authMiddleare.js"
 import getUploader from "../config/multerConfig.js";
-import { bookDoctorAppointment, doctorAptPayment, doctorAptVitals, doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
+import { bookDoctorAppointment, doctorAptPayment, doctorAptVitals, doctorConsultationNote, doctorLabTest, getDoctorAppointment, getDoctorAppointmentData } from "../controller/appointmentController.js";
 import { addPatient, addTimeSlot, deleteTimeSlot, doctorDashboard, getDoctorPatientLabPrescription, getDoctorPatientReport, getOccupiedSlots, getPatientHistory, getPatientPending, getTimeSlots, sendReminder, updateDaySlot, updateTimeSlot, } from "../controller/Doctor/doctorController.js";
 import { checkPermission } from "../middleware/permissionCheck.js";
 import { ChatList } from "../controller/Hospital/chatController.js";
@@ -74,4 +74,5 @@ doctor.delete('/time-slot/:slotId', authMiddleware, checkPermission("doctors", "
 doctor.post('/add-patient', authMiddleware, addPatient)
 doctor.post('/appointment-payment', authMiddleware, checkPermission("doctors", "appointmentPayment"), doctorAptPayment)
 doctor.post('/add-patient-vitals', authMiddleware, checkPermission("doctors", "appointmentVital"), doctorAptVitals)
+doctor.post('/add-consultation-note', authMiddleware, checkPermission("doctors", "appointmentVital"), doctorConsultationNote)
 export default doctor

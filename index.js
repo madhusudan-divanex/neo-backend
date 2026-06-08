@@ -90,7 +90,7 @@ app.use((err, req, res, next) => {
 
     res.status(err.status || 500).json({
         success: false,
-        message: err.message || "Internal Server Error"
+        message: "Internal Server Error"
     });
 })
 const limiter = rateLimit({
@@ -712,7 +712,7 @@ app.use('/user/:id', async (req, res) => {
         });
     } catch (err) {
         console.log(err)
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
 })
 

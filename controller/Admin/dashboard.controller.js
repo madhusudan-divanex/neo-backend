@@ -161,7 +161,7 @@ export const getAdminDashboard = async (req, res) => {
     })
   } catch (err) {
     console.error('Dashboard error:', err)
-    res.status(500).json({ success: false, message: err.message })
+    res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
 const now = new Date()

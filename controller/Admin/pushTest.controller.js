@@ -12,7 +12,7 @@ export const testPush = async (req, res) => {
       token,
       title: "🔥 Test Notification",
       body: "Backend se test push aa gaya 🚀",
-        type: "test"
+      type: "test"
     });
 
     res.json({
@@ -24,7 +24,7 @@ export const testPush = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };

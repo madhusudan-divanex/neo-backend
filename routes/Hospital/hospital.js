@@ -14,7 +14,7 @@ import authMiddleware from "../../middleware/authMiddleare.js";
 import { addSample, addTest, deleteTest, getTest, getTestData, getTestReport, labTestAction, saveLabInvoice, saveReport, updateTest } from "../../controller/Laboratory/laboratoryContoller.js";
 import getUploader from "../../config/multerConfig.js";
 import { addInventry, addSupplier, completeReturn, createPO, createReturn, customerReturn, deletePO, deleteReturn, deleteSupplier, getPODetails, getPOList, getReturnById, getSupplier, getSupplierById, inventoryDelete, inventoryGetById, inventoryList, inventoryUpdate, listReturns, patientHospitalAllotment, patientHospitalPrescriptions, receivePO, sellMedicine, updatePO, updateReturn, updateSupplier } from "../../controller/Pharmacy/pharmacyController.js";
-import { actionLabAppointment, bookLabAppointment, doctorAptPayment, doctorAptVitals, getDoctorAppointmentData, getLabAppointment, paymentLabAppointment } from "../../controller/appointmentController.js";
+import { actionLabAppointment, bookLabAppointment, doctorAptPayment, doctorAptVitals, doctorConsultationNote, getDoctorAppointmentData, getLabAppointment, paymentLabAppointment } from "../../controller/appointmentController.js";
 import { checkPermission } from "../../middleware/permissionCheck.js";
 import { ChatList } from "../../controller/Hospital/chatController.js";
 import { sendReport } from "../../controller/Laboratory/authController.js";
@@ -154,4 +154,5 @@ router.get('/check-patient-ipd/:id', auth, profile.getIsInIpd)
 router.post('/lab/sample', auth, checkPermission("lab", "collectSample"), addSample)
 router.post('/lab/test-report-data', auth, getTestReport)
 router.post('/add-patient-vitals', auth, checkPermission("appointments", "addVitals"), doctorAptVitals)
+router.post('/add-consultation-note', auth, checkPermission("appointments", "addConsultationNote"), doctorConsultationNote)
 export default router;
