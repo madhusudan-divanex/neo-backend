@@ -357,7 +357,7 @@ const cancelDoctorAppointment = async (req, res) => {
         const isExist = await User.findById(patientId);
         if (!isExist) return res.status(200).json({ message: 'User not exist' });
 
-        const isPatient = await DoctorAppointment.findById(appointmentId);
+        const isPatient = await DoctorAppointment.findById(appointmentId).populate('doctorId', 'fcmToken');
         if (!isPatient) return res.status(200).json({ message: 'Appointment not exist' });
 
         const update = await DoctorAppointment.findByIdAndUpdate(appointmentId, { status: 'cancel', cancelMessage }, { new: true })
@@ -365,7 +365,13 @@ const cancelDoctorAppointment = async (req, res) => {
             await Notification.create({
                 userId: isPatient.doctorId,
                 title: "Appointment Cancelled!",
-                message: `${isExist?.name} has cancelled the doctor appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} for ${cancelMessage}.`
+                message: `${isExist?.name} has cancelled the appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} for ${cancelMessage}.`
+            })
+            sendPush({
+                token: isPatient?.doctorId?.fcmToken,
+                title: "Appointment Cancelled!",
+                body: `${isExist?.name} has cancelled the appointment on ${new Date(isPatient.date)?.toLocaleString('en-GB')} for ${cancelMessage}.`,
+                data: { type: "Appointment Cancelled", time: Date.now().toString() }
             })
             return res.status(200).json({ message: "Appointment cancel successfully", success: true })
         } else {
@@ -524,7 +530,7 @@ const deleteDoctorPrescription = async (req, res) => {
 const prescriptionAction = async (req, res) => {
     const { prescriptionId, status } = req.body;
     try {
-        const isExist = await Prescriptions.findById(prescriptionId).populate("patientId appointmentId");
+        const isExist = await Prescriptions.findById(prescriptionId).populate("patientId doctorId appointmentId");
         if (!isExist) return res.status(200).json({ message: 'Prescription not exist' });
 
 
@@ -539,7 +545,22 @@ const prescriptionAction = async (req, res) => {
                     description: `Prescription status updated ${update?.status} for ${isExist?.patientId?.name} with appointment id ${isExist?.appointmentId?.customId}.`
                 })
             }
-            return res.status(200).json({ message: "Prescription updated successfully", success: true })
+            res.status(200).json({ message: "Prescription updated successfully", success: true })
+            const patientId = isExist?.patientId?._id;
+            await Notification.create({
+                userId: patientId,
+                title: "Prescription updated",
+                message: `Your prescription for ${isExist?.diagnosis} has been ${update?.status} by ${isExist?.doctorId?.name}.`,
+                type: "prescription"
+            });
+            if (isExist?.patientId?.fcmToken) {
+                sendPush({
+                    token: isExist?.patientId?.fcmToken,
+                    title: "Prescription updated",
+                    body: `Your prescription for ${isExist?.diagnosis} has been ${update?.status} by  ${isExist?.doctorId?.name}.`,
+                    data: { type: "Prescription updated", time: Date.now().toString() }
+                })
+            }
         } else {
             return res.status(200).json({ message: "Prescription not updated", success: false })
         }
@@ -624,7 +645,7 @@ const getPatientAppointment = async (req, res) => {
             isExist = await User.findById(patientId);
         }
         if (!isExist) return res.status(200).json({ message: 'Patient not exist', success: false });
-        const appointments = await DoctorAppointment.find({ patientId }).populate('prescriptionId').populate('hospitalId', 'name hospitalId')
+        const appointments = await DoctorAppointment.find({ patientId }).select('-vitals -clinicalNotes').populate('prescriptionId').populate('hospitalId', 'name hospitalId')
             .populate({
                 path: 'doctorId', select: 'name email contactNumber', populate: {
                     path: 'doctorId',
@@ -676,14 +697,20 @@ const getPatientAppointment = async (req, res) => {
             const doctorId = app.doctorId?._id?.toString();
             const userId = app.hospitalId?._id?.toString();
 
-            const hospitalBasicId = userToBasicMap[userId];
+            const hospitalBasicId = userToBasicMap[userId]?.toString();
+
             const hospitalAddress = hospitalBasicId
                 ? hospitalMap[hospitalBasicId]
                 : null;
 
             return {
                 ...app,
-                doctorAddress: hospitalAddress || addressMap[doctorId] || null
+                doctorAddress: hospitalAddress
+                    ? {
+                        ...hospitalAddress,
+                        specialty: addressMap[doctorId]?.specialty || null
+                    }
+                    : addressMap[doctorId] || null
             };
         });
 
@@ -778,7 +805,7 @@ const giveRating = async (req, res) => {
         } else if (hospitalId) {
             const isExist = await User.findById(hospitalId);
             if (!isExist) return res.status(200).json({ message: 'Hospital not exist' });
-            const isAlreadyRated = await Rating.findOne({ patientId, hospitalId })
+            const isAlreadyRated = await Rating.findOne({ patientId, hospitalId, doctorId })
             if (isAlreadyRated) return res.status(200).json({ message: "Already rated" })
         } else {
             const isExist = await User.findById(labId);
@@ -1037,7 +1064,7 @@ const bookLabAppointment = async (req, res) => {
             }
 
             if (isExist.fcmToken) {
-                await sendPush({
+                sendPush({
                     token: isExist.fcmToken,
                     title: "New Appointment",
                     body: `${isPatient?.name} booked an appointment for tests on ${new Date(date).toLocaleTimeString('en-GB')}`,
@@ -1046,7 +1073,7 @@ const bookLabAppointment = async (req, res) => {
             }
 
             if (isPatient.fcmToken) {
-                await sendPush({
+                sendPush({
                     token: isPatient.fcmToken,
                     title: "New Appointment",
                     body: `You booked an appointment on ${new Date(date).toLocaleTimeString('en-GB')} with ${isExist?.name}`,
@@ -1338,7 +1365,7 @@ const getDoctorAppointmentData = async (req, res) => {
     try {
         let isExist;
         if (appointmentId.length < 24) {
-            isExist = await DoctorAppointment.findOne({ customId: appointmentId }).populate('hospitalId', 'name')
+            isExist = await DoctorAppointment.findOne({ customId: appointmentId }).populate('hospitalId', 'name hospitalId')
                 .populate({ path: 'patientId', select: 'name email contactNumber nh12 patientId', populate: ({ path: 'patientId', select: 'gnder profileImage' }) })
                 .populate({ path: 'doctorId', select: 'name email contactNumber nh12 doctorId', populate: ({ path: 'doctorId', select: 'profileImage' }) }).lean()
                 .populate({
@@ -1351,7 +1378,7 @@ const getDoctorAppointmentData = async (req, res) => {
                 .populate('prescriptionId').lean();
         } else {
 
-            isExist = await DoctorAppointment.findById(appointmentId).populate('hospitalId', 'name')
+            isExist = await DoctorAppointment.findById(appointmentId).populate('hospitalId', 'name hospitalId')
                 .populate({ path: 'patientId', select: 'name email contactNumber nh12 patientId', populate: ({ path: 'patientId', select: 'gender profileImage' }) })
                 .populate({ path: 'doctorId', select: 'name email contactNumber nh12 doctorId', populate: ({ path: 'doctorId', select: 'name profileImage' }) }).lean()
                 .populate({
@@ -1364,10 +1391,17 @@ const getDoctorAppointmentData = async (req, res) => {
                 .populate('prescriptionId').lean();
         }
         const doctorAddress = await DoctorAbout.findOne({ userId: isExist?.doctorId?._id }).select('fullAddress hospitalName specialty').populate('specialty', 'name')
+        const hospitalAddress = await HospitalAddress.findOne({ hospitalId: isExist?.hospitalId?.hospitalId }).lean()
         // const labReports = await TestReport.find({ appointmentId: isExist?._id }).populate('testId')
         const labAppointment = await LabAppointment.findOne({ doctorAp: isExist._id })
+        let address;
+        if (isExist.hospitalId?._id) {
+            address = { ...hospitalAddress, specialty: doctorAddress?.specialty }
+        } else {
+            address = doctorAddress
+        }
         if (!isExist) return res.status(200).json({ message: 'Appointment not exist' });
-        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, doctorAddress, success: true, labAppointment })
+        return res.status(200).json({ message: "Appointment fetch successfully", data: isExist, address, success: true, labAppointment })
     } catch (err) {
         console.log(err)
         return res.status(200).json({ message: "Internal server error" });

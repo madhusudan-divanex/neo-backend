@@ -9,7 +9,7 @@ const UserSchema = new mongoose.Schema(
       unique: true
     },
     name: { type: String },
-    email: { type: String,  },
+    email: { type: String, index: true },
     passwordHash: { type: String, required: true },
     role: { type: String, default: "hospital" },
     // REAL-TIME STATUS
@@ -30,7 +30,7 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    contactNumber: { type: String},
+    contactNumber: { type: String, index: true },
 
     // hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic' },
     created_by: { type: String, required: true },
@@ -42,13 +42,16 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null
     },
-    nh12:String,
-    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'Laboratory' },
-    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy' },
-    patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient' },
-    doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' },
-    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic' },
-    staffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+    nh12: {
+      type: String,
+      index: true
+    },
+    labId: { type: mongoose.Schema.Types.ObjectId, ref: 'Laboratory', index: true },
+    pharId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy', index: true },
+    patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', index: true },
+    doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', index: true },
+    hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'HospitalBasic', index: true },
+    staffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', index: true },
   },
   { timestamps: true }
 );

@@ -467,7 +467,7 @@ const saveReport = async (req, res) => {
             manualComment, remark,
             manualName
         } = req.body;
-        const isAppointment = await LabAppointment.findOne({ labId, _id: appointmentId }).populate('patientId staff', 'name')
+        const isAppointment = await LabAppointment.findOne({ labId, _id: appointmentId }).populate('patientId staff', 'name fcmToken')
         if (!isAppointment) {
             return res.status(404).json({ message: "appointement not found", success: false })
         }
@@ -549,6 +549,14 @@ const saveReport = async (req, res) => {
                 },
                 "Lab Report", isAppointment?.patientId?._id,
             )
+            if (isAppointment?.patientId?.fcmToken) {
+                sendPush({
+                    token: isAppointment?.patientId?.fcmToken,
+                    title: "Lab Report",
+                    body: `Your ${subCatData?.subCategory} test report is ready for appointment ${isAppointment?.customId}.`,
+                    data: { type: "Lab Report", time: Date.now().toString() }
+                });
+            }
             await AuditLog.create([
                 {
                     orgId: req.user.id || req.user.userId,
@@ -698,7 +706,6 @@ const saveLabInvoice = async (req, res) => {
             paymentType,
             paymentId,
             taxes, subTotal, discount, total, appointmentId, labId, patientId
-
         });
 
         await invoice.save();

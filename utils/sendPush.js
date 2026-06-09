@@ -6,7 +6,7 @@ export const sendPush = async ({ token, title, body, data = {} }) => {
 
   const message = {
     token,
-    notification: { title, body },
+    notification: { title, body, imageUrl: "https://api.neohealthcard.com:9100/uploads/assets/logo.png" },
     data
   };
 

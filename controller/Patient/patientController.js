@@ -948,7 +948,6 @@ async function userRating(req, res) {
 
     if (hospitalId) {
       const isAlreadyGiven = await Rating.findOne({ patientId, hospitalId })
-      console.log(isAlreadyGiven)
       if (isAlreadyGiven) {
         return res.status(200).json({ success: false, message: "Already rated" })
       }
