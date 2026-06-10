@@ -506,3 +506,44 @@ Patient->
 Hospital Staff->
     jab doctor login karega tab IPD/OPD/EMERGENCY/Allotment History me sirf vo hi data show hoga jisme uski id exists karti ha
 
+npm install puppeteer
+const puppeteer = require("puppeteer");
+
+async function generateInvoicePdf(invoice) {
+  const browser = await puppeteer.launch({
+    headless: true,
+  });
+
+  const page = await browser.newPage();
+
+  const html = `
+    <html>
+      <body>
+        <h1>Invoice</h1>
+        <p>Invoice No: ${invoice.number}</p>
+        <p>Customer: ${invoice.customer}</p>
+        <p>Amount: ₹${invoice.amount}</p>
+      </body>
+    </html>
+  `;
+
+  await page.setContent(html);
+
+  const pdf = await page.pdf({
+    format: "A4",
+    printBackground: true,
+  });
+
+  await browser.close();
+
+  return pdf;
+}
+const pdfBuffer = await generateInvoicePdf(invoice);
+
+res.set({
+  "Content-Type": "application/pdf",
+  "Content-Disposition":
+    "attachment; filename=invoice.pdf",
+});
+
+res.send(pdfBuffer);

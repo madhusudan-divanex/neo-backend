@@ -990,24 +990,7 @@ const addTestForBedPatient = async (req, res) => {
       const { testsWithPrice, totalFees: newTotalFees } = buildTestsWithPrice()
 
       // Fees diff calculate karo
-      const oldFees = labAppointment.fees || 0
       const addedSubCatIds = allSubCatIds.filter(id => !existingSubCatIds.includes(id))
-      const removedSubCatIds = existingSubCatIds.filter(id => !allSubCatIds.includes(id))
-
-      // Old fees mein se removed ka price hatao, naye ka add karo
-      const { totalFees: addedFees } = buildTestsWithPrice()
-      const removedFeesCalc = (labAppointment.tests || [])
-        .flatMap(t => t.subCat || [])
-        .filter(s => removedSubCatIds.includes(s.subCatId?.toString()))
-        .reduce((sum, s) => sum + (s.subCatPrice || 0), 0)
-
-      const removedCategoryFees = (labAppointment.tests || [])
-        .filter(t => {
-          const tSubCats = t.subCat.map(s => s.subCatId?.toString())
-          return tSubCats.some(id => removedSubCatIds.includes(id))
-        })
-        .reduce((sum, t) => sum + (t.categoryPrice || 0), 0)
-
       labAppointment.tests = testsWithPrice
       labAppointment.testId = testId
       labAppointment.fees = Math.max(0, newTotalFees)
@@ -1147,6 +1130,7 @@ export const departmentTransfer = async (req, res) => {
       return res.status(404).json({ message: "Doctor To not found", success: false });
     }
 
+
     // ✅ Check employment
     const toDoctorEmployment = await StaffEmployement.findOne({
       organizationId: hospitalId,
@@ -1162,6 +1146,24 @@ export const departmentTransfer = async (req, res) => {
       await session.abortTransaction();
       return res.status(400).json({
         message: `Doctor is ${toDoctorEmployment.status}`,
+        success: false
+      });
+    }
+    const deptData = await Department.findById(departmentTo).session(session)
+    if (!deptData) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Department To not found", success: false });
+    }
+    const isHead = deptData.headOfDepartment?.equals(toDoctor._id);
+
+    const isEmployee = deptData.employees.some(emp =>
+      emp.employeeId?.equals(toDoctor._id)
+    );
+
+    if (!isHead && !isEmployee) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: "Doctor is not employed in department",
         success: false
       });
     }
@@ -1183,6 +1185,7 @@ export const departmentTransfer = async (req, res) => {
     // ✅ Update allotment
     isAllotment.primaryDoctorId = toDoctor._id;
     isAllotment.bedId = bedTo
+    isAllotment.departmentId = departmentTo
     await isAllotment.save({ session });
 
     // ✅ Update beds
@@ -1197,6 +1200,19 @@ export const departmentTransfer = async (req, res) => {
       { status: "Booked" },
       { new: true, session }
     );
+    const isPtDept = await PatientDepartment.findOne({ departmentId: departmentFrom, status: 'Active', allotmentId })
+    if (isPtDept) {
+      isPtDept.status = "Inactive"
+      await isPtDept.save({ session })
+
+      await PatientDepartment.create([{
+        patientId: isAllotment?.patientId?._id,
+        departmentId: departmentTo,
+        status: 'Active',
+        allotmentId: isAllotment._id,
+        hospitalId,
+      }], { session })
+    }
 
     await AuditLog.create([{
       orgId: isAllotment.hospitalId,
@@ -1217,6 +1233,7 @@ export const departmentTransfer = async (req, res) => {
     });
 
   } catch (err) {
+    console.log(err)
     // ❌ Rollback everything if error
     await session.abortTransaction();
     session.endSession();

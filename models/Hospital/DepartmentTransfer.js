@@ -5,7 +5,7 @@ const transferSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "BedAllotment",
         required: true,
-        unique:true
+        index: true
     },
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -48,7 +48,7 @@ const transferSchema = new Schema({
         required: true
     },
     reason: {
-        type:String,
+        type: String,
         required: true
     }
 
