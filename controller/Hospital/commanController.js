@@ -143,13 +143,11 @@ export const searchAllUsers = async (req, res) => {
       if (user.doctorId?.profileImage) {
         image = user.doctorId.profileImage;
       } else if (user.hospitalId?.logoFileId) {
-        image = user.hospitalId.logoFileId;
+        image = `api/file/${user.hospitalId.logoFileId}`
       } else if (user.labId?.logo) {
         image = user.labId.logo;
       } else if (user.pharId?.logo) {
         image = user.pharId.logo;
-      } else if (user.patientId?.profileImage) {
-        image = user.patientId.profileImage;
       }
 
       return {

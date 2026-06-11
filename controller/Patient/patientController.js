@@ -751,7 +751,29 @@ async function getPatientFavoriteData(req, res) {
       Favorite.countDocuments({ userId, pharId: { $ne: null } })
     ]);
 
+    let totalCount = 0;
 
+    if (type === "lab") {
+      totalCount = await Favorite.countDocuments({
+        userId,
+        labId: { $ne: null }
+      });
+    } else if (type === "hospital") {
+      totalCount = await Favorite.countDocuments({
+        userId,
+        hospitalId: { $ne: null }
+      });
+    } else if (type === "doctor") {
+      totalCount = await Favorite.countDocuments({
+        userId,
+        doctorId: { $ne: null }
+      });
+    } else if (type === "pharmacy") {
+      totalCount = await Favorite.countDocuments({
+        userId,
+        pharId: { $ne: null }
+      });
+    }
     return res.status(200).json({
       message: "Favorite data fetched",
       data: myFavorite,
@@ -764,7 +786,8 @@ async function getPatientFavoriteData(req, res) {
       },
       pagination: {
         currentPage: Number(page),
-        limit: Number(limit)
+        limit: Number(limit),
+        totalPages: Math.ceil(totalCount / Number(limit))
       }
     });
 
@@ -851,8 +874,10 @@ async function getPatientPrescriptionsInvoice(req, res) {
     const sellData = await Sell.find({ patientId: pateintId })
       .populate({ path: 'pharId', select: 'name email nh12 contactNumber pharId', populate: { path: 'pharId', select: 'logo' } })
       .populate({ path: 'hospitalId', select: 'name email nh12 contactNumber hospitalId', populate: { path: 'hospitalId', select: 'logoFileId' } })
+      .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
+
 
     const finalData = await Promise.all(
       sellData.map(async (item) => ({
@@ -1716,11 +1741,15 @@ const getSearchCity = async (req, res) => {
   const { name, page, limit } = req.query
   try {
     const country = await Country.findOne({ name: "India" })
-    const city = await City.find({
-      name: { $regex: name, $options: "i" },
-      countryCode: country.isoCode,
 
-    }).skip((page - 1) * limit).limit(limit)
+    const filter = {}
+    if (name) {
+      filter.name = { $regex: name, $options: "i" }
+    }
+    filter.countryCode = country.isoCode
+
+    const city = await City.find(filter).skip((page - 1) * limit).limit(limit)
+
 
     return res.status(200).json({
       message: "City fetched successfully",
@@ -1961,6 +1990,11 @@ const getTopUserByCategory = async (req, res) => {
           localField: "userId",
           foreignField: "_id",
           pipeline: [
+            {
+              $match: {
+                fcmToken: { $ne: "" },
+              }
+            },
             {
               $project: {
                 name: 1,
