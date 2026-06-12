@@ -1191,7 +1191,9 @@ const getDoctors = async (req, res) => {
 
     try {
 
-        const specialties = specialty ? specialty.split(',') : [];
+        const specialties = specialty
+            ? specialty.split(',').map(id => new mongoose.Types.ObjectId(id))
+            : [];
         const languages = language ? language.split(',') : [];
 
         const feesRange = fees ? fees.split('_') : [];
@@ -1240,7 +1242,6 @@ const getDoctors = async (req, res) => {
         /* ---------------- FILTERS ---------------- */
 
         const matchFilter = {};
-
         if (specialties.length) {
             matchFilter.specialty = { $in: specialties };
         }

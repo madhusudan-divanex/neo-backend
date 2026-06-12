@@ -34,7 +34,7 @@ export const uploadImages = async (req, res) => {
         type: "thumbnail"
       });
       await LabImage.findOneAndUpdate({ userId: userId }, {
-        thumbnail: `/api/file/${fileDoc._id}`,
+        thumbnail: `api/file/${fileDoc._id}`,
       }, { new: true });
       created.push(img);
     }

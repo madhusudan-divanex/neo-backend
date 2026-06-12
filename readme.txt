@@ -496,15 +496,12 @@ Lab/Hospital/Pharmacy/Doctor->
 
 
  
+Hospital & Pharmacy->
+    scan patient prescription (phele only patient ka card scan hota tha fir us patient ki prescription list show hoti thi 
+    fir user usme se active prescription select karta tha sell ke liye but ab direct user ki prescription scan karke sell
+    kar sakta ha)
 Patient->
-    Hospital Admit List 
-    Hospital Transfer letter 
-    Discharge letter 
-    Bed Invoice
-    Hospital Bill
-    Allot lab Report 
-Hospital Staff->
-    jab doctor login karega tab IPD/OPD/EMERGENCY/Allotment History me sirf vo hi data show hoga jisme uski id exists karti ha
+    Favroit Data
 
 npm install puppeteer
 const puppeteer = require("puppeteer");

@@ -732,7 +732,7 @@ cron.schedule("0 2 * * *", async () => {
   timezone: "Asia/Kolkata"
 });
 
-cron.schedule("0 * * * *", async () => {
+cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
     console.log("📌 Cron job to reject expired appointments started:", now);
